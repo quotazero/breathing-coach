@@ -470,6 +470,16 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
     <div class="note"><b id="acc-name"></b><br><span id="acc-email-shown" class="tiny"></span></div>
     <div class="stats"><div><b id="st-sessions">0</b><span data-i18n="st_sessions"></span></div><div><b id="st-minutes">0</b><span data-i18n="st_minutes"></span></div><div><b id="st-week">0</b><span data-i18n="st_week"></span></div></div>
     <p class="tiny" id="acc-sync"></p>
+    <div class="note" id="push-card" style="margin-top:12px">
+      <b id="push-h"></b>
+      <p class="tiny" id="push-state" style="margin:6px 0 10px"></p>
+      <button class="btn" id="b-push-on" style="display:none"></button>
+      <div id="push-opts" style="display:none">
+        <label style="display:flex;gap:10px;align-items:center;margin:0 0 10px"><span id="push-time-l"></span><input class="txt" type="time" id="push-time" value="19:00" style="width:auto;margin:0"></label>
+        <label style="display:flex;gap:10px;align-items:center;margin:0 0 12px;font-size:14px"><input type="checkbox" id="push-streak" checked style="width:20px;height:20px;accent-color:var(--accent)"><span id="push-streak-l"></span></label>
+        <button class="btn ghost" id="b-push-off"></button>
+      </div>
+    </div>
     <button class="btn ghost" id="b-export" data-i18n="export"></button>
     <a class="btn ghost" id="b-admin" href="admin.html" style="display:none;text-align:center;text-decoration:none">Pannello admin</a>
     <button class="btn ghost" id="b-logout" data-i18n="acc_logout"></button>
@@ -511,7 +521,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.6.12';
+const VERSION='0.7.0';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1478,7 +1488,7 @@ function openAccount(nudge){
   track('account_screen',{guest,nudge:!!nudge});
   show('s-account');
 }
-function renderAccount(){
+function renderAccount(){try{renderPush()}catch(e){}
   if(isGuest())return;
   $('acc-name').textContent=T[lang].welcome(userLabel());$('acc-email-shown').textContent=user.email||'';
   const all=lsJ(KEY.sess,[]).filter(r=>r.status==='completed');
@@ -1525,6 +1535,52 @@ $('b-hist-back').onclick=()=>goTab('s-welcome');
 /* ---------- diag UI ---------- */
 $('b-diag').onclick=()=>{$('diag-out').textContent=LOG.join('\n');show('s-diag')};
 $('b-diag-back').onclick=()=>goTab('s-welcome');
+
+/* ---------- notifiche push (promemoria giornaliero) ---------- */
+const VAPID_PUB='BKhbbX1hV1Nd6IV0GSApPZEo4l03CfA3OAlUuyavZ5-gEb22Y1W6JB1wLf-_ffeoFMtVOU9VWZwbXmawpFtbtCo';
+const pushOK=()=>('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
+function pushT(){const en=lang==='en';return en?{h:'Daily reminder',on:'Turn on reminders',off:'Turn off',time:'Remind me at',streak:'Warn me if I’m about to lose my streak',s_on:'Reminders are on.',s_off:'Get a daily nudge to train.',s_ios:'To get notifications, add the app to the Home screen first.',s_no:'This browser doesn’t support notifications.',s_den:'Notifications are blocked. Enable them in your phone settings.',s_err:'Couldn’t turn on reminders. Try again.'}:{h:'Promemoria giornaliero',on:'Attiva i promemoria',off:'Disattiva',time:'Ricordamelo alle',streak:'Avvisami se rischio di perdere la serie',s_on:'Promemoria attivi.',s_off:'Ricevi ogni giorno un promemoria per allenarti.',s_ios:'Per ricevere le notifiche aggiungi prima l’app alla Home.',s_no:'Questo browser non supporta le notifiche.',s_den:'Le notifiche sono bloccate. Attivale dalle impostazioni del telefono.',s_err:'Non sono riuscito ad attivare i promemoria. Riprova.'}}
+function b64u(b){const p='='.repeat((4-b.length%4)%4);const r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))}
+function ab2b64(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+async function pushReg(){return navigator.serviceWorker.register('sw.js')}
+async function renderPush(){
+  const x=pushT();$('push-h').textContent=x.h;$('b-push-on').textContent=x.on;$('b-push-off').textContent=x.off;$('push-time-l').textContent=x.time;$('push-streak-l').textContent=x.streak;
+  const card=$('push-card');if(!user||user.is_anonymous){card.style.display='none';return}card.style.display='';
+  $('b-push-on').style.display='none';$('push-opts').style.display='none';
+  if(!pushOK()){$('push-state').textContent=isIOS&&!env().standalone?x.s_ios:x.s_no;return}
+  if(Notification.permission==='denied'){$('push-state').textContent=x.s_den;return}
+  let sub=null;try{const reg=await navigator.serviceWorker.getRegistration('sw.js')||await pushReg();sub=await reg.pushManager.getSubscription()}catch(e){}
+  if(sub){
+    $('push-state').textContent=x.s_on;$('push-opts').style.display='';
+    try{const {data}=await sb.from('push_subs').select('remind_time,streak_on').eq('endpoint',sub.endpoint).maybeSingle();
+      if(data){$('push-time').value=String(data.remind_time).slice(0,5);$('push-streak').checked=!!data.streak_on}}catch(e){}
+  }else{$('push-state').textContent=x.s_off;$('b-push-on').style.display=''}
+}
+async function pushSave(sub){
+  const j=sub.toJSON();
+  const row={user_id:user.id,endpoint:sub.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,tz:Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Rome',
+    remind_on:true,remind_time:$('push-time').value||'19:00',streak_on:$('push-streak').checked,last_sent:null};
+  const {error}=await sb.from('push_subs').upsert(row,{onConflict:'endpoint'});if(error)throw error;
+}
+$('b-push-on').onclick=async()=>{
+  try{
+    const perm=await Notification.requestPermission();if(perm!=='granted'){await renderPush();return}
+    const reg=await pushReg();await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)});
+    await pushSave(sub);track('push_on');log('push:on');
+  }catch(e){log('push:error',e.message);$('push-state').textContent=pushT().s_err;return}
+  renderPush();
+};
+async function pushUpdate(){
+  try{const reg=await navigator.serviceWorker.getRegistration('sw.js');const sub=reg&&await reg.pushManager.getSubscription();if(!sub)return;
+    await sb.from('push_subs').update({remind_time:$('push-time').value||'19:00',streak_on:$('push-streak').checked,last_sent:null}).eq('endpoint',sub.endpoint)}catch(e){log('push:update-error',e.message)}
+}
+$('push-time').onchange=pushUpdate;$('push-streak').onchange=pushUpdate;
+$('b-push-off').onclick=async()=>{
+  try{const reg=await navigator.serviceWorker.getRegistration('sw.js');const sub=reg&&await reg.pushManager.getSubscription();
+    if(sub){await sb.from('push_subs').delete().eq('endpoint',sub.endpoint);await sub.unsubscribe()}track('push_off')}catch(e){log('push:off-error',e.message)}
+  renderPush();
+};
 /* ---------- aggiorna app ---------- */
 function updLabel(){const b=$('b-update');if(b)b.textContent=lang==='en'?'Update app':'Aggiorna app'}
 updLabel();
