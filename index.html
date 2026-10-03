@@ -74,6 +74,13 @@ p.lead{color:var(--ink);font-size:16px}
 .tab svg{width:22px;height:22px;stroke:currentColor}
 #s-welcome,#s-home,#s-static,#s-pb{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
 .tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:rgba(6,26,43,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 10px calc(8px + env(safe-area-inset-bottom,0px));z-index:5}
+.mdl{position:fixed;inset:0;background:rgba(3,12,20,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.mdl.on{display:flex}
+.mdl .box{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px 20px;max-width:360px;width:100%}
+.mdl h3{margin:0 0 12px;font-size:20px}
+.mdl ul{margin:0 0 14px;padding-left:20px;line-height:1.5;color:var(--ink)}
+.mdl label{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--ink2);margin:0 0 16px}
+.mdl input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
 .tabs:has(.legal){flex-direction:column}
 .tabrow{display:flex;width:100%}
 .tabs:has(.legal){padding-bottom:0}
@@ -488,6 +495,13 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <button class="btn ghost" id="b-clear" data-i18n="clear_log"></button>
 </section>
 
+<div class="mdl" id="st-help"><div class="box">
+  <h3 id="sth-t"></h3>
+  <ul id="sth-l"></ul>
+  <label><input type="checkbox" id="sth-nomore"><span id="sth-n"></span></label>
+  <button class="btn" id="sth-ok"></button>
+</div></div>
+
 <script>
 /* ============================================================
    Breathing Coach v0.2 — Orbita / Quota Zero
@@ -497,7 +511,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.6.10';
+const VERSION='0.6.11';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -518,7 +532,7 @@ const T={
   onb_name:'Come ti chiami? (facoltativo)', onb_level:'Il tuo livello', onb_goal:'Obiettivo principale', onb_weekly:'Quanto vuoi allenarti?', onb_weekly_l:'Sessioni a settimana', onb_done:'Iniziamo',
   lv_beginner:'Principiante', lv_intermediate:'Intermedio', lv_advanced:'Avanzato',
   goal_relax:'Rilassamento', goal_eq:'Compensazione', goal_perf:'Prestazione',
-  set_warm:'Riscaldamento', left_warm:'fine riscaldamento', warm_then:s=>'Poi inizia il training: '+params.cycles+' cicli, circa '+t2(s), set_warm_in:'Inspirazione (s)', set_warm_out:'Espirazione (s)', set_warm_n:'Respiri',
+  set_warm:'Riscaldamento', left_warm:'fine riscaldamento', warm_then:s=>'Rilassati e respira: il training inizia tra poco.', set_warm_in:'Inspirazione (s)', set_warm_out:'Espirazione (s)', set_warm_n:'Respiri',
   set_main:'Allenamento', set_in:'Inspirazione (s)', set_hf:'Apnea polmoni pieni (s)', set_out:'Espirazione (s)', set_he:'Apnea polmoni vuoti (s)', set_cycles:'Cicli',
   reminder:'Inspira dal naso. Espira dalla bocca con leggera resistenza.',
   start:'Inizia', test_sound:'Prova i suoni', history:'Storico', diag:'Diagnostica', back:'Indietro', stop:'Interrompi',
@@ -573,7 +587,7 @@ const T={
   onb_name:'Your name (optional)', onb_level:'Your level', onb_goal:'Main goal', onb_weekly:'How often do you want to train?', onb_weekly_l:'Sessions per week', onb_done:'Let’s start',
   lv_beginner:'Beginner', lv_intermediate:'Intermediate', lv_advanced:'Advanced',
   goal_relax:'Relaxation', goal_eq:'Equalization', goal_perf:'Performance',
-  set_warm:'Warm-up', left_warm:'warm-up ends', warm_then:s=>'Then the training starts: '+params.cycles+' cycles, about '+t2(s), set_warm_in:'Inhale (s)', set_warm_out:'Exhale (s)', set_warm_n:'Breaths',
+  set_warm:'Warm-up', left_warm:'warm-up ends', warm_then:s=>'Relax and breathe: the training starts soon.', set_warm_in:'Inhale (s)', set_warm_out:'Exhale (s)', set_warm_n:'Breaths',
   set_main:'Training', set_in:'Inhale (s)', set_hf:'Full-lung hold (s)', set_out:'Exhale (s)', set_he:'Empty-lung hold (s)', set_cycles:'Cycles',
   reminder:'Inhale through the nose. Exhale through the mouth with slight resistance.',
   start:'Start', test_sound:'Test sounds', history:'History', diag:'Diagnostics', back:'Back', stop:'Stop',
@@ -1238,11 +1252,17 @@ $('b-str-save').onclick=()=>{
   const all=lsJ(KEY.sess,[]);all.push(srun.record);lsSet(KEY.sess,JSON.stringify(all));
   log('static:saved',srun.record.id);srun=null;pushSessions();renderStatic();show('s-static');
 };
+function stHelpTexts(){const en=lang==='en';return en?{t:'How it works',l:['A spoken countdown guides your warm-up.','At zero, the hold starts.','1 tap on the screen = contraction','2 quick taps = stop the test'],n:'Don’t show again',ok:'Got it, start'}:{t:'Come funziona',l:['Il riscaldamento ti guida a voce con il conto alla rovescia.','Allo zero inizia l’apnea.','1 tap sullo schermo = contrazione','2 tap ravvicinati = fine della prova'],n:'Non mostrare più',ok:'Ho capito, inizia'}}
 $('b-st-start').onclick=()=>{
+  let seen=false;try{seen=localStorage.getItem('bc.sthelp')==='1'}catch(e){}
+  if(seen)return stGo();
+  const x=stHelpTexts();$('sth-t').textContent=x.t;$('sth-l').innerHTML=x.l.map(a=>'<li>'+a+'</li>').join('');$('sth-n').textContent=x.n;$('sth-ok').textContent=x.ok;$('sth-nomore').checked=false;$('st-help').classList.add('on')};
+$('sth-ok').onclick=()=>{if($('sth-nomore').checked){try{localStorage.setItem('bc.sthelp','1')}catch(e){}}$('st-help').classList.remove('on');stGo()};
+function stGo(){
   // iOS: la sintesi vocale deve partire dentro il gesto dell'utente
   if(synth)log('voice:voices',synth.getVoices().length);
   if(stCfg.warmSec>0)sayRemaining(stCfg.warmSec);
-  return startStatic().catch(e=>{log('static:crash',e.message);$('b-st-start').disabled=false;if(srun)stAbort('crash');else show('s-static')})};
+  return startStatic().catch(e=>{log('static:crash',e.message);$('b-st-start').disabled=false;if(srun)stAbort('crash');else show('s-static')})}
 
 /* --- grafici SVG --- */
 function attemptChart(total,contr){
