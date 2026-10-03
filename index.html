@@ -72,8 +72,12 @@ p.lead{color:var(--ink);font-size:16px}
 .card:active{transform:scale(.985)}
 .mute svg{width:22px;height:22px}
 .tab svg{width:22px;height:22px;stroke:currentColor}
-#s-welcome,#s-home,#s-static,#s-pb{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+#s-welcome,#s-home,#s-static,#s-pb{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
 .tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:rgba(6,26,43,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 10px calc(8px + env(safe-area-inset-bottom,0px));z-index:5}
+.tabs:has(.legal){flex-direction:column}
+.tabrow{display:flex;width:100%}
+.legal{display:flex;justify-content:center;gap:22px;padding:6px 0 2px}
+.legal .link{font-size:12px;color:var(--ink2)}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:12px;font-size:12px;color:var(--ink2)}
 .tab .ic{height:22px;display:flex}
 .tab.sel{color:var(--accent);background:rgba(143,224,210,.1)}
@@ -217,14 +221,14 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <button class="card" id="wl-breath" style="--c:var(--ph-hold_full)"><span class="ic" data-ic="lungs"></span><span><b data-i18n="wl_breath"></b><small id="wl-breath-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-static" style="--c:var(--ph-static)"><span class="ic" data-ic="timer"></span><span><b data-i18n="wl_static"></b><small id="wl-static-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-pb" style="--c:var(--ph-inhale)"><span class="ic" data-ic="trophy"></span><span><b data-i18n="wl_pb"></b><small id="wl-pb-sub"></small></span><span class="chev">›</span></button>
-  <div style="flex:1"></div>
-  <div style="display:flex;justify-content:center;gap:22px;margin-top:26px">
-    <button class="link" id="b-history" data-i18n="history"></button>
-    <button class="link" id="b-diag" data-i18n="diag"></button>
-    <a class="link" href="privacy.html" data-i18n="privacy"></a>
-    <a class="link" href="about.html" data-i18n="info"></a>
-  </div>
-  <nav class="tabs" data-tabs></nav>
+  <nav class="tabs" data-tabs><div class="tabrow" data-tabrow></div>
+    <div class="legal">
+      <button class="link" id="b-history" data-i18n="history"></button>
+      <button class="link" id="b-diag" data-i18n="diag"></button>
+      <a class="link" href="privacy.html" data-i18n="privacy"></a>
+      <a class="link" href="about.html" data-i18n="info"></a>
+    </div>
+  </nav>
 </section>
 
 <!-- ===== HOME / SETTINGS ===== -->
@@ -490,7 +494,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.6.4';
+const VERSION='0.6.5';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1267,7 +1271,7 @@ document.querySelectorAll('[data-ic]').forEach(el=>el.innerHTML=ICON[el.dataset.
 const TAB_DEFS=[['s-welcome','home','tab_home'],['s-home','lungs','tab_breath'],['s-static','timer','tab_static'],['s-pb','trophy','tab_pb']];
 const TABMAP={'s-cal':'s-welcome','s-pb-d':'s-pb','s-pb-add':'s-pb','s-st-d':'s-static'};
 function renderTabs(active){active=TABMAP[active]||active;
-  document.querySelectorAll('[data-tabs]').forEach(nav=>{nav.innerHTML=TAB_DEFS.map(([id,ic,k])=>`<button class="tab${id===active?' sel':''}" data-tab="${id}"><span class="ic">${ICON[ic]}</span><span>${t(k)}</span></button>`).join('');
+  document.querySelectorAll('[data-tabs]').forEach(nav0=>{const nav=nav0.querySelector('[data-tabrow]')||nav0;nav.innerHTML=TAB_DEFS.map(([id,ic,k])=>`<button class="tab${id===active?' sel':''}" data-tab="${id}"><span class="ic">${ICON[ic]}</span><span>${t(k)}</span></button>`).join('');
     nav.querySelectorAll('.tab').forEach(b=>b.onclick=()=>goTab(b.dataset.tab))});
 }
 function goTab(id){if(id==='s-pb'){renderPB();track('pb_open')}if(id==='s-static'){renderStatic();track('static_open')}if(id==='s-welcome')renderWelcome();renderTabs(id);show(id)}
