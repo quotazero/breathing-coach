@@ -1,6 +1,6 @@
 {
   "name": "Breathing Coach",
-  "short_name": "Breathing",
+  "short_name": "Breathing Coach",
   "description": "Trainer di respirazione e apnea a secco. Orbita by Quota Zero.",
   "start_url": "./",
   "scope": "./",
