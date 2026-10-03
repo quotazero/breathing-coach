@@ -63,7 +63,7 @@ p.lead{color:var(--ink);font-size:16px}
 #s-static-run .phase{font-size:22px;min-height:0}
 #s-static-run .num{font-size:min(28vw,130px);margin:0}
 #s-static-run .btn{padding:12px;font-size:16px}
-.card{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--bg2);border-radius:16px;padding:16px 14px;margin-top:10px;border-left:4px solid var(--c)}
+.card{background:color-mix(in srgb,var(--c) 13%,var(--bg2));border:1px solid color-mix(in srgb,var(--c) 38%,transparent);display:flex;align-items:center;gap:14px;width:100%;text-align:left;border-radius:16px;padding:16px 14px;margin-top:10px;border-left:4px solid var(--c)}
 .card .ic{width:40px;height:40px;flex-shrink:0;color:var(--c)}
 .card .ic svg{width:40px;height:40px}
 .card b{display:block;font-size:17px;font-weight:600}
@@ -217,13 +217,13 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <button class="card" id="wl-breath" style="--c:var(--ph-hold_full)"><span class="ic" data-ic="lungs"></span><span><b data-i18n="wl_breath"></b><small id="wl-breath-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-static" style="--c:var(--ph-static)"><span class="ic" data-ic="timer"></span><span><b data-i18n="wl_static"></b><small id="wl-static-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-pb" style="--c:var(--ph-inhale)"><span class="ic" data-ic="trophy"></span><span><b data-i18n="wl_pb"></b><small id="wl-pb-sub"></small></span><span class="chev">›</span></button>
-  <div style="flex:1"></div>
-  <div style="display:flex;justify-content:center;gap:22px;margin-top:22px">
+  <div style="display:flex;justify-content:center;gap:22px;margin-top:26px">
     <button class="link" id="b-history" data-i18n="history"></button>
     <button class="link" id="b-diag" data-i18n="diag"></button>
     <a class="link" href="privacy.html" data-i18n="privacy"></a>
     <a class="link" href="about.html" data-i18n="info"></a>
   </div>
+  <div style="flex:1"></div>
   <nav class="tabs" data-tabs></nav>
 </section>
 
@@ -490,7 +490,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.6.0';
+const VERSION='0.6.2';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1300,8 +1300,8 @@ applyMute();
 
 /* ---------- dati apnea: personal best per disciplina ---------- */
 const LOGO_B64='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';
-const DISC={pool:['STA','DYN','DYNB','DNF'],sea:['CWT','CWTB','CNF','FIM']};
-const DISC_KIND={STA:'time',DYN:'dist',DYNB:'dist',DNF:'dist',CWT:'depth',CWTB:'depth',CNF:'depth',FIM:'depth'};
+const DISC={dry:['DRY'],pool:['STA','DYN','DYNB','DNF'],sea:['CWT','CWTB','CNF','FIM']};
+const DISC_KIND={DRY:'time',STA:'time',DYN:'dist',DYNB:'dist',DNF:'dist',CWT:'depth',CWTB:'depth',CNF:'depth',FIM:'depth'};
 function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function pbRecords(){return lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='pb'&&r.status==='completed'&&r.actualParams&&r.actualParams.value>0)}
 function pbFmt(d,v){return DISC_KIND[d]==='time'?fmt(v):`${Math.round(v*10)/10} m`}
@@ -1338,7 +1338,7 @@ function openPBAdd(){
 }
 function renderPBAdd(){
   const g=(key,icon,col)=>`<div class="pbgrp" style="--c:${col};margin:10px 0 0"><span class="ic">${ICON[icon]}</span>${t('pb_g_'+key)}</div><div class="chips2" style="--c:${col}">${DISC[key].map(c=>`<button data-c="${c}" class="${pbSel===c?'sel':''}">${c} · ${esc(T[lang]['D_'+c])}</button>`).join('')}</div>`;
-  $('pbadd-disc').innerHTML=g('pool','pool','var(--ph-hold_empty)')+g('sea','sea','var(--ph-exhale)');
+  $('pbadd-disc').innerHTML=g('dry','timer','var(--ph-static)')+g('pool','pool','var(--ph-hold_empty)')+g('sea','sea','var(--ph-exhale)');
   $('pbadd-disc').querySelectorAll('button').forEach(b=>b.onclick=()=>{pbSel=b.dataset.c;renderPBAdd()});
   const kind=pbSel?DISC_KIND[pbSel]:null;
   $('pbadd-vlabel').textContent=kind==='time'?t('pb_time'):kind==='depth'?t('pb_depth'):kind==='dist'?t('pb_dist'):'';
@@ -1500,7 +1500,7 @@ $('b-accept').onclick=async()=>{
 /* ============================================================
    v0.6 — home con settimana, calendario, record per disciplina, annulla allenamento
    ============================================================ */
-Object.assign(T.it,{
+Object.assign(T.it,{D_DRY:'Apnea statica a secco',
   tab_pb:'Record', wl_pb:'I miei record', pb_title:'I miei record', pb_sub:'Il tuo migliore per ogni disciplina', pb_new:'Aggiungi', pb_add_title:'Risultato', pb_g_pool:'Piscina', pb_g_sea:'Mare',
   acc_guest:'Crea il tuo account per non perdere i progressi', proto:'Training a 4 fasi', left:'training rimanente',
   st_home_sub:'Prova massimale a secco', st_sub:'Solo a secco, seduto o sdraiato. Mai in acqua, mai da soli. Interrompi subito in caso di malessere.', st_warm:'Riscaldamento', st_trend:'Le mie prove',
@@ -1512,7 +1512,7 @@ Object.assign(T.it,{
   s_pb_att:(n)=>n===1?'1 risultato':n+' risultati', cal_act_b:(m,c,tot)=>`Respirazione · ${m} · ${c}/${tot} cicli`, cal_act_s:(d)=>`Apnea statica · ${d}`, cal_act_p:(d,v)=>`Record · ${d} ${v}`,
   wd:['L','M','M','G','V','S','D'], tip_box:'Inspira dal naso. Espira dalla bocca con leggera resistenza. Alza il volume e disattiva il silenzioso del telefono.'
 });
-Object.assign(T.en,{
+Object.assign(T.en,{D_DRY:'Dry static apnea',
   tab_pb:'Records', wl_pb:'My records', pb_title:'My records', pb_sub:'Your best for each discipline', pb_new:'Add', pb_add_title:'Result', pb_g_pool:'Pool', pb_g_sea:'Sea',
   acc_guest:'Create your account to keep your progress', proto:'4-phase training', left:'training left',
   st_home_sub:'Maximal dry attempt', st_sub:'Dry only, seated or lying down. Never in water, never alone. Stop immediately if you feel unwell.', st_warm:'Warm-up', st_trend:'My attempts',
@@ -1574,7 +1574,7 @@ $('b-tip').onclick=()=>{const b=$('tipbox');b.textContent=t('tip_box');b.style.d
 
 /* --- calendario --- */
 let calM=null,calSel=null;
-function pbDaySet(){const st=new Set();[...DISC.pool,...DISC.sea].forEach(c=>{let best=0;allEntries(c).forEach(e=>{if(e.v>best){best=e.v;st.add(dayKey(e.t))}})});return st}
+function pbDaySet(){const st=new Set();[...DISC.dry,...DISC.pool,...DISC.sea].forEach(c=>{let best=0;allEntries(c).forEach(e=>{if(e.v>best){best=e.v;st.add(dayKey(e.t))}})});return st}
 function openCal(){const d=new Date();calM=new Date(d.getFullYear(),d.getMonth(),1);calSel=dayKey(d);renderCal();renderTabs('s-cal');show('s-cal');track('calendar_open')}
 function renderCal(){
   const days=actsByDay(),stars=pbDaySet(),today=dayKey(new Date());
@@ -1604,18 +1604,18 @@ $('b-cal-back').onclick=()=>goTab('s-welcome');
 function allEntries(code){
   const out=[];
   pbRecords().filter(r=>r.actualParams.discipline===code).forEach(r=>out.push({id:r.id,t:+new Date(r.startedAt),v:r.actualParams.value,src:'pb',rec:r}));
-  if(code==='STA')staticRecords().forEach(r=>out.push({id:r.id,t:+new Date(r.startedAt),v:r.actualParams.holdSec,src:'static',rec:r}));
+  if(code==='DRY')staticRecords().forEach(r=>out.push({id:r.id,t:+new Date(r.startedAt),v:r.actualParams.holdSec,src:'static',rec:r}));
   return out.sort((a,b)=>a.t-b.t);
 }
-function discsWithData(){return [...DISC.pool,...DISC.sea].filter(c=>allEntries(c).length)}
-function staticPB(){return allEntries('STA').reduce((m,e)=>Math.max(m,e.v),0)}
+function discsWithData(){return [...DISC.dry,...DISC.pool,...DISC.sea].filter(c=>allEntries(c).length)}
+function staticPB(){return allEntries('DRY').reduce((m,e)=>Math.max(m,e.v),0)}
 let pbCur=null,pbEdit=null;
 function renderPB(){
   $('b-pb-add').innerHTML=ICON.plus+' '+t('pb_new');
   const grp=(key,icon,col)=>{const codes=DISC[key].filter(c=>allEntries(c).length);return codes.length?`<div class="pbgrp" style="--c:${col}"><span class="ic">${ICON[icon]}</span>${t('pb_g_'+key)}</div>`+codes.map(c=>{
     const es=allEntries(c),best=es.reduce((m,e)=>e.v>=m.v?e:m,es[0]);
-    return `<div class="pbcard" style="--c:${col}" data-d="${c}" role="button"><div class="pbh"><span class="pbn">${esc(T[lang]['D_'+c])} <small>${c}</small></span><span style="display:flex;align-items:baseline"><span class="pbv">${pbFmt(c,best.v)}</span><span class="chv">›</span></span></div><small>${new Date(best.t).toLocaleDateString(lang)} · ${T[lang].s_pb_att(es.length)}</small></div>`}).join(''):''};
-  let html=grp('pool','pool','var(--ph-hold_empty)')+grp('sea','sea','var(--ph-exhale)');
+    return `<div class="pbcard" style="--c:${col}" data-d="${c}" role="button"><div class="pbh"><span class="pbn">${esc(T[lang]['D_'+c])} <small>${c==='DRY'?'':c}</small></span><span style="display:flex;align-items:baseline"><span class="pbv">${pbFmt(c,best.v)}</span><span class="chv">›</span></span></div><small>${new Date(best.t).toLocaleDateString(lang)} · ${T[lang].s_pb_att(es.length)}</small></div>`}).join(''):''};
+  let html=grp('dry','timer','var(--ph-static)')+grp('pool','pool','var(--ph-hold_empty)')+grp('sea','sea','var(--ph-exhale)');
   if(!html){html=`<div class="pbempty"><img alt="" src="data:image/png;base64,${LOGO_B64}"><b style="font-size:18px">${t('pb_empty_t')}</b><span class="mut" style="color:var(--ink2);font-size:14px;max-width:290px">${t('pb_empty_s')}</span><button class="btn" id="b-pb-first" style="margin-top:6px;max-width:260px">+ ${t('pb_new')}</button></div>`}
   $('pb-body').innerHTML=html;
   const first=$('b-pb-first');if(first)first.onclick=()=>openPBAdd();
@@ -1635,10 +1635,10 @@ function discChart(es,code,col){
 }
 function openDisc(code){pbCur=code;renderDisc();renderTabs('s-pb-d');show('s-pb-d');track('pb_disc_open',{discipline:code})}
 function renderDisc(){
-  const code=pbCur,es=allEntries(code),isSea=DISC.sea.includes(code),col=isSea?'var(--ph-exhale)':'var(--ph-hold_empty)';
+  const code=pbCur,es=allEntries(code),isSea=DISC.sea.includes(code),col=isSea?'var(--ph-exhale)':DISC.dry.includes(code)?'var(--ph-static)':'var(--ph-hold_empty)';
   if(!es.length){return goTab('s-pb')}
   const best=Math.max(...es.map(e=>e.v));
-  $('pbd-title').textContent=T[lang]['D_'+code];$('pbd-sub').textContent=code;
+  $('pbd-title').textContent=T[lang]['D_'+code];$('pbd-sub').textContent=code==='DRY'?'':code;
   $('pbd-best').textContent=pbFmt(code,best);$('pbd-n').textContent=es.length;
   $('pbd-chart').innerHTML=discChart(es,code,col);
   const bestId=es.slice().reverse().find(e=>e.v===best).id;
