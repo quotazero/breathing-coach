@@ -511,7 +511,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.6.11';
+const VERSION='0.6.12';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1232,10 +1232,12 @@ function stFinish(aborted,reason){
 }
 /* --- recupero 1 minuto, respirazione libera --- */
 const REC_SEC=60;let rec=null;
+function recSteps(){return lang==='en'?['Exhale a little','Sharp inhale through the mouth','Hold 2 s — “hook”','Exhale gently']:['Espira appena','Inspira forte dalla bocca','Blocca 2 s — «hook»','Espira piano']}
 function startRecovery(){
-  rec={t0:Date.now()};$('rec-ph').textContent=t('rec_title');$('rec-sub').textContent=t('rec_sub');$('b-rec-skip').textContent=t('rec_skip');
+  rec={t0:Date.now()};$('rec-ph').textContent=t('rec_title');$('rec-sub').textContent=recSteps()[0];$('b-rec-skip').textContent=t('rec_skip');
   show('s-static-rec');acquireWake();log('static:recovery-start');
   const tk=()=>{if(!rec)return;const el=(Date.now()-rec.t0)/1000;const left=Math.max(0,REC_SEC-el);
+    {const c=el%7,k=c<1?0:c<2?1:c<4?2:3;if(rec.k!==k){rec.k=k;$('rec-sub').textContent=recSteps()[k]}}
     $('rec-num').textContent=fmt(Math.ceil(left));$('rec-bar').style.width=Math.min(100,el/REC_SEC*100).toFixed(1)+'%';
     if(left<=0)return endRecovery(false);rec.raf=requestAnimationFrame(tk)};tk();
 }
