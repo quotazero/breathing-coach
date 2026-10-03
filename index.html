@@ -521,7 +521,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.7.0';
+const VERSION='0.7.1';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1581,6 +1581,28 @@ $('b-push-off').onclick=async()=>{
     if(sub){await sb.from('push_subs').delete().eq('endpoint',sub.endpoint);await sub.unsubscribe()}track('push_off')}catch(e){log('push:off-error',e.message)}
   renderPush();
 };
+
+/* ---------- aggiornamento automatico ---------- */
+const vnum=v=>String(v||'0').split('.').map(n=>+n||0);
+const vNewer=(a,b)=>{const x=vnum(a),y=vnum(b);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return false};
+const BUSY=['s-session','s-feedback','s-next','s-static-run','s-static-rec','s-static-result','s-pb-add','s-disclaimer','s-onb'];
+async function autoUpdate(){
+  try{
+    if(!navigator.onLine)return;
+    const cur=document.querySelector('.screen.on');if(cur&&BUSY.includes(cur.id))return;
+    const r=await fetch(location.pathname+'?chk='+Date.now(),{cache:'no-store'});if(!r.ok)return;
+    const v=((await r.text()).match(/VERSION='([0-9.]+)'/)||[])[1];
+    if(!v||!vNewer(v,VERSION))return;
+    let tried=null;try{tried=sessionStorage.getItem('bc.autoupd')}catch(e){}
+    if(tried===v)return;                       // già provato in questa sessione: niente cicli
+    try{sessionStorage.setItem('bc.autoupd',v)}catch(e){}
+    log('app:auto-update',{from:VERSION,to:v});
+    try{await pushPrefs()}catch(e){}
+    location.replace(location.pathname+'?u='+Date.now());
+  }catch(e){log('app:auto-update-error',e.message)}
+}
+setTimeout(autoUpdate,2500);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(autoUpdate,800)});
 /* ---------- aggiorna app ---------- */
 function updLabel(){const b=$('b-update');if(b)b.textContent=lang==='en'?'Update app':'Aggiorna app'}
 updLabel();
