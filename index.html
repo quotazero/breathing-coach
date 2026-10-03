@@ -127,6 +127,41 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
 .stats div{flex:1;background:var(--bg2);border-radius:12px;padding:12px;text-align:center}
 .stats b{display:block;font-size:22px;font-weight:600}
 .stats span{font-size:12px;color:var(--ink2)}
+.rbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0}.rbtn svg{width:22px;height:22px}
+.pbcard .pbv{white-space:nowrap}
+.wtabs{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+.wk{display:block;width:100%;background:var(--bg2);border-radius:16px;padding:14px 8px 12px;margin:12px 0 4px;text-align:center}
+.wkg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.wkd{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--ink2)}
+.wkd.today{color:var(--ink);font-weight:700}
+.dr{width:34px;height:34px;border-radius:50%;padding:3px;display:flex;flex-shrink:0}
+.dr>i{flex:1;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;font-weight:600;color:var(--ink)}
+.dr>i svg{width:16px;height:16px}
+.dr.e{padding:0;border:1.5px solid var(--line)}.dr.e>i{background:none;color:var(--ink2);font-weight:400}
+.dr.fut{opacity:.4}
+.wkd.today .dr.e{border-color:var(--ink2)}
+.wkl{font-size:13px;color:var(--ink2);margin-top:10px}
+.calh{display:flex;align-items:center;justify-content:space-between;margin:14px 0 6px}.calh b{font-size:17px;text-transform:capitalize}
+.calh button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);font-size:20px}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:6px 2px;justify-items:center}
+.calg .wd{font-size:11px;color:var(--ink2)}
+.cd{display:flex;flex-direction:column;align-items:center;position:relative;width:100%}
+.cd .dr{width:38px;height:38px;padding:3px}.cd .dr.e{padding:0}
+.cd.sel .dr{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--accent)}
+.cd .st{position:absolute;top:-3px;right:calc(50% - 25px);color:var(--ph-inhale);font-size:11px;line-height:1}
+.cd .st svg{width:12px;height:12px;fill:currentColor}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin:14px 0 4px}.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.dayrow{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ink2)}.dayrow b{color:var(--ink)}.dayrow i{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.hist.tap{cursor:pointer}
+.hist .del,.hist .ed{flex-shrink:0;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);color:var(--ink2);display:flex;align-items:center;justify-content:center;padding:0}
+.hist .del svg,.hist .ed svg{width:18px;height:18px}
+.hist .ed:active{color:var(--accent);border-color:var(--accent)}
+.pbcard .chv{color:var(--ink2);font-size:22px;margin-left:8px}
+.startbar{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom,0px));padding-top:12px;background:linear-gradient(rgba(6,26,43,0),var(--bg) 28%)}
+#s-home .row{padding:9px 0}#s-home h2{margin-top:4px}
+#s-home .grp{margin-top:12px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(90px + env(safe-area-inset-bottom,0px));background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center;font-size:14px;z-index:50}
+.btn.sm{padding:12px;font-size:15px}
 @media (prefers-reduced-motion:reduce){#s-session{transition:none}.bar i{transition:none}}
 </style>
 </head>
@@ -173,21 +208,22 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
 <!-- ===== WELCOME ===== -->
 <section class="screen" id="s-welcome">
   <div class="top">
-    <div><h1 id="wl-hi"></h1><div class="sum" id="wl-streak"></div></div>
-    <div style="display:flex;gap:8px;align-items:center"><button class="pill" id="b-lang2">EN</button></div>
+    <h1 id="wl-hi"></h1>
+    <div style="display:flex;gap:8px;align-items:center"><button class="pill" id="b-lang2">EN</button><button class="rbtn" id="b-acc-ic" aria-label="account" style="width:40px;height:40px"></button></div>
   </div>
-  <div style="margin:10px 0 4px"><button class="pill" id="b-account3" style="width:100%;text-align:left"></button></div>
+  <div style="margin:10px 0 0"><button class="pill acc" id="b-account3" style="width:100%;text-align:left;display:none"></button></div>
+  <button class="wk" id="wk"><div class="wkg" id="wk-grid"></div><div class="wkl" id="wk-line"></div></button>
   <h2 data-i18n="wl_q"></h2>
   <button class="card" id="wl-breath" style="--c:var(--ph-hold_full)"><span class="ic" data-ic="lungs"></span><span><b data-i18n="wl_breath"></b><small id="wl-breath-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-static" style="--c:var(--ph-static)"><span class="ic" data-ic="timer"></span><span><b data-i18n="wl_static"></b><small id="wl-static-sub"></small></span><span class="chev">›</span></button>
-  <button class="card" id="wl-pb" style="--c:var(--ph-inhale)"><span class="ic" data-ic="diver"></span><span><b data-i18n="wl_pb"></b><small id="wl-pb-sub"></small></span><span class="chev">›</span></button>
-  <div class="note" style="margin-top:18px" id="wl-tip"></div>
+  <button class="card" id="wl-pb" style="--c:var(--ph-inhale)"><span class="ic" data-ic="trophy"></span><span><b data-i18n="wl_pb"></b><small id="wl-pb-sub"></small></span><span class="chev">›</span></button>
   <div style="flex:1"></div>
-  <div style="display:flex;justify-content:space-between;margin-top:18px">
-    <button class="link" id="b-history2" data-i18n="history"></button>
-    <button class="link" id="b-diag2" data-i18n="diag"></button>
+  <div style="display:flex;justify-content:center;gap:22px;margin-top:22px">
+    <button class="link" id="b-history" data-i18n="history"></button>
+    <button class="link" id="b-diag" data-i18n="diag"></button>
+    <a class="link" href="privacy.html" data-i18n="privacy"></a>
+    <a class="link" href="about.html" data-i18n="info"></a>
   </div>
-  <p class="tiny" style="margin-top:12px" id="ver2"></p>
   <nav class="tabs" data-tabs></nav>
 </section>
 
@@ -195,12 +231,13 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
 <section class="screen" id="s-home">
   <div class="top">
     <div>
-      <h1>Breathing Coach</h1>
+      <h1 data-i18n="tab_breath"></h1>
       <div class="sum" id="proto-name"></div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center"><button class="mute" id="b-mute-home"></button><button class="pill" id="b-lang">EN</button></div>
+    <div style="display:flex;gap:8px;align-items:center"><button class="mute" id="b-mute-home"></button><button class="rbtn" id="b-tip" aria-label="info" style="font-size:19px;font-weight:600;font-style:italic;font-family:Georgia,serif">i</button></div>
   </div>
-  <div style="margin:10px 0 4px"><button class="pill" id="b-account" style="width:100%;text-align:left"></button></div>
+  <button class="pill" id="b-lang" style="display:none">EN</button><button class="pill" id="b-account" style="display:none"></button>
+  <div class="note" id="tipbox" style="display:none;margin-top:10px"></div>
 
   <div class="grp grp-warm">
     <div class="top" style="align-items:center"><h2 data-i18n="set_warm"></h2><button class="pill" id="b-warm-edit" style="display:inline-flex;gap:6px;align-items:center"></button></div>
@@ -222,17 +259,9 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <div class="row"><div class="lbl" data-i18n="set_he"></div><div class="stepper" data-k="holdEmpty" data-step="5" data-min="0" data-max="300"></div></div>
   <div class="row"><div class="lbl" data-i18n="set_cycles"></div><div class="stepper" data-k="cycles" data-step="1" data-min="1" data-max="30"></div></div></div>
 
-  <div class="sum" id="sum-total"></div>
-  <div class="note" style="margin-top:14px" data-i18n="reminder"></div>
-
-  <button class="btn" id="b-start" data-i18n="start"></button>
-  <p class="tiny" style="text-align:center;margin-top:8px" data-i18n="vol_hint"></p>
-
-  <div style="display:flex;justify-content:space-between;margin-top:18px">
-    <button class="link" id="b-history" data-i18n="history"></button>
-    <button class="link" id="b-diag" data-i18n="diag"></button>
-  </div>
-  <p class="tiny" style="margin-top:22px" id="ver"></p>
+  <div class="sum" id="sum-total" style="margin-top:12px"></div>
+  <div style="flex:1"></div>
+  <div class="startbar"><button class="btn" id="b-start" data-i18n="start" style="margin-top:0"></button></div>
   <nav class="tabs" data-tabs></nav>
 </section>
 
@@ -270,6 +299,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <textarea id="fb-notes"></textarea>
   <div style="flex:1"></div>
   <button class="btn" id="b-save" data-i18n="save"></button>
+  <button class="btn ghost sm" id="b-fb-discard" data-i18n="discard" style="color:var(--danger);border-color:rgba(242,160,160,.35)"></button>
 </section>
 
 <!-- ===== PROSSIMA SESSIONE ===== -->
@@ -290,14 +320,13 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
 
 <!-- ===== APNEA STATICA: intro / storico ===== -->
 <section class="screen" id="s-static">
-  <div class="top"><div><h1 data-i18n="st_title"></h1><div class="sum" data-i18n="st_home_sub"></div></div><button class="pill" id="b-account2" style="flex-shrink:0;max-width:42%;overflow:hidden;text-overflow:ellipsis"></button></div>
-  <p data-i18n="st_sub"></p>
+  <div class="top"><div><h1 data-i18n="st_title"></h1><div class="sum" data-i18n="st_home_sub"></div></div></div>
+  <p style="margin-top:10px" data-i18n="st_sub"></p>
   <div class="stats"><div><b id="st-pb">–</b><span data-i18n="st_pb"></span></div><div><b id="st-last">–</b><span data-i18n="st_last"></span></div><div><b id="st-count">0</b><span data-i18n="st_tests"></span></div></div>
-  <div class="grp grp-static"><h2 data-i18n="st_settings"></h2>
-    <div class="row"><div class="lbl" data-i18n="st_warm"><small></small></div><div class="stepper" id="st-warm"></div></div>
+  <div class="grp grp-static" style="margin-top:14px"><h2 data-i18n="st_settings"></h2>
+    <div class="row"><div class="lbl" data-i18n="st_warm"></div><div class="stepper" id="st-warm"></div></div>
     <div class="row"><div class="lbl" data-i18n="st_voice"></div><div style="display:flex;gap:8px"><button class="pill" id="b-st-voice">—</button></div></div>
 </div>
-  <div class="note" style="margin-top:12px" data-i18n="st_hint_long"></div>
   <button class="btn" id="b-st-start" data-i18n="st_start"></button>
   <p class="tiny" style="text-align:center;margin-top:8px" data-i18n="vol_hint"></p>
   <h2 data-i18n="st_trend"></h2>
@@ -357,7 +386,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <nav class="tabs" data-tabs></nav>
 </section>
 <section class="screen" id="s-pb-add">
-  <div class="top"><h1 data-i18n="pb_add_title"></h1><button class="pill" id="b-pbadd-back" data-i18n="back"></button></div>
+  <div class="top"><h1 id="pbadd-title"></h1><button class="pill" id="b-pbadd-back" data-i18n="back"></button></div>
   <h2 data-i18n="pb_disc"></h2>
   <div id="pbadd-disc"></div>
   <h2 id="pbadd-vlabel"></h2>
@@ -368,6 +397,39 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <p class="tiny" id="pbadd-err" style="color:#F2A0A0;min-height:18px"></p>
   <div style="flex:1"></div>
   <button class="btn" id="b-pbadd-save" data-i18n="save"></button>
+</section>
+
+<!-- ===== RECORD: disciplina ===== -->
+<section class="screen wtabs" id="s-pb-d">
+  <div class="top"><div><h1 id="pbd-title"></h1><div class="sum" id="pbd-sub"></div></div><button class="pill" id="b-pbd-back" data-i18n="back"></button></div>
+  <div class="stats"><div><b id="pbd-best">–</b><span data-i18n="st_pb"></span></div><div><b id="pbd-n">0</b><span data-i18n="results"></span></div></div>
+  <div id="pbd-chart" style="margin-top:10px"></div>
+  <div id="pbd-list" style="margin-top:6px"></div>
+  <button class="btn" id="b-pbd-add"></button>
+  <nav class="tabs" data-tabs></nav>
+</section>
+
+<!-- ===== APNEA STATICA: dettaglio prova ===== -->
+<section class="screen wtabs" id="s-st-d">
+  <div class="top"><div><h1 id="std-title"></h1><div class="sum" id="std-sub"></div></div><button class="pill" id="b-std-back" data-i18n="back"></button></div>
+  <div class="stats"><div><b id="std-total">–</b><span data-i18n="st_total"></span></div><div><b id="std-first">–</b><span data-i18n="st_first"></span></div><div><b id="std-contr">0</b><span data-i18n="st_contr"></span></div></div>
+  <h2 data-i18n="st_chart_title"></h2>
+  <div id="std-chart"></div>
+  <p class="tiny" data-i18n="st_legend"></p>
+  <p id="std-notes"></p>
+  <div style="flex:1"></div>
+  <button class="btn ghost sm" id="b-std-del" style="color:var(--danger);border-color:rgba(242,160,160,.35)"></button>
+  <nav class="tabs" data-tabs></nav>
+</section>
+
+<!-- ===== CALENDARIO ===== -->
+<section class="screen wtabs" id="s-cal">
+  <div class="top"><h1 data-i18n="cal_title"></h1><button class="pill" id="b-cal-back" data-i18n="back"></button></div>
+  <div class="calh"><button id="cal-prev" aria-label="prev">‹</button><b id="cal-month"></b><button id="cal-next" aria-label="next">›</button></div>
+  <div class="calg" id="cal-grid"></div>
+  <div class="legend"><span><i style="background:var(--ph-hold_full)"></i><span data-i18n="tab_breath"></span></span><span><i style="background:var(--ph-static)"></i><span data-i18n="tab_static"></span></span><span><span style="color:var(--ph-inhale)">★</span> <span data-i18n="cal_star"></span></span></div>
+  <div id="cal-day" style="margin-top:8px"></div>
+  <nav class="tabs" data-tabs></nav>
 </section>
 
 <!-- ===== ACCOUNT / LOGIN ===== -->
@@ -413,6 +475,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
 <section class="screen" id="s-diag">
   <div class="top"><h1 data-i18n="diag"></h1><button class="pill" id="b-diag-back" data-i18n="back"></button></div>
   <p class="tiny" data-i18n="diag_help"></p>
+  <p class="tiny" id="diag-ver"></p>
   <pre id="diag-out"></pre>
   <button class="btn" id="b-copy" data-i18n="copy"></button>
   <button class="btn ghost" id="b-clear" data-i18n="clear_log"></button>
@@ -427,7 +490,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.5.2';
+const VERSION='0.6.0';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -929,6 +992,7 @@ function finish(aborted,reason){
   if(run.url)URL.revokeObjectURL(run.url);
   releaseWake();
   $('s-session').style.background='var(--bg)';$('s-session').classList.remove('dark');
+  if(aborted&&cyc===0&&ct<30){log('session:discarded-short');track('session_discard',{where:'auto'});run=null;$('b-start').disabled=false;stopArm=0;$('b-stop').textContent=t('stop');goTab('s-home');toast(t('discarded'));return}
   $('fb-title').textContent=aborted?t('abort_title'):t('done_title');
   $('fb-sub').textContent=`${cyc}/${params.cycles} ${t('cycle')} · ${t2(ct)}`;
   document.querySelectorAll('.fb button').forEach(b=>b.classList.remove('sel'));$('fb-notes').value='';fbChoice=null;
@@ -1031,11 +1095,10 @@ function renderStatic(){
   $('st-pb').textContent=pb?fmt(pb):'–';$('st-last').textContent=last?fmt(last.actualParams.holdSec):'–';$('st-count').textContent=recs.length;
   $('st-trend').innerHTML=recs.length>=2?trendChart(recs.slice(-20)):'';
   $('st-list').innerHTML=recs.length?recs.slice().reverse().slice(0,30).map(r=>{const d=new Date(r.startedAt),a=r.actualParams;
-    return `<div class="hist"><div class="ht"><b>${d.toLocaleDateString(lang)}</b> · <b>${fmt(a.holdSec)}</b>${a.holdSec===pb?' · PB':''} — ${T[lang].st_hist(a.firstContractionSec!=null?fmt(a.firstContractionSec):'',a.contractions.length)}${r.notes?'<br>'+String(r.notes).replace(/</g,'&lt;'):''}</div><button class="del" data-id="${r.id}" aria-label="delete">✕</button></div>`}).join(''):`<p>${t('st_empty')}</p>`;
+    return `<div class="hist"><div class="ht"><b>${d.toLocaleDateString(lang)}</b> · <b>${fmt(a.holdSec)}</b>${a.holdSec===pb?' · PB':''} — ${T[lang].st_hist(a.firstContractionSec!=null?fmt(a.firstContractionSec):'',a.contractions.length)}${r.notes?'<br>'+String(r.notes).replace(/</g,'&lt;'):''}</div><button class="del" data-id="${r.id}" aria-label="delete">${ICON.trash}</button></div>`}).join(''):`<p>${t('st_empty')}</p>`;
   bindDeletes($('st-list'),renderStatic);
 }
 $('b-st-voice').onclick=()=>{stCfg.voice=!stCfg.voice;stSave();if(stCfg.voice)speak(t('st_title'))};
-$('b-account2').onclick=()=>openAccount(false);
 
 /* --- motore prova --- */
 let srun=null;
@@ -1121,7 +1184,8 @@ function stFinish(aborted,reason){
   $('str-chart').innerHTML=holdSec>0?attemptChart(holdSec,srun.contr):'';
   $('str-notes').value='';$('str-notes').placeholder=t('notes_ph');
   $('b-st-start').disabled=false;
-  if(holdSec>0)startRecovery();else show('s-static-result');
+  if(holdSec<10){log('static:discarded-short');track('static_discard',{hold:holdSec});srun=null;goTab('s-static');toast(t('st_discarded'));return}
+  startRecovery();
 }
 /* --- recupero 1 minuto, respirazione libera --- */
 const REC_SEC=60;let rec=null;
@@ -1160,7 +1224,7 @@ function attemptChart(total,contr){
   s+=`<line x1="${L}" y1="${base}" x2="${W-R}" y2="${base}" stroke="rgba(234,244,247,.5)" stroke-width="2"/>`;
   if(contr.length){const f=x(contr[0]);s+=`<rect x="${f}" y="${base-2}" width="${W-R-f}" height="4" fill="var(--ph-hold_full)" opacity=".7"/>`}
   contr.forEach((c,i)=>{s+=`<line x1="${x(c)}" y1="${base-14}" x2="${x(c)}" y2="${base+8}" stroke="${i===0?'var(--ph-hold_full)':'var(--ink)'}" stroke-width="${i===0?2.5:1.5}"/>`});
-  const step=total>240?60:30;for(let m=0;m<=total;m+=step)s+=`<text x="${x(m)}" y="${H-6}" text-anchor="${m===0?'start':m+step>total?'end':'middle'}">${fmt(m)}</text>`;
+  const step=total>240?60:30;for(let m=0;m<=total;m+=step){if(m>0&&total-m<step*.4)continue;s+=`<text x="${x(m)}" y="${H-6}" text-anchor="${m===0?'start':m+step>total?'end':'middle'}">${fmt(m)}</text>`;}
   s+=`<text x="${W-R}" y="${H-6}" text-anchor="end">${fmt(total)}</text>`;
   if(contr.length)s+=`<text x="${Math.min(W-40,x(contr[0]))}" y="${base-20}" fill="var(--ph-hold_full)">${t('st_first')} ${fmt(contr[0])}</text>`;
   return s+'</svg>';
@@ -1192,11 +1256,16 @@ const ICON={
   pool:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9.5h18M3 14.5h18"/><path d="M7 5v14M12 5v14M17 5v14" stroke-dasharray="1 3"/></svg>',
   sea:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9c1.8-1.6 3.4-1.6 5 0s3.2 1.6 5 0 3.4-1.6 5 0 2.2 1 2.5.8"/><path d="M2.5 14c1.8-1.6 3.4-1.6 5 0s3.2 1.6 5 0 3.4-1.6 5 0 2.2 1 2.5.8"/><path d="M2.5 19c1.8-1.6 3.4-1.6 5 0s3.2 1.6 5 0 3.4-1.6 5 0 2.2 1 2.5.8"/></svg>',
   plus:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  trophy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H5v1.5A3 3 0 0 0 8 10.5"/><path d="M16 6h3v1.5a3 3 0 0 1-3 3"/><path d="M12 13v4"/><path d="M10 17h4"/><path d="M8.5 20h7"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l.8 12h9.4l.8-12"/><path d="M10 11v5M14 11v5"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 20c.6-3.6 3.6-5.6 7-5.6s6.4 2 7 5.6"/></svg>',
+  star:'<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9 6.8 19.7l1-5.9L3.5 9.7l5.9-.8L12 3.5z"/></svg>',
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 10.5V20h12v-9.5"/></svg>'
 };
 document.querySelectorAll('[data-ic]').forEach(el=>el.innerHTML=ICON[el.dataset.ic]);
-const TAB_DEFS=[['s-welcome','home','tab_home'],['s-home','lungs','tab_breath'],['s-static','timer','tab_static'],['s-pb','diver','tab_pb']];
-function renderTabs(active){
+const TAB_DEFS=[['s-welcome','home','tab_home'],['s-home','lungs','tab_breath'],['s-static','timer','tab_static'],['s-pb','trophy','tab_pb']];
+const TABMAP={'s-cal':'s-welcome','s-pb-d':'s-pb','s-pb-add':'s-pb','s-st-d':'s-static'};
+function renderTabs(active){active=TABMAP[active]||active;
   document.querySelectorAll('[data-tabs]').forEach(nav=>{nav.innerHTML=TAB_DEFS.map(([id,ic,k])=>`<button class="tab${id===active?' sel':''}" data-tab="${id}"><span class="ic">${ICON[ic]}</span><span>${t(k)}</span></button>`).join('');
     nav.querySelectorAll('.tab').forEach(b=>b.onclick=()=>goTab(b.dataset.tab))});
 }
@@ -1217,12 +1286,11 @@ function renderWelcome(){
   const pb=staticPB();$('wl-static-sub').textContent=T[lang].wl_static_sub(pb?fmt(pb):'');
   $('wl-pb-sub').textContent=T[lang].pb_sub_wl(pbRecords().length);
   $('wl-tip').textContent=t('wl_tip');$('ver2').textContent=`Breathing Coach v${VERSION} · Orbita by Quota Zero`;
-  const b3=$('b-account3');b3.textContent=$('b-account').textContent;b3.classList.toggle('acc',!isGuest());
+  const b3=$('b-account3');b3.textContent=$('b-account').textContent;b3.style.display=isGuest()?'block':'none';
 }
 $('wl-pb').onclick=()=>goTab('s-pb');$('wl-breath').onclick=()=>goTab('s-home');$('wl-static').onclick=()=>goTab('s-static');
 $('b-account3').onclick=()=>openAccount(false);
 $('b-lang2').onclick=()=>$('b-lang').click();
-$('b-history2').onclick=()=>$('b-history').click();$('b-diag2').onclick=()=>$('b-diag').click();
 
 /* ---------- mute ---------- */
 let muted=ls('bc.muted')==='1';
@@ -1251,7 +1319,7 @@ function renderPB(){
     const open=pbOpen===code;
     return `<div class="pbcard" style="--c:${color}" data-d="${code}" ${dry?'':'role="button"'}><div class="pbh"><span class="pbn">${esc(T[lang]['D_'+code])} <small>${code}</small></span><span class="pbv">${pbFmt(code,best)}</span></div>
       <small>${dry?t('pb_dry_note'):new Date(bestRec.startedAt).toLocaleDateString(lang)+' · '+T[lang].pb_att(list.length)}</small>${dry?'':pbSpark(vals)}
-      ${open&&!dry?'<div style="margin-top:8px">'+list.slice().reverse().map(r=>`<div class="hist" style="margin:0"><div class="ht"><b>${new Date(r.startedAt).toLocaleDateString(lang)}</b> · ${pbFmt(code,r.actualParams.value)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="del" data-id="${r.id}" aria-label="delete">✕</button></div>`).join('')+'</div>':''}</div>`};
+      ${open&&!dry?'<div style="margin-top:8px">'+list.slice().reverse().map(r=>`<div class="hist" style="margin:0"><div class="ht"><b>${new Date(r.startedAt).toLocaleDateString(lang)}</b> · ${pbFmt(code,r.actualParams.value)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="del" data-id="${r.id}" aria-label="delete">${ICON.trash}</button></div>`).join('')+'</div>':''}</div>`};
   let html='';
   const dry=spb?`<div class="pbgrp" style="--c:var(--ph-static)"><span class="ic">${ICON.timer}</span>${t('pb_g_dry')}</div>`+card('STA',[{actualParams:{value:spb},startedAt:new Date()}],'var(--ph-static)',true):'';
   const grp=(key,icon,col)=>{const codes=DISC[key].filter(c=>by[c]);return codes.length?`<div class="pbgrp" style="--c:${col}"><span class="ic">${ICON[icon]}</span>${t('pb_g_'+key)}</div>`+codes.map(c=>card(c,by[c],col,false)).join(''):''};
@@ -1299,7 +1367,7 @@ function renderSettings(){
     p.onclick=()=>{params[k]=Math.min(max,params[k]+step);save();manualChange()};
   });
   const tl=buildTimeline(params);
-  $('sum-total').textContent=T[lang].sum_total(t2(tl.total));
+  {const wsec=params.warmReps*(params.warmIn+params.warmOut);$('sum-total').textContent=T[lang].sum_split(t2(wsec),t2(params.cycles*(params.inhale+params.holdFull+params.exhale+params.holdEmpty)),t2(tl.total))}
   $('proto-name').textContent=t('proto');
   renderWarm();
 }
@@ -1308,7 +1376,7 @@ function renderWarm(){
   const wt=buildTimeline({...params,cycles:0});
   const secs=params.warmReps*(params.warmIn+params.warmOut);
   $('warm-sum').textContent=T[lang].warm_sumf(params.warmReps,params.warmIn,params.warmOut);
-  $('warm-tag').textContent=(params.warmReps>0?`≈ ${t2(secs)} · `:'')+(warmMine()?t('warm_mine'):t('warm_def'));
+  $('warm-tag').textContent=warmMine()?t('warm_mine'):'';$('warm-tag').style.display=warmMine()?'':'none';
   $('warm-view').style.display=warmEditing?'none':'flex';$('warm-edit').style.display=warmEditing?'block':'none';
   $('b-warm-edit').innerHTML=warmEditing?'':ICON.pencil+' '+t('warm_edit');$('b-warm-edit').style.display=warmEditing?'none':'inline-flex';
   $('b-warm-save').textContent=t('warm_save');$('b-warm-reset').textContent=t('warm_reset');$('b-warm-cancel').textContent=t('warm_cancel');
@@ -1344,7 +1412,7 @@ function renderAccountPill(){
   const b=$('b-account');if(!b)return;
   if(isGuest()){b.textContent=t('acc_guest');b.classList.remove('acc')}
   else{const pend=lsJ(KEY.sess,[]).filter(r=>!r.synced).length;b.textContent=(userLabel()||'')+(pend?' · ⟳':' · ✓');b.classList.add('acc')}
-  const b3=$('b-account3');if(b3){b3.textContent=$('b-account').textContent;b3.classList.toggle('acc',!isGuest())}
+  const b3=$('b-account3');if(b3){b3.textContent=$('b-account').textContent;b3.style.display=isGuest()?'block':'none'}
   const b2=$('b-account2');if(b2){b2.textContent=isGuest()?t('acc_guest').split(' · ')[0]:(userLabel()||'');b2.classList.toggle('acc',!isGuest())}
 }
 function renderAccMode(){$('b-acc-mode').textContent=accMode==='new'?t('acc_mode_new'):t('acc_mode_existing')}
@@ -1389,7 +1457,7 @@ $('b-export').onclick=()=>{
 /* ---------- history ---------- */
 function renderHistory(){
   const all=lsJ(KEY.sess,[]).slice().reverse();
-  const D=r=>`<button class="del" data-id="${r.id}" aria-label="delete">✕</button>`;
+  const D=r=>`<button class="del" data-id="${r.id}" aria-label="delete">${ICON.trash}</button>`;
   $('hist-list').innerHTML=all.length?all.map(r=>{
     const d=new Date(r.startedAt),p=r.plannedParams||{},fb={easy:'😄',right:'😐',hard:'😣'}[r.feedback]||'·';
     const when=`<b>${d.toLocaleDateString(lang)} ${d.toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'})}</b>`;
@@ -1414,7 +1482,7 @@ function applyLang(){
   document.documentElement.lang=lang;
   document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});
   $('fb-notes').placeholder=t('notes_ph');$('b-lang').textContent=lang==='it'?'EN':'IT';
-  $('ver').textContent=`Breathing Coach v${VERSION} · Orbita by Quota Zero`;
+  $('diag-ver').textContent=`Breathing Coach v${VERSION} · Orbita by Quota Zero`;
   $('b-lang2').textContent=$('b-lang').textContent;
   renderSettings();renderAccountPill();renderAccMode();renderStatic();renderTabs(document.querySelector('.screen.on')?.id||'s-welcome');if($('s-welcome').classList.contains('on'))renderWelcome();
 }
@@ -1428,6 +1496,223 @@ $('b-accept').onclick=async()=>{
   renderOnb();show('s-onb');
   await ensureUser();if(user){registerDevice();syncAll()}
 };
+
+/* ============================================================
+   v0.6 — home con settimana, calendario, record per disciplina, annulla allenamento
+   ============================================================ */
+Object.assign(T.it,{
+  tab_pb:'Record', wl_pb:'I miei record', pb_title:'I miei record', pb_sub:'Il tuo migliore per ogni disciplina', pb_new:'Aggiungi', pb_add_title:'Risultato', pb_g_pool:'Piscina', pb_g_sea:'Mare',
+  acc_guest:'Crea il tuo account per non perdere i progressi', proto:'Training a 4 fasi', left:'training rimanente',
+  st_home_sub:'Prova massimale a secco', st_sub:'Solo a secco, seduto o sdraiato. Mai in acqua, mai da soli. Interrompi subito in caso di malessere.', st_warm:'Riscaldamento', st_trend:'Le mie prove',
+  privacy:'Privacy', info:'Info', discard:'Non salvare', discard_confirm:'Eliminare questo allenamento? Non verrà salvato.', discarded:'Allenamento annullato, non salvato.', st_discarded:'Prova annullata, non salvata.',
+  stop_again:'Tocca ancora per interrompere', results:'risultati', cal_title:'Calendario', cal_star:'nuovo record', cal_none:'Nessuna attività in questo giorno.', add_result:'+ Aggiungi risultato',
+  edit_result:'Modifica risultato', del_test:'Elimina questa prova', pb_tag:'PB', tip_vol:'Alza il volume e disattiva il silenzioso del telefono.',
+  wk_line:(s,n)=>`${s>1?s+' giorni di fila':s===1?'Allenato oggi · continua domani':'Nessun allenamento recente'} · ${n===1?'1 allenamento':n+' allenamenti'} questa settimana`,
+  sum_split:(w,tr,tot)=>`Riscaldamento ${w} · Training ${tr}`, wl_static:'Prova massimale', warm_mine:'Personalizzato',
+  s_pb_att:(n)=>n===1?'1 risultato':n+' risultati', cal_act_b:(m,c,tot)=>`Respirazione · ${m} · ${c}/${tot} cicli`, cal_act_s:(d)=>`Apnea statica · ${d}`, cal_act_p:(d,v)=>`Record · ${d} ${v}`,
+  wd:['L','M','M','G','V','S','D'], tip_box:'Inspira dal naso. Espira dalla bocca con leggera resistenza. Alza il volume e disattiva il silenzioso del telefono.'
+});
+Object.assign(T.en,{
+  tab_pb:'Records', wl_pb:'My records', pb_title:'My records', pb_sub:'Your best for each discipline', pb_new:'Add', pb_add_title:'Result', pb_g_pool:'Pool', pb_g_sea:'Sea',
+  acc_guest:'Create your account to keep your progress', proto:'4-phase training', left:'training left',
+  st_home_sub:'Maximal dry attempt', st_sub:'Dry only, seated or lying down. Never in water, never alone. Stop immediately if you feel unwell.', st_warm:'Warm-up', st_trend:'My attempts',
+  privacy:'Privacy', info:'Info', discard:'Don’t save', discard_confirm:'Delete this workout? It will not be saved.', discarded:'Workout cancelled, not saved.', st_discarded:'Attempt cancelled, not saved.',
+  stop_again:'Tap again to stop', results:'results', cal_title:'Calendar', cal_star:'new record', cal_none:'No activity on this day.', add_result:'+ Add result',
+  edit_result:'Edit result', del_test:'Delete this attempt', pb_tag:'PB', tip_vol:'Turn the volume up and switch off silent mode.',
+  wk_line:(s,n)=>`${s>1?s+' days in a row':s===1?'Trained today · keep going tomorrow':'No recent workouts'} · ${n===1?'1 workout':n+' workouts'} this week`,
+  sum_split:(w,tr,tot)=>`Warm-up ${w} · Training ${tr}`, wl_static:'Maximal attempt', warm_mine:'Custom',
+  s_pb_att:(n)=>n===1?'1 result':n+' results', cal_act_b:(m,c,tot)=>`Breathing · ${m} · ${c}/${tot} cycles`, cal_act_s:(d)=>`Static apnea · ${d}`, cal_act_p:(d,v)=>`Record · ${d} ${v}`,
+  wd:['M','T','W','T','F','S','S'], tip_box:'Inhale through the nose. Exhale through the mouth with light resistance. Turn the volume up and switch off silent mode.'
+});
+function toast(msg){const d=document.createElement('div');d.className='toast';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
+const COL={breath:'var(--ph-hold_full)',static:'var(--ph-static)',pb:'var(--ph-inhale)'};
+
+/* --- attività, serie, settimana --- */
+function actType(r){
+  if(r.exerciseId==='breathing')return(r.status==='completed'||(r.elapsedSec||0)>=120)?'breath':null;
+  if(r.exerciseId==='static')return 'static';
+  return null;
+}
+function actsByDay(){const m={};lsJ(KEY.sess,[]).forEach(r=>{const ty=actType(r);if(ty){const k=dayKey(r.startedAt);(m[k]=m[k]||[]).push({ty,r})}});return m}
+function streakDays(){
+  const days=actsByDay();let n=0;const d=new Date();
+  if(!days[dayKey(d)]){d.setDate(d.getDate()-1);if(!days[dayKey(d)])return 0}
+  while(days[dayKey(d)]){n++;d.setDate(d.getDate()-1)}return n;
+}
+function ringHTML(types,inner,cls){
+  const u=[...new Set(types)];
+  if(!u.length)return `<span class="dr e ${cls||''}"><i>${inner||''}</i></span>`;
+  const bg=u.length===1?COL[u[0]]:`conic-gradient(${u.map((c,i)=>`${COL[c]} ${i*100/u.length}% ${(i+1)*100/u.length}%`).join(',')})`;
+  return `<span class="dr ${cls||''}" style="background:${bg}"><i>${inner||''}</i></span>`;
+}
+function weekStart(d0){const d=new Date(d0||Date.now());d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
+function renderWeek(){
+  const days=actsByDay(),ws=weekStart(),today=dayKey(new Date());let n=0,html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(ws);d.setDate(ws.getDate()+i);const k=dayKey(d),a=days[k]||[],ty=a.map(x=>x.ty);n+=a.length;
+    const fut=d>new Date()&&k!==today;
+    const inner=ty.length===1?`<span style="color:${COL[ty[0]]};display:flex">${ICON[ty[0]==='breath'?'lungs':'timer']}</span>`:ty.length>1?String(ty.length):'';
+    html+=`<div class="wkd${k===today?' today':''}"><span>${T[lang].wd[i]}</span>${ringHTML(ty,inner,fut?'fut':'')}</div>`;
+  }
+  $('wk-grid').innerHTML=html;$('wk-line').textContent=T[lang].wk_line(streakDays(),n);
+}
+
+/* --- welcome --- */
+function renderWelcome(){
+  $('wl-hi').textContent=T[lang].wl_hi(userLabel()||(profile&&profile.display_name)||'');
+  renderWeek();
+  const br=lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='breathing'&&r.status==='completed').pop();
+  $('wl-breath-sub').textContent=T[lang].wl_breath_sub(br?`${new Date(br.startedAt).toLocaleDateString(lang)} · ${t2(br.elapsedSec)}`:'');
+  const pb=staticPB();$('wl-static-sub').textContent=T[lang].wl_static_sub(pb?fmt(pb):'');
+  $('wl-pb-sub').textContent=T[lang].pb_sub_wl(discsWithData().length);
+  $('b-acc-ic').innerHTML=ICON.user;
+  const b3=$('b-account3');b3.textContent=$('b-account').textContent;b3.style.display=isGuest()?'block':'none';
+}
+$('b-acc-ic').onclick=()=>openAccount(false);
+$('wk').onclick=()=>openCal();
+$('b-tip').onclick=()=>{const b=$('tipbox');b.textContent=t('tip_box');b.style.display=b.style.display==='none'?'block':'none'};
+
+/* --- calendario --- */
+let calM=null,calSel=null;
+function pbDaySet(){const st=new Set();[...DISC.pool,...DISC.sea].forEach(c=>{let best=0;allEntries(c).forEach(e=>{if(e.v>best){best=e.v;st.add(dayKey(e.t))}})});return st}
+function openCal(){const d=new Date();calM=new Date(d.getFullYear(),d.getMonth(),1);calSel=dayKey(d);renderCal();renderTabs('s-cal');show('s-cal');track('calendar_open')}
+function renderCal(){
+  const days=actsByDay(),stars=pbDaySet(),today=dayKey(new Date());
+  $('cal-month').textContent=calM.toLocaleDateString(lang,{month:'long',year:'numeric'});
+  const first=new Date(calM),off=(first.getDay()+6)%7,dim=new Date(calM.getFullYear(),calM.getMonth()+1,0).getDate();
+  let h=T[lang].wd.map(x=>`<span class="wd">${x}</span>`).join('');
+  for(let i=0;i<off;i++)h+='<span></span>';
+  for(let d=1;d<=dim;d++){
+    const dt=new Date(calM.getFullYear(),calM.getMonth(),d),k=dayKey(dt),ty=(days[k]||[]).map(x=>x.ty),fut=dt>new Date()&&k!==today;
+    h+=`<button class="cd${k===calSel?' sel':''}" data-k="${k}">${stars.has(k)?`<span class="st">${ICON.star}</span>`:''}${ringHTML(ty,d,fut?'fut':'')}</button>`;
+  }
+  $('cal-grid').innerHTML=h;
+  $('cal-grid').querySelectorAll('.cd').forEach(b=>b.onclick=()=>{calSel=b.dataset.k;renderCal()});
+  const L=[];const sel=calSel;
+  lsJ(KEY.sess,[]).forEach(r=>{if(dayKey(r.startedAt)!==sel)return;const ty=actType(r);const a=r.actualParams||{},p=r.plannedParams||{};
+    if(ty==='breath')L.push([r,'breath',T[lang].cal_act_b(t2(r.elapsedSec||0),r.cyclesCompleted||0,p.cycles||0)]);
+    else if(ty==='static')L.push([r,'static',T[lang].cal_act_s(fmt(a.holdSec||0))]);
+    else if(r.exerciseId==='pb'&&r.status==='completed')L.push([r,'pb',T[lang].cal_act_p(esc(T[lang]['D_'+a.discipline]||a.discipline),pbFmt(a.discipline,a.value))])});
+  L.sort((x,y)=>new Date(x[0].startedAt)-new Date(y[0].startedAt));
+  $('cal-day').innerHTML=L.length?L.map(([r,ty,txt])=>`<div class="dayrow"><i style="background:${COL[ty]}"></i><span><b>${new Date(r.startedAt).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'})}</b> ${ty==='pb'?txt:txt}</span></div>`).join(''):`<p>${t('cal_none')}</p>`;
+}
+$('cal-prev').onclick=()=>{calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);renderCal()};
+$('cal-next').onclick=()=>{calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);renderCal()};
+$('b-cal-back').onclick=()=>goTab('s-welcome');
+
+/* --- record per disciplina --- */
+function allEntries(code){
+  const out=[];
+  pbRecords().filter(r=>r.actualParams.discipline===code).forEach(r=>out.push({id:r.id,t:+new Date(r.startedAt),v:r.actualParams.value,src:'pb',rec:r}));
+  if(code==='STA')staticRecords().forEach(r=>out.push({id:r.id,t:+new Date(r.startedAt),v:r.actualParams.holdSec,src:'static',rec:r}));
+  return out.sort((a,b)=>a.t-b.t);
+}
+function discsWithData(){return [...DISC.pool,...DISC.sea].filter(c=>allEntries(c).length)}
+function staticPB(){return allEntries('STA').reduce((m,e)=>Math.max(m,e.v),0)}
+let pbCur=null,pbEdit=null;
+function renderPB(){
+  $('b-pb-add').innerHTML=ICON.plus+' '+t('pb_new');
+  const grp=(key,icon,col)=>{const codes=DISC[key].filter(c=>allEntries(c).length);return codes.length?`<div class="pbgrp" style="--c:${col}"><span class="ic">${ICON[icon]}</span>${t('pb_g_'+key)}</div>`+codes.map(c=>{
+    const es=allEntries(c),best=es.reduce((m,e)=>e.v>=m.v?e:m,es[0]);
+    return `<div class="pbcard" style="--c:${col}" data-d="${c}" role="button"><div class="pbh"><span class="pbn">${esc(T[lang]['D_'+c])} <small>${c}</small></span><span style="display:flex;align-items:baseline"><span class="pbv">${pbFmt(c,best.v)}</span><span class="chv">›</span></span></div><small>${new Date(best.t).toLocaleDateString(lang)} · ${T[lang].s_pb_att(es.length)}</small></div>`}).join(''):''};
+  let html=grp('pool','pool','var(--ph-hold_empty)')+grp('sea','sea','var(--ph-exhale)');
+  if(!html){html=`<div class="pbempty"><img alt="" src="data:image/png;base64,${LOGO_B64}"><b style="font-size:18px">${t('pb_empty_t')}</b><span class="mut" style="color:var(--ink2);font-size:14px;max-width:290px">${t('pb_empty_s')}</span><button class="btn" id="b-pb-first" style="margin-top:6px;max-width:260px">+ ${t('pb_new')}</button></div>`}
+  $('pb-body').innerHTML=html;
+  const first=$('b-pb-first');if(first)first.onclick=()=>openPBAdd();
+  $('pb-body').querySelectorAll('.pbcard').forEach(c=>c.onclick=()=>openDisc(c.dataset.d));
+}
+function discChart(es,code,col){
+  if(es.length<2)return '';
+  const W=340,H=140,L=44,R=10,top=14,bot=24,n=es.length,vals=es.map(e=>e.v),mx=Math.max(...vals)*1.08,mn=Math.min(0,...vals);
+  const x=i=>L+(i/(n-1))*(W-L-R),y=v=>top+(1-(v-mn)/(mx-mn))*(H-top-bot);
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" style="aspect-ratio:${W}/${H}">`;
+  for(const v of [mx/3,2*mx/3,mx/1.08])s+=`<line x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}" stroke="rgba(234,244,247,.1)"/><text x="${L-4}" y="${y(v)+3}" text-anchor="end">${pbFmt(code,v)}</text>`;
+  s+=`<polyline points="${es.map((e,i)=>x(i)+','+y(e.v)).join(' ')}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  const best=Math.max(...vals);
+  es.forEach((e,i)=>{s+=`<circle cx="${x(i)}" cy="${y(e.v)}" r="${e.v===best?5:3}" fill="${e.v===best?'var(--ph-inhale)':col}"/>`});
+  s+=`<text x="${L}" y="${H-6}">${new Date(es[0].t).toLocaleDateString(lang)}</text><text x="${W-R}" y="${H-6}" text-anchor="end">${new Date(es[n-1].t).toLocaleDateString(lang)}</text>`;
+  return s+'</svg>';
+}
+function openDisc(code){pbCur=code;renderDisc();renderTabs('s-pb-d');show('s-pb-d');track('pb_disc_open',{discipline:code})}
+function renderDisc(){
+  const code=pbCur,es=allEntries(code),isSea=DISC.sea.includes(code),col=isSea?'var(--ph-exhale)':'var(--ph-hold_empty)';
+  if(!es.length){return goTab('s-pb')}
+  const best=Math.max(...es.map(e=>e.v));
+  $('pbd-title').textContent=T[lang]['D_'+code];$('pbd-sub').textContent=code;
+  $('pbd-best').textContent=pbFmt(code,best);$('pbd-n').textContent=es.length;
+  $('pbd-chart').innerHTML=discChart(es,code,col);
+  const bestId=es.slice().reverse().find(e=>e.v===best).id;
+  $('pbd-list').innerHTML=es.slice().reverse().map(e=>{const d=new Date(e.t);
+    return `<div class="hist${e.src==='static'?' tap':''}" data-id="${e.id}" data-src="${e.src}"><div class="ht"><b>${d.toLocaleDateString(lang)}</b> · <b>${pbFmt(code,e.v)}</b>${e.id===bestId?' · <span style="color:var(--ph-inhale)">'+t('pb_tag')+'</span>':''}${e.src==='static'?' · '+t('st_title').toLowerCase():''}${e.rec.notes?'<br>'+esc(e.rec.notes):''}</div>${e.src==='pb'?`<button class="ed" data-id="${e.id}" aria-label="edit">${ICON.pencil}</button>`:''}<button class="del" data-id="${e.id}" aria-label="delete">${ICON.trash}</button></div>`}).join('');
+  $('b-pbd-add').textContent=t('add_result');
+  bindDeletes($('pbd-list'),renderDisc);
+  $('pbd-list').querySelectorAll('.ed').forEach(b=>b.onclick=ev=>{ev.stopPropagation();openPBAdd(code,es.find(e=>e.id===b.dataset.id).rec)});
+  $('pbd-list').querySelectorAll('.hist.tap').forEach(h=>h.onclick=ev=>{if(ev.target.closest('.del'))return;openStDetail(h.dataset.id)});
+}
+$('b-pbd-back').onclick=()=>goTab('s-pb');
+$('b-pbd-add').onclick=()=>openPBAdd(pbCur);
+
+function openPBAdd(code,rec){
+  pbEdit=rec||null;pbSel=rec?rec.actualParams.discipline:(typeof code==='string'?code:null);
+  $('pbadd-err').textContent='';$('pbadd-notes').value=rec?(rec.notes||''):'';$('pbadd-notes').placeholder=t('notes_ph');
+  const d=rec?new Date(rec.startedAt):new Date();$('pbadd-date').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const n=new Date();$('pbadd-date').max=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+  renderPBAdd();
+  if(rec){const v=rec.actualParams.value;if(DISC_KIND[pbSel]==='time'){$('pbadd-min').value=Math.floor(v/60);$('pbadd-sec').value=Math.round(v%60)}else $('pbadd-m').value=v}
+  $('pbadd-title').textContent=rec?t('edit_result'):t('pb_add_title');
+  renderTabs('s-pb-add');show('s-pb-add');track('pb_add_open');
+}
+$('b-pb-add').onclick=()=>openPBAdd();
+$('b-pbadd-back').onclick=()=>{if(pbCur&&allEntries(pbCur).length)openDisc(pbCur);else goTab('s-pb')};
+$('b-pbadd-save').onclick=()=>{
+  if(!pbSel)return $('pbadd-err').textContent=t('pb_err_disc');
+  let v;if(DISC_KIND[pbSel]==='time')v=(+($('pbadd-min').value||0))*60+(+($('pbadd-sec').value||0));else v=+($('pbadd-m').value||0);
+  if(!(v>0)||v>(DISC_KIND[pbSel]==='time'?1800:400))return $('pbadd-err').textContent=t('pb_err');
+  const day=$('pbadd-date').value;const when=day?new Date(day+'T12:00:00'):new Date();
+  const all=lsJ(KEY.sess,[]);
+  if(pbEdit){const r=all.find(x=>x.id===pbEdit.id);if(r){r.startedAt=r.endedAt=when.toISOString();r.actualParams={discipline:pbSel,value:Math.round(v*10)/10,unit:DISC_KIND[pbSel]==='time'?'s':'m'};r.notes=$('pbadd-notes').value.trim();r.synced=false}track('pb_edited',{discipline:pbSel})}
+  else{
+    const rec={id:uuid(),schemaVersion:SCHEMA,protocolId:'pb-log-v1',exerciseId:'pb',startedAt:when.toISOString(),endedAt:when.toISOString(),plannedParams:{},actualParams:{discipline:pbSel,value:Math.round(v*10)/10,unit:DISC_KIND[pbSel]==='time'?'s':'m'},status:'completed',abortReason:null,cyclesCompleted:0,elapsedSec:0,plannedSec:0,feedback:null,notes:$('pbadd-notes').value.trim(),nextParams:null,synced:false,owner:user?user.id:null,diag:{}};
+    all.push(rec);track('pb_saved',{discipline:pbSel,value:rec.actualParams.value});log('pb:saved',rec.id)}
+  lsSet(KEY.sess,JSON.stringify(all));pushSessions();pbEdit=null;openDisc(pbSel);
+};
+
+/* --- apnea statica: pagina, minuti, dettaglio prova --- */
+const warmLabel=s=>s===0?'0':s<60?`${s} s`:s%60===0?`${s/60} min`:`${Math.floor(s/60)} min ${s%60} s`;
+function renderStatic(){
+  const el=$('st-warm');el.innerHTML=`<button>−</button><span class="v" style="min-width:84px">${warmLabel(stCfg.warmSec)}</span><button>+</button>`;
+  el.children[0].onclick=()=>{stCfg.warmSec=Math.max(0,stCfg.warmSec-30);stSave()};el.children[2].onclick=()=>{stCfg.warmSec=Math.min(300,stCfg.warmSec+30);stSave()};
+  $('b-st-voice').textContent=stCfg.voice?'ON':'OFF';$('b-st-voice').classList.toggle('acc',stCfg.voice);
+  const recs=staticRecords(),pb=staticPB(),last=recs[recs.length-1];
+  $('st-pb').textContent=pb?fmt(pb):'–';$('st-last').textContent=last?fmt(last.actualParams.holdSec):'–';$('st-count').textContent=recs.length;
+  $('st-trend').innerHTML=recs.length>=2?trendChart(recs.slice(-20)):'';
+  $('st-list').innerHTML=recs.length?recs.slice().reverse().slice(0,40).map(r=>{const d=new Date(r.startedAt),a=r.actualParams;
+    return `<div class="hist tap" data-id="${r.id}"><div class="ht"><b>${d.toLocaleDateString(lang)}</b> · <b>${fmt(a.holdSec)}</b>${a.holdSec===pb?' · '+t('pb_tag'):''} — ${T[lang].st_hist(a.firstContractionSec!=null?fmt(a.firstContractionSec):'',a.contractions.length)}</div><button class="del" data-id="${r.id}" aria-label="delete">${ICON.trash}</button></div>`}).join(''):`<p>${t('st_empty')}</p>`;
+  bindDeletes($('st-list'),renderStatic);
+  $('st-list').querySelectorAll('.hist.tap').forEach(h=>h.onclick=ev=>{if(ev.target.closest('.del'))return;openStDetail(h.dataset.id)});
+}
+let stDetId=null,stDetBack='s-static';
+function openStDetail(id){
+  const r=lsJ(KEY.sess,[]).find(x=>x.id===id);if(!r)return;stDetId=id;stDetBack=document.querySelector('.screen.on').id==='s-pb-d'?'s-pb-d':'s-static';
+  const a=r.actualParams,d=new Date(r.startedAt);
+  $('std-title').textContent=t('st_title');$('std-sub').textContent=d.toLocaleDateString(lang)+' '+d.toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'});
+  $('std-total').textContent=fmt1(a.holdSec);$('std-first').textContent=a.firstContractionSec!=null?fmt1(a.firstContractionSec):'–';$('std-contr').textContent=(a.contractions||[]).length;
+  $('std-chart').innerHTML=a.holdSec>0?attemptChart(a.holdSec,a.contractions||[]):'';
+  $('std-notes').textContent=r.notes||'';$('b-std-del').innerHTML=ICON.trash.replace('<svg','<svg style="width:18px;height:18px;vertical-align:-3px;margin-right:6px"')+t('del_test');
+  renderTabs('s-st-d');show('s-st-d');track('static_detail_open');
+}
+$('b-std-back').onclick=()=>{if(stDetBack==='s-pb-d'&&pbCur&&allEntries(pbCur).length)openDisc(pbCur);else goTab('s-static')};
+$('b-std-del').onclick=async()=>{if(!confirm(t('del_confirm')))return;await deleteSession(stDetId);if(stDetBack==='s-pb-d'&&pbCur&&allEntries(pbCur).length)openDisc(pbCur);else goTab('s-static')};
+
+/* --- annulla allenamento --- */
+$('b-fb-discard').onclick=()=>{if(!confirm(t('discard_confirm')))return;log('session:discarded');track('session_discard',{where:'feedback'});run=null;goTab('s-home');toast(t('discarded'))};
+let stopArm=0;
+$('b-stop').onclick=()=>{
+  const el=run&&audio.currentTime||0;
+  if(el<30||Date.now()-stopArm<3000){stopArm=0;$('b-stop').textContent=t('stop');return abort('user')}
+  stopArm=Date.now();$('b-stop').textContent=t('stop_again');setTimeout(()=>{if(Date.now()-stopArm>=2900){stopArm=0;$('b-stop').textContent=t('stop')}},3000);
+};
+
 applyLang();
 (async()=>{
   // Google già collegato a un altro account (link ospite fallito): accedi direttamente a quell'account
