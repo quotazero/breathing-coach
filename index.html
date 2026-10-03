@@ -80,8 +80,8 @@ p.lead{color:var(--ink);font-size:16px}
 .legal{display:flex;justify-content:center;gap:26px;margin-top:14px;padding:0 0 max(8px,calc(env(safe-area-inset-bottom,0px) - 6px))}
 .legal .link{font-size:11.5px;color:var(--ink2);opacity:.65}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:12px;font-size:12px;color:var(--ink2)}
-.tab .ic{height:22px;display:flex}
-.tab.sel{color:var(--accent);background:rgba(143,224,210,.1)}
+.tab .ic{height:22px;display:flex;color:var(--c,var(--ink2))}
+.tab.sel{color:var(--c,var(--accent));background:color-mix(in srgb,var(--c,var(--accent)) 14%,transparent)}
 .chart{width:100%;height:auto;display:block;background:var(--bg2);border-radius:12px;padding:8px}
 .chart text{font-family:var(--font);font-size:10px;fill:var(--ink2)}
 .mute{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);font-size:20px;display:flex;align-items:center;justify-content:center}
@@ -497,7 +497,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.6.9';
+const VERSION='0.6.10';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1292,10 +1292,10 @@ const ICON={
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 10.5V20h12v-9.5"/></svg>'
 };
 document.querySelectorAll('[data-ic]').forEach(el=>el.innerHTML=ICON[el.dataset.ic]);
-const TAB_DEFS=[['s-welcome','home','tab_home'],['s-home','lungs','tab_breath'],['s-static','timer','tab_static'],['s-pb','trophy','tab_pb']];
+const TAB_DEFS=[['s-welcome','home','tab_home','var(--accent)'],['s-home','lungs','tab_breath','var(--ph-hold_full)'],['s-static','timer','tab_static','var(--ph-static)'],['s-pb','trophy','tab_pb','var(--ph-inhale)']];
 const TABMAP={'s-cal':'s-welcome','s-pb-d':'s-pb','s-pb-add':'s-pb','s-st-d':'s-static'};
 function renderTabs(active){active=TABMAP[active]||active;
-  document.querySelectorAll('[data-tabs]').forEach(nav0=>{const nav=nav0.querySelector('[data-tabrow]')||nav0;nav.innerHTML=TAB_DEFS.map(([id,ic,k])=>`<button class="tab${id===active?' sel':''}" data-tab="${id}"><span class="ic">${ICON[ic]}</span><span>${t(k)}</span></button>`).join('');
+  document.querySelectorAll('[data-tabs]').forEach(nav0=>{const nav=nav0.querySelector('[data-tabrow]')||nav0;nav.innerHTML=TAB_DEFS.map(([id,ic,k,c])=>`<button class="tab${id===active?' sel':''}" data-tab="${id}" style="--c:${c}"><span class="ic">${ICON[ic]}</span><span>${t(k)}</span></button>`).join('');
     nav.querySelectorAll('.tab').forEach(b=>b.onclick=()=>goTab(b.dataset.tab))});
 }
 function goTab(id){if(id==='s-pb'){renderPB();track('pb_open')}if(id==='s-static'){renderStatic();track('static_open')}if(id==='s-welcome')renderWelcome();renderTabs(id);show(id)}
