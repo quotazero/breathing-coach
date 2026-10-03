@@ -494,7 +494,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.6.5';
+const VERSION='0.6.6';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -621,6 +621,10 @@ function t2(s){s=Math.round(s);const m=Math.floor(s/60),r=s%60;return m?`${m} mi
 /* ---------- storage (best effort) ---------- */
 function ls(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function lsSet(k,v){try{localStorage.setItem(k,v);return true}catch(e){log('storage-error',e.message);return false}}
+const PREF_KEYS=['bc.params.v1','bc.warm.v1','bc.static.v1'];
+let prefTimer=null,applyingPrefs=false;
+const _lsSet0=lsSet;
+lsSet=function(k,v){const r=_lsSet0(k,v);if(!applyingPrefs&&PREF_KEYS.includes(k)){_lsSet0('bc.prefs.ts',String(Date.now()));clearTimeout(prefTimer);prefTimer=setTimeout(()=>{try{pushPrefs()}catch(e){}},1500)}return r}
 function lsJ(k,d){try{return JSON.parse(ls(k))??d}catch(e){return d}}
 function uuid(){return crypto.randomUUID?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c=='x'?r:(r&3|8)).toString(16)})}
 let deviceId=ls(KEY.athlete);if(!deviceId){deviceId=uuid();lsSet(KEY.athlete,deviceId)}
@@ -771,6 +775,23 @@ async function pullProfile(){
     lsSet(KEY.onb,JSON.stringify(profile));log('profile:pulled',{onb:profile.onboarding_done});
   }catch(e){log('profile:pull-error',e.message)}
 }
+async function pushPrefs(){
+  if(!sb||!user||user.is_anonymous)return;
+  try{const blob={t:+ls('bc.prefs.ts')||Date.now(),cfg:lsJ('bc.params.v1',null),warm:lsJ('bc.warm.v1',null),st:lsJ('bc.static.v1',null)};
+    const {error}=await sb.auth.updateUser({data:{prefs:blob}});if(error)throw error;log('prefs:pushed')}catch(e){log('prefs:push-error',e.message)}
+}
+function pullPrefs(){
+  if(!user||user.is_anonymous)return;
+  try{const b=user.user_metadata&&user.user_metadata.prefs;if(!b)return pushPrefs();
+    const lt=+ls('bc.prefs.ts')||0;if(b.t<=lt)return;
+    applyingPrefs=true;
+    if(b.cfg){lsSet('bc.params.v1',JSON.stringify(b.cfg));Object.assign(params,b.cfg)}
+    if(b.warm)lsSet('bc.warm.v1',JSON.stringify(b.warm));
+    if(b.st){lsSet('bc.static.v1',JSON.stringify(b.st));Object.assign(stCfg,b.st)}
+    _lsSet0('bc.prefs.ts',String(b.t));applyingPrefs=false;
+    try{renderSettings();renderStatic()}catch(e){}
+    log('prefs:pulled')}catch(e){applyingPrefs=false;log('prefs:pull-error',e.message)}
+}
 async function registerDevice(){
   if(!sb||!user)return;
   try{const e=env();await sb.from('devices').upsert({id:deviceId,user_id:user.id,ua:e.ua.slice(0,200),platform:isIOS?'ios':/Android/.test(e.ua)?'android':'other',standalone:e.standalone,last_seen:new Date().toISOString()},{onConflict:'id'})}catch(e){log('device:error',e.message)}
@@ -897,7 +918,7 @@ async function afterLogin(method){
   const key=user.id+':'+(user.is_anonymous?'a':'u');if(loginKey===key)return;loginKey=key;
   log('auth:login',{method,id:user.id.slice(0,8)});
   track('login_success',{method});
-  await pullProfile();
+  await pullProfile();pullPrefs();
   if(profile&&!profile.display_name&&(user.user_metadata?.full_name||user.user_metadata?.name))profile.display_name=user.user_metadata.full_name||user.user_metadata.name;
   if(profile&&profile.display_name&&profile.level)profile.onboarding_done=true;
   await saveProfile(profile||{});
@@ -1762,7 +1783,7 @@ applyLang();
   if(sb)sb.auth.onAuthStateChange(async(ev,session)=>{log('auth:event',ev);if(session){user=session.user;if((ev==='SIGNED_IN'||ev==='USER_UPDATED')&&!user.is_anonymous){await afterLogin(user.app_metadata?.provider||'oauth')}}});
   track('app_open',{standalone:env().standalone,lang});
   renderAccountPill();
-  if(user){registerDevice();if(profile&&profile.onboarding_done)saveProfile({});await pullSessions();await syncAll()}
+  if(user){registerDevice();if(profile&&profile.onboarding_done)saveProfile({});pullPrefs();await pullSessions();await syncAll()}
   renderAccountPill();
 })();
 </script>
