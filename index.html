@@ -480,6 +480,8 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <div class="top"><h1 data-i18n="diag"></h1><button class="pill" id="b-diag-back" data-i18n="back"></button></div>
   <p class="tiny" data-i18n="diag_help"></p>
   <p class="tiny" id="diag-ver"></p>
+  <button class="btn" id="b-update"></button>
+  <p class="tiny" id="upd-msg" style="min-height:18px"></p>
   <pre id="diag-out"></pre>
   <button class="btn" id="b-copy" data-i18n="copy"></button>
   <button class="btn ghost" id="b-clear" data-i18n="clear_log"></button>
@@ -494,7 +496,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.6.6';
+const VERSION='0.6.7';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1500,11 +1502,28 @@ $('b-hist-back').onclick=()=>goTab('s-welcome');
 /* ---------- diag UI ---------- */
 $('b-diag').onclick=()=>{$('diag-out').textContent=LOG.join('\n');show('s-diag')};
 $('b-diag-back').onclick=()=>goTab('s-welcome');
+/* ---------- aggiorna app ---------- */
+function updLabel(){const b=$('b-update');if(b)b.textContent=lang==='en'?'Update app':'Aggiorna app'}
+updLabel();
+$('b-update').onclick=async()=>{
+  const m=$('upd-msg'),en=lang==='en';m.textContent=en?'Checking…':'Controllo…';
+  try{
+    const r=await fetch(location.pathname+'?chk='+Date.now(),{cache:'no-store'});const tx=await r.text();
+    const v=(tx.match(/VERSION='([0-9.]+)'/)||[])[1];
+    try{if(window.caches){for(const k of await caches.keys())await caches.delete(k)}}catch(e){}
+    try{if(navigator.serviceWorker){for(const g of await navigator.serviceWorker.getRegistrations())await g.unregister()}}catch(e){}
+    if(v&&v===VERSION){m.textContent=en?`You already have the latest version (v${VERSION}).`:`Hai già l'ultima versione (v${VERSION}).`;return}
+    m.textContent=en?`Updating to v${v||'?'}…`:`Aggiorno alla v${v||'?'}…`;
+    await pushPrefs().catch(()=>{});
+    setTimeout(()=>location.replace(location.pathname+'?u='+Date.now()),500);
+  }catch(e){m.textContent=en?'No connection. Try again.':'Nessuna connessione. Riprova.'}
+};
+
 $('b-copy').onclick=async()=>{const txt=LOG.join('\n');try{await navigator.clipboard.writeText(txt);alert('OK')}catch(e){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();alert('OK')}};
 $('b-clear').onclick=()=>{LOG.length=0;log('env',env());$('diag-out').textContent=LOG.join('\n')};
 
 /* ---------- lang / i18n ---------- */
-function applyLang(){
+function applyLang(){try{updLabel()}catch(e){}
   document.documentElement.lang=lang;
   document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});
   $('fb-notes').placeholder=t('notes_ph');$('b-lang').textContent=lang==='it'?'EN':'IT';
