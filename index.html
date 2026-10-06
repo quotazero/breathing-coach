@@ -547,7 +547,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.8.2';
+const VERSION='0.8.3';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -568,7 +568,7 @@ const T={
   onb_name:'Come ti chiami? (facoltativo)', onb_level:'Il tuo livello', onb_goal:'Obiettivo principale', onb_weekly:'Quanto vuoi allenarti?', onb_weekly_l:'Sessioni a settimana', onb_done:'Iniziamo',
   lv_beginner:'Principiante', lv_intermediate:'Intermedio', lv_advanced:'Avanzato',
   goal_relax:'Rilassamento', goal_eq:'Compensazione', goal_perf:'Prestazione',
-  set_warm:'Riscaldamento', left_warm:'fine riscaldamento', warm_then:s=>'Rilassati e respira: il training inizia tra poco.', set_warm_in:'Inspirazione (s)', set_warm_out:'Espirazione (s)', set_warm_n:'Respiri',
+  warm_in_t:'Inspira dal naso', warm_out_t:'Espira dalla bocca', set_warm:'Riscaldamento', left_warm:'fine riscaldamento', warm_then:s=>'Rilassati e respira: il training inizia tra poco.', set_warm_in:'Inspirazione (s)', set_warm_out:'Espirazione (s)', set_warm_n:'Respiri',
   set_main:'Allenamento', set_in:'Inspirazione (s)', set_hf:'Apnea polmoni pieni (s)', set_out:'Espirazione (s)', set_he:'Apnea polmoni vuoti (s)', set_cycles:'Cicli',
   reminder:'Inspira dal naso. Espira dalla bocca con leggera resistenza.',
   start:'Inizia', test_sound:'Prova i suoni', history:'Storico', diag:'Diagnostica', back:'Indietro', stop:'Interrompi',
@@ -623,7 +623,7 @@ const T={
   onb_name:'Your name (optional)', onb_level:'Your level', onb_goal:'Main goal', onb_weekly:'How often do you want to train?', onb_weekly_l:'Sessions per week', onb_done:'Let’s start',
   lv_beginner:'Beginner', lv_intermediate:'Intermediate', lv_advanced:'Advanced',
   goal_relax:'Relaxation', goal_eq:'Equalization', goal_perf:'Performance',
-  set_warm:'Warm-up', left_warm:'warm-up ends', warm_then:s=>'Relax and breathe: the training starts soon.', set_warm_in:'Inhale (s)', set_warm_out:'Exhale (s)', set_warm_n:'Breaths',
+  warm_in_t:'Inhale through the nose', warm_out_t:'Exhale through the mouth', set_warm:'Warm-up', left_warm:'warm-up ends', warm_then:s=>'Relax and breathe: the training starts soon.', set_warm_in:'Inhale (s)', set_warm_out:'Exhale (s)', set_warm_n:'Breaths',
   set_main:'Training', set_in:'Inhale (s)', set_hf:'Full-lung hold (s)', set_out:'Exhale (s)', set_he:'Empty-lung hold (s)', set_cycles:'Cycles',
   reminder:'Inhale through the nose. Exhale through the mouth with slight resistance.',
   start:'Start', test_sound:'Test sounds', history:'History', diag:'Diagnostics', back:'Back', stop:'Stop',
@@ -1045,7 +1045,7 @@ function setPhaseUI(s){
   $('m-cycle').textContent=`${s.rep}/${s.reps}`;
   $('m-cycle-l').textContent=s.block==='warmup'?t('warm'):(s.rep===s.reps&&s.reps>1?t('last'):t('cycle'));
   $('m-left-l').textContent=t('left');
-  if(s.block==='warmup'){const we=Math.max(...run.tl.segs.filter(x=>x.block==='warmup').map(x=>x.end));$('tipx').textContent=T[lang].warm_then(Math.round(run.tl.total-we));run.leftLab=null}
+  if(s.block==='warmup'){const we=Math.max(...run.tl.segs.filter(x=>x.block==='warmup').map(x=>x.end));{const wi=s.type==='inhale'?t('warm_in_t'):s.type==='exhale'?t('warm_out_t'):'';$('tipx').innerHTML=(wi?esc(wi)+'<br><span style="opacity:.75;font-size:14px;font-weight:400">':'<span>')+esc(T[lang].warm_then(Math.round(run.tl.total-we)))+'</span>'};run.leftLab=null}
 }
 function completedCycles(){const ct=audio.currentTime;const main=run.tl.segs.filter(s=>s.block==='main');let c=0;for(const s of main){if(ct>=s.end&&s.type==='hold_empty')c=s.rep;else if(ct>=s.end&&params.holdEmpty<=0&&s.type==='exhale')c=s.rep}return c}
 function currentPhase(){const ct=audio.currentTime;const s=run.tl.segs.find(s=>ct>=s.start&&ct<s.end);return s?{block:s.block,type:s.type,rep:s.rep}:null}
