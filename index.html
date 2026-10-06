@@ -228,6 +228,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <h2 data-i18n="wl_q"></h2>
   <button class="card" id="wl-breath" style="--c:var(--ph-hold_full)"><span class="ic" data-ic="lungs"></span><span><b data-i18n="wl_breath"></b><small id="wl-breath-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-static" style="--c:var(--ph-static)"><span class="ic" data-ic="timer"></span><span><b data-i18n="wl_static"></b><small id="wl-static-sub"></small></span><span class="chev">›</span></button>
+  <button class="card" id="wl-water" style="--c:var(--ph-exhale)"><span class="ic" data-ic="sea"></span><span><b data-i18n="wl_water"></b><small id="wl-water-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-pb" style="--c:var(--ph-inhale)"><span class="ic" data-ic="trophy"></span><span><b data-i18n="wl_pb"></b><small id="wl-pb-sub"></small></span><span class="chev">›</span></button>
   <nav class="tabs" data-tabs><div class="tabrow" data-tabrow></div>
     <div class="legal">
@@ -397,6 +398,30 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <div id="pb-body"></div>
   <nav class="tabs" data-tabs></nav>
 </section>
+<section class="screen" id="s-water">
+  <div class="top"><div><h1 data-i18n="wt_title"></h1><div class="sum" data-i18n="wt_sub"></div></div><button class="pill" id="b-wt-add" style="display:inline-flex;gap:6px;align-items:center;flex-shrink:0"></button></div>
+  <div id="wt-body"></div>
+  <nav class="tabs" data-tabs></nav>
+</section>
+<section class="screen" id="s-water-add">
+  <div class="top"><h1 id="wta-title"></h1><button class="pill" id="b-wta-back" data-i18n="back"></button></div>
+  <h2 data-i18n="wt_where"></h2>
+  <div class="chips2" id="wta-where" style="--c:var(--ph-exhale)"></div>
+  <input class="txt" id="wta-place" type="text" maxlength="60">
+  <h2 data-i18n="wt_disc"></h2>
+  <div class="chips2" id="wta-disc" style="--c:var(--ph-exhale)"></div>
+  <h2 data-i18n="wt_depth"></h2>
+  <div class="pbin"><input id="wta-m" type="number" inputmode="decimal" min="0" max="400" step="0.5" placeholder="0"> <span data-i18n="pb_m"></span></div>
+  <h2 data-i18n="pb_date"></h2>
+  <div class="pbin"><input type="date" id="wta-date"></div>
+  <h2 data-i18n="dy_out"></h2>
+  <div class="chips2" id="wta-out"></div>
+  <textarea id="wta-focus" rows="2"></textarea>
+  <textarea id="wta-notes"></textarea>
+  <p class="tiny" id="wta-err" style="color:#F2A0A0;min-height:18px"></p>
+  <div style="flex:1"></div>
+  <button class="btn" id="b-wta-save" data-i18n="save"></button>
+</section>
 <section class="screen" id="s-pb-add">
   <div class="top"><h1 id="pbadd-title"></h1><button class="pill" id="b-pbadd-back" data-i18n="back"></button></div>
   <h2 data-i18n="pb_disc"></h2>
@@ -405,9 +430,6 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <div class="pbin" id="pbadd-vin"></div>
   <h2 data-i18n="pb_date"></h2>
   <div class="pbin"><input type="date" id="pbadd-date"></div>
-  <h2 data-i18n="dy_out"></h2>
-  <div class="chips2" id="pbadd-out"></div>
-  <textarea id="pbadd-focus" rows="2"></textarea>
   <textarea id="pbadd-notes"></textarea>
   <p class="tiny" id="pbadd-err" style="color:#F2A0A0;min-height:18px"></p>
   <div style="flex:1"></div>
@@ -442,7 +464,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <div class="top"><h1 data-i18n="cal_title"></h1><button class="pill" id="b-cal-back" data-i18n="back"></button></div>
   <div class="calh"><button id="cal-prev" aria-label="prev">‹</button><b id="cal-month"></b><button id="cal-next" aria-label="next">›</button></div>
   <div class="calg" id="cal-grid"></div>
-  <div class="legend"><span><i style="background:var(--ph-hold_full)"></i><span data-i18n="tab_breath"></span></span><span><i style="background:var(--ph-static)"></i><span data-i18n="tab_static"></span></span><span><i style="background:var(--ph-inhale)"></i><span data-i18n="cal_leg_pb"></span></span><span><span style="color:var(--ph-inhale)">★</span> <span data-i18n="cal_star"></span></span></div>
+  <div class="legend"><span><i style="background:var(--ph-hold_full)"></i><span data-i18n="tab_breath"></span></span><span><i style="background:var(--ph-static)"></i><span data-i18n="tab_static"></span></span><span><i style="background:var(--ph-exhale)"></i><span data-i18n="cal_leg_w"></span></span><span><i style="background:var(--ph-inhale)"></i><span data-i18n="cal_leg_pb"></span></span><span><span style="color:var(--ph-inhale)">★</span> <span data-i18n="cal_star"></span></span></div>
   <div id="cal-day" style="margin-top:8px"></div>
   <button class="btn ghost sm" id="b-cal-add" style="margin-top:10px"></button>
   <nav class="tabs" data-tabs></nav>
@@ -525,7 +547,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.8.0';
+const VERSION='0.8.1';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1328,13 +1350,13 @@ const ICON={
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 10.5V20h12v-9.5"/></svg>'
 };
 document.querySelectorAll('[data-ic]').forEach(el=>el.innerHTML=ICON[el.dataset.ic]);
-const TAB_DEFS=[['s-welcome','home','tab_home','var(--accent)'],['s-home','lungs','tab_breath','var(--ph-hold_full)'],['s-static','timer','tab_static','var(--ph-static)'],['s-pb','trophy','tab_pb','var(--ph-inhale)']];
-const TABMAP={'s-cal':'s-welcome','s-pb-d':'s-pb','s-pb-add':'s-pb','s-st-d':'s-static'};
+const TAB_DEFS=[['s-welcome','home','tab_home','var(--accent)'],['s-home','lungs','tab_breath_s','var(--ph-hold_full)'],['s-static','timer','tab_static_s','var(--ph-static)'],['s-water','sea','tab_water','var(--ph-exhale)'],['s-pb','trophy','tab_pb','var(--ph-inhale)']];
+const TABMAP={'s-cal':'s-welcome','s-pb-d':'s-pb','s-pb-add':'s-pb','s-water-add':'s-water','s-st-d':'s-static'};
 function renderTabs(active){active=TABMAP[active]||active;
   document.querySelectorAll('[data-tabs]').forEach(nav0=>{const nav=nav0.querySelector('[data-tabrow]')||nav0;nav.innerHTML=TAB_DEFS.map(([id,ic,k,c])=>`<button class="tab${id===active?' sel':''}" data-tab="${id}" style="--c:${c}"><span class="ic">${ICON[ic]}</span><span>${t(k)}</span></button>`).join('');
     nav.querySelectorAll('.tab').forEach(b=>b.onclick=()=>goTab(b.dataset.tab))});
 }
-function goTab(id){if(id==='s-pb'){renderPB();track('pb_open')}if(id==='s-static'){renderStatic();track('static_open')}if(id==='s-welcome')renderWelcome();renderTabs(id);show(id)}
+function goTab(id){if(id==='s-water'){renderWater();track('water_open')}if(id==='s-pb'){renderPB();track('pb_open')}if(id==='s-static'){renderStatic();track('static_open')}if(id==='s-welcome')renderWelcome();renderTabs(id);show(id)}
 
 /* ---------- welcome ---------- */
 function dayKey(d){const x=new Date(d);return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`}
@@ -1353,7 +1375,7 @@ function renderWelcome(){
   $('wl-tip').textContent=t('wl_tip');$('ver2').textContent=`Breathing Coach v${VERSION} · Orbita by Quota Zero`;
   const b3=$('b-account3');b3.textContent=$('b-account').textContent;b3.style.display=isGuest()?'block':'none';
 }
-$('wl-pb').onclick=()=>goTab('s-pb');$('wl-breath').onclick=()=>goTab('s-home');$('wl-static').onclick=()=>goTab('s-static');
+$('wl-pb').onclick=()=>goTab('s-pb');$('wl-water').onclick=()=>goTab('s-water');$('wl-breath').onclick=()=>goTab('s-home');$('wl-static').onclick=()=>goTab('s-static');
 $('b-account3').onclick=()=>openAccount(false);
 $('b-lang2').onclick=()=>$('b-lang').click();
 
@@ -1589,7 +1611,7 @@ $('b-push-off').onclick=async()=>{
 /* ---------- aggiornamento automatico ---------- */
 const vnum=v=>String(v||'0').split('.').map(n=>+n||0);
 const vNewer=(a,b)=>{const x=vnum(a),y=vnum(b);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return false};
-const BUSY=['s-session','s-feedback','s-next','s-static-run','s-static-rec','s-static-result','s-pb-add','s-disclaimer','s-onb'];
+const BUSY=['s-water-add','s-session','s-feedback','s-next','s-static-run','s-static-rec','s-static-result','s-pb-add','s-disclaimer','s-onb'];
 async function autoUpdate(){
   try{
     if(!navigator.onLine)return;
@@ -1690,10 +1712,101 @@ function dyExtra(r){const a=r.actualParams||{};let h='';
   return h}
 function dyFocus(r){const a=r.actualParams||{};return a.focus?`<br><span style="color:var(--ink2)">${esc(t('dy_focus'))}: ${esc(a.focus)}</span>`:''}
 
+Object.assign(T.it,{tab_breath_s:'Respiro',tab_static_s:'Statica',tab_water:'Acqua',wl_water:'Allenamenti in acqua',
+  wt_title:'Allenamenti in acqua',wt_sub:'Il tuo diario in mare e piscina',wt_new:'Nuovo',wt_add_title:'Allenamento in acqua',wt_edit:'Modifica allenamento',
+  wt_where:'Dove',wt_sea:'Mare',wt_pool:'Piscina',wt_place_ph:'Luogo (es. Capo Mulini)',wt_disc:'Disciplina (facoltativa)',wt_depth:'Massima raggiunta',
+  wt_empty_t:'Segna il tuo primo allenamento in acqua',wt_empty_s:'Profondità, com’è andata e su cosa lavorare: lo ritrovi qui e nel calendario.',
+  wt_focus_card:'Da lavorare dall’ultima volta',wt_chart:'Massima nel tempo',wt_err:'Inserisci un valore valido (0–400 m).',
+  wt_offer:(d,v)=>`Nuovo massimo in ${d}: ${v}. Vuoi salvarlo anche come record?`,wt_offer_yes:'Salva come record',wt_offer_no:'No, grazie',
+  wl_water_sub:(n)=>n?(n===1?'1 allenamento':n+' allenamenti'):'Mare e piscina',cal_leg_w:'Acqua'});
+Object.assign(T.en,{tab_breath_s:'Breath',tab_static_s:'Static',tab_water:'Water',wl_water:'Water training',
+  wt_title:'Water training',wt_sub:'Your sea and pool log',wt_new:'New',wt_add_title:'Water training',wt_edit:'Edit training',
+  wt_where:'Where',wt_sea:'Sea',wt_pool:'Pool',wt_place_ph:'Place (e.g. Capo Mulini)',wt_disc:'Discipline (optional)',wt_depth:'Best reached',
+  wt_empty_t:'Log your first water training',wt_empty_s:'Depth, how it went and what to work on: you will find it here and in the calendar.',
+  wt_focus_card:'To work on since last time',wt_chart:'Best over time',wt_err:'Enter a valid value (0–400 m).',
+  wt_offer:(d,v)=>`New best in ${d}: ${v}. Save it as a record too?`,wt_offer_yes:'Save as record',wt_offer_no:'No thanks',
+  wl_water_sub:(n)=>n?(n===1?'1 training':n+' trainings'):'Sea and pool',cal_leg_w:'Water'});
+COL.water='var(--ph-exhale)';
+const WDISC=['CWT','CWTB','CNF','FIM','DYN','DYNB','DNF'];
+function waterRecs(){return lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='water'&&r.status==='completed').sort((a,b)=>a.startedAt<b.startedAt?-1:1)}
+function migrateWater(){
+  const all=lsJ(KEY.sess,[]);let ch=0;
+  all.forEach(r=>{const a=r.actualParams||{};if(r.exerciseId==='pb'&&(a.outcome||a.focus)){
+    r.exerciseId='water';r.protocolId='water-log-v1';
+    r.actualParams={where:DISC.pool.includes(a.discipline)?'pool':'sea',place:'',discipline:a.discipline,depth:a.unit==='m'?a.value:undefined,outcome:a.outcome,focus:a.focus};r.synced=false;ch++}});
+  if(ch){lsSet(KEY.sess,JSON.stringify(all));log('water:migrated',ch);try{pushSessions()}catch(e){}}
+}
+migrateWater();
+const _pull0=pullSessions;pullSessions=async function(){await _pull0();migrateWater()};
+let wtEdit=null,wtFrom=null,wtOut=null,wtWhere='sea',wtDisc=null,wtOffer=null;
+function renderWtForm(){
+  $('wta-where').innerHTML=['sea','pool'].map(k=>`<button data-w="${k}" class="${wtWhere===k?'sel':''}">${t('wt_'+k)}</button>`).join('');
+  $('wta-where').querySelectorAll('button').forEach(b=>b.onclick=()=>{wtWhere=b.dataset.w;renderWtForm()});
+  $('wta-disc').innerHTML=WDISC.map(c=>`<button data-c="${c}" class="${wtDisc===c?'sel':''}">${c} · ${esc(T[lang]['D_'+c])}</button>`).join('');
+  $('wta-disc').querySelectorAll('button').forEach(b=>b.onclick=()=>{wtDisc=wtDisc===b.dataset.c?null:b.dataset.c;renderWtForm()});
+  $('wta-out').innerHTML=Object.entries(OUT).map(([k,[l,c]])=>`<button data-o="${k}" class="${wtOut===k?'sel':''}" style="--c:${c}">${t(l)}</button>`).join('');
+  $('wta-out').querySelectorAll('button').forEach(b=>b.onclick=()=>{wtOut=wtOut===b.dataset.o?null:b.dataset.o;renderWtForm()});
+}
+function openWaterAdd(rec,day,from){
+  wtEdit=rec||null;wtFrom=from||null;const a=rec?rec.actualParams||{}:{};
+  wtWhere=a.where||'sea';wtDisc=a.discipline||null;wtOut=a.outcome||null;
+  $('wta-err').textContent='';$('wta-place').value=a.place||'';$('wta-place').placeholder=t('wt_place_ph');
+  $('wta-m').value=a.depth!=null?a.depth:'';$('wta-focus').value=a.focus||'';$('wta-focus').placeholder=t('dy_focus_ph');
+  $('wta-notes').value=rec?(rec.notes||''):'';$('wta-notes').placeholder=t('dy_notes_ph');
+  const n=new Date(),todayISO=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+  let iso=todayISO;if(rec){const d=new Date(rec.startedAt);iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}else if(day)iso=keyToISO(day);
+  if(iso>todayISO)iso=todayISO;$('wta-date').value=iso;$('wta-date').max=todayISO;
+  $('wta-title').textContent=rec?t('wt_edit'):t('wt_add_title');
+  renderWtForm();renderTabs('s-water');show('s-water-add');track('water_add_open',{from:from||'water'});
+}
+function waterExit(){if(wtFrom==='cal'){wtFrom=null;renderCal();renderTabs('s-cal');show('s-cal')}else goTab('s-water')}
+$('b-wta-back').onclick=waterExit;
+$('b-wt-add').onclick=()=>openWaterAdd();
+$('b-wta-save').onclick=()=>{
+  const raw=$('wta-m').value.trim();let depth;
+  if(raw!==''){depth=+raw;if(!(depth>0)||depth>400)return $('wta-err').textContent=t('wt_err')}
+  const day=$('wta-date').value;const when=day?new Date(day+'T12:00:00'):new Date();
+  const ap={where:wtWhere,place:$('wta-place').value.trim()||undefined,discipline:wtDisc||undefined,depth:depth!=null?Math.round(depth*10)/10:undefined,outcome:wtOut||undefined,focus:$('wta-focus').value.trim()||undefined};
+  const all=lsJ(KEY.sess,[]);let id;
+  if(wtEdit){const r=all.find(x=>x.id===wtEdit.id);if(r){r.startedAt=r.endedAt=when.toISOString();r.actualParams=ap;r.notes=$('wta-notes').value.trim();r.synced=false;id=r.id}track('water_edited')}
+  else{id=uuid();all.push({id,schemaVersion:SCHEMA,protocolId:'water-log-v1',exerciseId:'water',startedAt:when.toISOString(),endedAt:when.toISOString(),plannedParams:{},actualParams:ap,status:'completed',abortReason:null,cyclesCompleted:0,elapsedSec:0,plannedSec:0,feedback:null,notes:$('wta-notes').value.trim(),nextParams:null,synced:false,owner:user?user.id:null,diag:{}});
+    track('water_saved',{where:wtWhere,discipline:wtDisc,depth:ap.depth});log('water:saved',id)}
+  lsSet(KEY.sess,JSON.stringify(all));pushSessions();
+  wtOffer=null;
+  if(ap.discipline&&ap.depth!=null&&DISC_KIND[ap.discipline]!=='time'){const best=allEntries(ap.discipline).reduce((m,e)=>Math.max(m,e.v),0);if(ap.depth>best)wtOffer={id,discipline:ap.discipline,value:ap.depth,when:when.toISOString(),notes:$('wta-notes').value.trim()}}
+  wtEdit=null;
+  if(wtOffer){goTab('s-water')}else waterExit();
+};
+function renderWater(){
+  $('b-wt-add').innerHTML=ICON.plus+' '+t('wt_new');
+  const rs=waterRecs();let h='';
+  if(wtOffer){h+=`<div class="pbcard" style="--c:var(--ph-inhale)"><b>${esc(T[lang].wt_offer(T[lang]['D_'+wtOffer.discipline],pbFmt(wtOffer.discipline,wtOffer.value)))}</b><div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm" id="wt-offer-yes">${t('wt_offer_yes')}</button><button class="btn ghost sm" id="wt-offer-no">${t('wt_offer_no')}</button></div></div>`}
+  if(!rs.length&&!wtOffer){h=`<div class="pbempty"><img alt="" src="data:image/png;base64,${LOGO_B64}"><b style="font-size:18px">${t('wt_empty_t')}</b><span class="mut" style="color:var(--ink2);font-size:14px;max-width:290px">${t('wt_empty_s')}</span><button class="btn" id="b-wt-first" style="margin-top:6px;max-width:260px">+ ${t('wt_new')}</button></div>`}
+  else if(rs.length){
+    const lf=rs.slice().reverse().find(r=>r.actualParams&&r.actualParams.focus);
+    if(lf)h+=`<div class="pbcard" style="--c:var(--ph-exhale);border-left:3px solid var(--ph-exhale)"><small>${t('wt_focus_card')} · ${new Date(lf.startedAt).toLocaleDateString(lang)}</small><div style="margin-top:4px;font-size:16px">${esc(lf.actualParams.focus)}</div></div>`;
+    const es=rs.filter(r=>r.actualParams.depth!=null).map(r=>({t:+new Date(r.startedAt),v:r.actualParams.depth}));
+    if(es.length>=2)h+=`<h2>${t('wt_chart')}</h2>`+discChart(es,'CWT','var(--ph-exhale)');
+    h+=`<div style="margin-top:8px">`+rs.slice().reverse().map(r=>{const a=r.actualParams,d=new Date(r.startedAt);
+      const bits=[a.where?t('wt_'+a.where):'',a.place?esc(a.place):'',a.discipline?esc(a.discipline):'',a.depth!=null?`<b>${a.depth} m</b>`:''].filter(Boolean).join(' · ');
+      return `<div class="hist"><div class="ht"><b>${d.toLocaleDateString(lang)}</b> · ${bits}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button><button class="del" data-id="${r.id}" aria-label="delete">${ICON.trash}</button></div>`}).join('')+`</div>`;
+  }
+  $('wt-body').innerHTML=h;
+  const f=$('b-wt-first');if(f)f.onclick=()=>openWaterAdd();
+  $('wt-body').querySelectorAll('.ed').forEach(b=>b.onclick=()=>openWaterAdd(rs.find(r=>r.id===b.dataset.id)));
+  bindDeletes($('wt-body'),renderWater);
+  const y=$('wt-offer-yes'),n=$('wt-offer-no');
+  if(n)n.onclick=()=>{wtOffer=null;renderWater()};
+  if(y)y.onclick=()=>{const o=wtOffer;wtOffer=null;const all=lsJ(KEY.sess,[]);
+    all.push({id:uuid(),schemaVersion:SCHEMA,protocolId:'pb-log-v1',exerciseId:'pb',startedAt:o.when,endedAt:o.when,plannedParams:{},actualParams:{discipline:o.discipline,value:o.value,unit:'m'},status:'completed',abortReason:null,cyclesCompleted:0,elapsedSec:0,plannedSec:0,feedback:null,notes:o.notes||'',nextParams:null,synced:false,owner:user?user.id:null,diag:{}});
+    lsSet(KEY.sess,JSON.stringify(all));pushSessions();track('pb_saved',{discipline:o.discipline,value:o.value,from:'water'});renderWater()};
+}
+
 /* --- attività, serie, settimana --- */
 function actType(r){
   if(r.exerciseId==='breathing')return(r.status==='completed'||(r.elapsedSec||0)>=120)?'breath':null;
   if(r.exerciseId==='static')return 'static';
+  if(r.exerciseId==='water')return r.status==='completed'?'water':null;
   if(r.exerciseId==='pb')return r.status==='completed'?'pb':null;
   return null;
 }
@@ -1715,7 +1828,7 @@ function renderWeek(){
   for(let i=0;i<7;i++){
     const d=new Date(ws);d.setDate(ws.getDate()+i);const k=dayKey(d),a=days[k]||[],ty=a.map(x=>x.ty);n+=a.length;
     const fut=d>new Date()&&k!==today;
-    const inner=ty.length===1?`<span style="color:${COL[ty[0]]};display:flex">${ICON[ty[0]==='breath'?'lungs':ty[0]==='pb'?'sea':'timer']}</span>`:ty.length>1?String(ty.length):'';
+    const inner=ty.length===1?`<span style="color:${COL[ty[0]]};display:flex">${ICON[ty[0]==='breath'?'lungs':ty[0]==='water'?'sea':ty[0]==='pb'?'trophy':'timer']}</span>`:ty.length>1?String(ty.length):'';
     html+=`<div class="wkd${k===today?' today':''}"><span>${T[lang].wd[i]}</span>${ringHTML(ty,inner,fut?'fut':'')}</div>`;
   }
   $('wk-grid').innerHTML=html;$('wk-line').textContent=T[lang].wk_line(streakDays(),n);
@@ -1729,6 +1842,7 @@ function renderWelcome(){
   $('wl-breath-sub').textContent=T[lang].wl_breath_sub(br?`${new Date(br.startedAt).toLocaleDateString(lang)} · ${t2(br.elapsedSec)}`:'');
   const pb=staticPB();$('wl-static-sub').textContent=T[lang].wl_static_sub(pb?fmt(pb):'');
   $('wl-pb-sub').textContent=T[lang].pb_sub_wl(discsWithData().length);
+  $('wl-water-sub').textContent=T[lang].wl_water_sub(waterRecs().length);
   $('b-acc-ic').innerHTML=ICON.user;
   const b3=$('b-account3');b3.textContent=$('b-account').textContent;b3.style.display=isGuest()?'block':'none';
 }
@@ -1756,13 +1870,14 @@ function renderCal(){
   lsJ(KEY.sess,[]).forEach(r=>{if(dayKey(r.startedAt)!==sel)return;const ty=actType(r);const a=r.actualParams||{},p=r.plannedParams||{};
     if(ty==='breath')L.push([r,'breath',T[lang].cal_act_b(t2(r.elapsedSec||0),r.cyclesCompleted||0,p.cycles||0)]);
     else if(ty==='static')L.push([r,'static',T[lang].cal_act_s(fmt(a.holdSec||0))]);
+    else if(ty==='water'){const w=r.actualParams||{};L.push([r,'water',[t('tab_water'),w.where?t('wt_'+w.where):'',w.place?esc(w.place):'',w.discipline||'',w.depth!=null?w.depth+' m':''].filter(Boolean).join(' · ')])}
     else if(r.exerciseId==='pb'&&r.status==='completed')L.push([r,'pb',T[lang].cal_act_p(esc(T[lang]['D_'+a.discipline]||a.discipline),pbFmt(a.discipline,a.value))])});
   L.sort((x,y)=>new Date(x[0].startedAt)-new Date(y[0].startedAt));
-  $('cal-day').innerHTML=L.length?L.map(([r,ty,txt])=>ty==='pb'?`<div class="hist"><div class="ht"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${(OUT[(r.actualParams||{}).outcome]||[0,COL.pb])[1]}"></i>${txt}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button></div>`:`<div class="dayrow"><i style="background:${COL[ty]}"></i><span><b>${new Date(r.startedAt).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'})}</b> ${txt}</span></div>`).join(''):`<p>${t('cal_none')}</p>`;
-  $('cal-day').querySelectorAll('.ed').forEach(b=>b.onclick=()=>{const r=lsJ(KEY.sess,[]).find(x=>x.id===b.dataset.id);if(r)openPBAdd(null,r,null,'cal')});
+  $('cal-day').innerHTML=L.length?L.map(([r,ty,txt])=>ty==='water'?`<div class="hist"><div class="ht"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${(OUT[(r.actualParams||{}).outcome]||[0,COL.pb])[1]}"></i>${txt}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button></div>`:`<div class="dayrow"><i style="background:${COL[ty]}"></i><span><b>${new Date(r.startedAt).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'})}</b> ${txt}</span></div>`).join(''):`<p>${t('cal_none')}</p>`;
+  $('cal-day').querySelectorAll('.ed').forEach(b=>b.onclick=()=>{const r=lsJ(KEY.sess,[]).find(x=>x.id===b.dataset.id);if(r)openWaterAdd(r,null,'cal')});
   $('b-cal-add').textContent=t('cal_add');
 }
-$('b-cal-add').onclick=()=>openPBAdd(null,null,calSel,'cal');
+$('b-cal-add').onclick=()=>openWaterAdd(null,calSel,'cal');
 $('cal-prev').onclick=()=>{calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);renderCal()};
 $('cal-next').onclick=()=>{calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);renderCal()};
 $('b-cal-back').onclick=()=>goTab('s-welcome');
@@ -1810,7 +1925,7 @@ function renderDisc(){
   $('pbd-chart').innerHTML=discChart(es,code,col);
   const bestId=es.slice().reverse().find(e=>e.v===best).id;
   $('pbd-list').innerHTML=es.slice().reverse().map(e=>{const d=new Date(e.t);
-    return `<div class="hist${e.src==='static'?' tap':''}" data-id="${e.id}" data-src="${e.src}"><div class="ht"><b>${d.toLocaleDateString(lang)}</b> · <b>${pbFmt(code,e.v)}</b>${e.id===bestId?' · <span style="color:var(--ph-inhale)">'+t('pb_tag')+'</span>':''}${e.src==='static'?' · '+t('st_title').toLowerCase():''}${e.src==='pb'?dyExtra(e.rec)+dyFocus(e.rec):''}${e.rec.notes?'<br>'+esc(e.rec.notes):''}</div>${e.src==='pb'?`<button class="ed" data-id="${e.id}" aria-label="edit">${ICON.pencil}</button>`:''}<button class="del" data-id="${e.id}" aria-label="delete">${ICON.trash}</button></div>`}).join('');
+    return `<div class="hist${e.src==='static'?' tap':''}" data-id="${e.id}" data-src="${e.src}"><div class="ht"><b>${d.toLocaleDateString(lang)}</b> · <b>${pbFmt(code,e.v)}</b>${e.id===bestId?' · <span style="color:var(--ph-inhale)">'+t('pb_tag')+'</span>':''}${e.src==='static'?' · '+t('st_title').toLowerCase():''}${e.rec.notes?'<br>'+esc(e.rec.notes):''}</div>${e.src==='pb'?`<button class="ed" data-id="${e.id}" aria-label="edit">${ICON.pencil}</button>`:''}<button class="del" data-id="${e.id}" aria-label="delete">${ICON.trash}</button></div>`}).join('');
   $('b-pbd-add').textContent=t('add_result');
   bindDeletes($('pbd-list'),renderDisc);
   $('pbd-list').querySelectorAll('.ed').forEach(b=>b.onclick=ev=>{ev.stopPropagation();openPBAdd(code,es.find(e=>e.id===b.dataset.id).rec)});
@@ -1821,14 +1936,12 @@ $('b-pbd-add').onclick=()=>openPBAdd(pbCur);
 
 function openPBAdd(code,rec,day,from){
   pbEdit=rec||null;pbFrom=from||null;pbSel=rec?rec.actualParams.discipline:(typeof code==='string'?code:null);
-  pbOut=rec&&rec.actualParams.outcome||null;
-  $('pbadd-err').textContent='';$('pbadd-notes').value=rec?(rec.notes||''):'';$('pbadd-notes').placeholder=t('dy_notes_ph');
-  $('pbadd-focus').value=rec&&rec.actualParams.focus||'';$('pbadd-focus').placeholder=t('dy_focus_ph');
+  $('pbadd-err').textContent='';$('pbadd-notes').value=rec?(rec.notes||''):'';$('pbadd-notes').placeholder=t('notes_ph');
   const n=new Date(),todayISO=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
   let iso=todayISO;if(rec){const d=new Date(rec.startedAt);iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}else if(day){iso=keyToISO(day)}
   if(iso>todayISO)iso=todayISO;
   $('pbadd-date').value=iso;$('pbadd-date').max=todayISO;
-  renderPBAdd();renderOut();
+  renderPBAdd();
   if(rec){const v=rec.actualParams.value;if(DISC_KIND[pbSel]==='time'){$('pbadd-min').value=Math.floor(v/60);$('pbadd-sec').value=Math.round(v%60)}else $('pbadd-m').value=v}
   $('pbadd-title').textContent=rec?t('edit_result'):t('pb_add_title');
   renderTabs(from==='cal'?'s-cal':'s-pb-add');show('s-pb-add');track('pb_add_open',{from:from||'pb'});
@@ -1842,9 +1955,9 @@ $('b-pbadd-save').onclick=()=>{
   if(!(v>0)||v>(DISC_KIND[pbSel]==='time'?1800:400))return $('pbadd-err').textContent=t('pb_err');
   const day=$('pbadd-date').value;const when=day?new Date(day+'T12:00:00'):new Date();
   const all=lsJ(KEY.sess,[]);
-  if(pbEdit){const r=all.find(x=>x.id===pbEdit.id);if(r){r.startedAt=r.endedAt=when.toISOString();r.actualParams={discipline:pbSel,value:Math.round(v*10)/10,unit:DISC_KIND[pbSel]==='time'?'s':'m',outcome:pbOut||undefined,focus:$('pbadd-focus').value.trim()||undefined};r.notes=$('pbadd-notes').value.trim();r.synced=false}track('pb_edited',{discipline:pbSel})}
+  if(pbEdit){const r=all.find(x=>x.id===pbEdit.id);if(r){r.startedAt=r.endedAt=when.toISOString();r.actualParams={discipline:pbSel,value:Math.round(v*10)/10,unit:DISC_KIND[pbSel]==='time'?'s':'m'};r.notes=$('pbadd-notes').value.trim();r.synced=false}track('pb_edited',{discipline:pbSel})}
   else{
-    const rec={id:uuid(),schemaVersion:SCHEMA,protocolId:'pb-log-v1',exerciseId:'pb',startedAt:when.toISOString(),endedAt:when.toISOString(),plannedParams:{},actualParams:{discipline:pbSel,value:Math.round(v*10)/10,unit:DISC_KIND[pbSel]==='time'?'s':'m',outcome:pbOut||undefined,focus:$('pbadd-focus').value.trim()||undefined},status:'completed',abortReason:null,cyclesCompleted:0,elapsedSec:0,plannedSec:0,feedback:null,notes:$('pbadd-notes').value.trim(),nextParams:null,synced:false,owner:user?user.id:null,diag:{}};
+    const rec={id:uuid(),schemaVersion:SCHEMA,protocolId:'pb-log-v1',exerciseId:'pb',startedAt:when.toISOString(),endedAt:when.toISOString(),plannedParams:{},actualParams:{discipline:pbSel,value:Math.round(v*10)/10,unit:DISC_KIND[pbSel]==='time'?'s':'m'},status:'completed',abortReason:null,cyclesCompleted:0,elapsedSec:0,plannedSec:0,feedback:null,notes:$('pbadd-notes').value.trim(),nextParams:null,synced:false,owner:user?user.id:null,diag:{}};
     all.push(rec);track('pb_saved',{discipline:pbSel,value:rec.actualParams.value});log('pb:saved',rec.id)}
   lsSet(KEY.sess,JSON.stringify(all));pushSessions();pbEdit=null;if(pbFrom==='cal'){pbCur=pbSel;pbAddExit()}else openDisc(pbSel);
 };
