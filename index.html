@@ -21,7 +21,7 @@
   padding-bottom:env(safe-area-inset-bottom,0px);
   --bg:#061A2B; --bg2:#0B2A40; --ink:#EAF4F7; --ink2:#8FB1C2; --line:rgba(234,244,247,.14);
   --accent:#8FE0D2; --danger:#F08A7A;
-  --ph-inhale:#8FE0D2; --ph-hold_full:#F2C879; --ph-exhale:#7FB4F0; --ph-hold_empty:#C4A6EA; --ph-warm:#A9D3B5; --ph-static:#79C9F2; --water:#B07CF5;
+  --ph-inhale:#8FE0D2; --ph-hold_full:#F2C879; --ph-exhale:#7FB4F0; --ph-hold_empty:#C4A6EA; --ph-warm:#A9D3B5; --ph-static:#79C9F2; --water:#9F8FD8;
   --font:'Sora',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
 html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
@@ -547,7 +547,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.8.4';
+const VERSION='0.8.5';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1370,7 +1370,7 @@ function renderWelcome(){
   $('wl-hi').textContent=T[lang].wl_hi(userLabel()||(profile&&profile.display_name)||'');
   $('wl-streak').textContent=T[lang].wl_streak(streakDays());
   const br=lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='breathing'&&r.status==='completed').pop();
-  $('wl-breath-sub').textContent=T[lang].wl_breath_sub(br?`${new Date(br.startedAt).toLocaleDateString(lang)} · ${t2(br.elapsedSec)}`:'');
+  $('wl-breath-sub').textContent=T[lang].wl_breath_sub(br?`${relDay(br.startedAt)} · ${t2(br.elapsedSec)}`:'');
   const pb=staticPB();$('wl-static-sub').textContent=T[lang].wl_static_sub(pb?fmt(pb):'');
   $('wl-pb-sub').textContent=T[lang].pb_sub_wl(pbRecords().length);
   $('wl-tip').textContent=t('wl_tip');$('ver2').textContent=`Breathing Coach v${VERSION} · Orbita by Quota Zero`;
@@ -1719,14 +1719,14 @@ Object.assign(T.it,{tab_breath_s:'Respiro',tab_static_s:'Statica',tab_water:'Acq
   wt_empty_t:'Segna il tuo primo allenamento in acqua',wt_empty_s:'Profondità, com’è andata e su cosa lavorare: lo ritrovi qui e nel calendario.',
   wt_focus_card:'Da lavorare dall’ultima volta',wt_chart:'Massima nel tempo',wt_err:'Inserisci un valore valido (0–400 m).',
   wt_offer:(d,v)=>`Nuovo massimo in ${d}: ${v}. Vuoi salvarlo anche come record?`,wt_offer_yes:'Salva come record',wt_offer_no:'No, grazie',
-  wl_water_sub:(n)=>n?(n===1?'1 allenamento':n+' allenamenti'):'Mare e piscina',cal_leg_w:'Acqua'});
+  wl_water_sub:(n,tot)=>n?(n===1?'1 allenamento questa settimana':n+' questa settimana'):tot?'Nessuno questa settimana':'Mare e piscina',cal_leg_w:'Acqua'});
 Object.assign(T.en,{tab_breath_s:'Breath',tab_static_s:'Static',tab_water:'Water',wl_water:'Water training',
   wt_title:'Water training',wt_sub:'Your sea and pool log',wt_new:'New',wt_add_title:'Water training',wt_edit:'Edit training',
   wt_where:'Where',wt_sea:'Sea',wt_pool:'Pool',wt_place_ph:'Place (e.g. Capo Mulini)',wt_disc:'Discipline (optional)',wt_depth:'Best reached',
   wt_empty_t:'Log your first water training',wt_empty_s:'Depth, how it went and what to work on: you will find it here and in the calendar.',
   wt_focus_card:'To work on since last time',wt_chart:'Best over time',wt_err:'Enter a valid value (0–400 m).',
   wt_offer:(d,v)=>`New best in ${d}: ${v}. Save it as a record too?`,wt_offer_yes:'Save as record',wt_offer_no:'No thanks',
-  wl_water_sub:(n)=>n?(n===1?'1 training':n+' trainings'):'Sea and pool',cal_leg_w:'Water'});
+  wl_water_sub:(n,tot)=>n?(n===1?'1 training this week':n+' this week'):tot?'None this week':'Sea and pool',cal_leg_w:'Water'});
 COL.water='var(--water)';
 const WDISC=['CWT','CWTB','CNF','FIM','DYN','DYNB','DNF'];
 function waterRecs(){return lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='water'&&r.status==='completed').sort((a,b)=>a.startedAt<b.startedAt?-1:1)}
@@ -1823,6 +1823,9 @@ function ringHTML(types,inner,cls){
   const bg=u.length===1?COL[u[0]]:`conic-gradient(${u.map((c,i)=>`${COL[c]} ${i*100/u.length}% ${(i+1)*100/u.length}%`).join(',')})`;
   return `<span class="dr ${cls||''}" style="background:${bg}"><i>${inner||''}</i></span>`;
 }
+function relDay(ts){const d=new Date(ts),a=new Date(d);a.setHours(0,0,0,0);const n=new Date();n.setHours(0,0,0,0);const diff=Math.round((n-a)/86400000);
+  if(diff===0)return lang==='it'?'oggi':'today';if(diff===1)return lang==='it'?'ieri':'yesterday';return d.toLocaleDateString(lang)}
+function waterWeekCount(){const ws=weekStart().getTime();return waterRecs().filter(r=>new Date(r.startedAt).getTime()>=ws).length}
 function weekStart(d0){const d=new Date(d0||Date.now());d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
 function renderWeek(){
   const days=actsByDay(),ws=weekStart(),today=dayKey(new Date());let n=0,html='';
@@ -1840,10 +1843,10 @@ function renderWelcome(){
   $('wl-hi').textContent=T[lang].wl_hi(userLabel()||(profile&&profile.display_name)||'');
   renderWeek();
   const br=lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='breathing'&&r.status==='completed').pop();
-  $('wl-breath-sub').textContent=T[lang].wl_breath_sub(br?`${new Date(br.startedAt).toLocaleDateString(lang)} · ${t2(br.elapsedSec)}`:'');
+  $('wl-breath-sub').textContent=T[lang].wl_breath_sub(br?`${relDay(br.startedAt)} · ${t2(br.elapsedSec)}`:'');
   const pb=staticPB();$('wl-static-sub').textContent=T[lang].wl_static_sub(pb?fmt(pb):'');
   $('wl-pb-sub').textContent=T[lang].pb_sub_wl(discsWithData().length);
-  $('wl-water-sub').textContent=T[lang].wl_water_sub(waterRecs().length);
+  $('wl-water-sub').textContent=T[lang].wl_water_sub(waterWeekCount(),waterRecs().length);
   $('b-acc-ic').innerHTML=ICON.user;
   const b3=$('b-account3');b3.textContent=$('b-account').textContent;b3.style.display=isGuest()?'block':'none';
 }
