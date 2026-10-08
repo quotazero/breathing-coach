@@ -21,7 +21,7 @@
   padding-bottom:env(safe-area-inset-bottom,0px);
   --bg:#061A2B; --bg2:#0B2A40; --ink:#EAF4F7; --ink2:#8FB1C2; --line:rgba(234,244,247,.14);
   --accent:#8FE0D2; --danger:#F08A7A;
-  --ph-inhale:#8FE0D2; --ph-hold_full:#F2C879; --ph-exhale:#7FB4F0; --ph-hold_empty:#C4A6EA; --ph-warm:#A9D3B5; --ph-static:#79C9F2;
+  --ph-inhale:#8FE0D2; --ph-hold_full:#F2C879; --ph-exhale:#7FB4F0; --ph-hold_empty:#C4A6EA; --ph-warm:#A9D3B5; --ph-static:#79C9F2; --water:#B07CF5;
   --font:'Sora',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
 html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
@@ -228,7 +228,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <h2 data-i18n="wl_q"></h2>
   <button class="card" id="wl-breath" style="--c:var(--ph-hold_full)"><span class="ic" data-ic="lungs"></span><span><b data-i18n="wl_breath"></b><small id="wl-breath-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-static" style="--c:var(--ph-static)"><span class="ic" data-ic="timer"></span><span><b data-i18n="wl_static"></b><small id="wl-static-sub"></small></span><span class="chev">›</span></button>
-  <button class="card" id="wl-water" style="--c:var(--ph-exhale)"><span class="ic" data-ic="sea"></span><span><b data-i18n="wl_water"></b><small id="wl-water-sub"></small></span><span class="chev">›</span></button>
+  <button class="card" id="wl-water" style="--c:var(--water)"><span class="ic" data-ic="sea"></span><span><b data-i18n="wl_water"></b><small id="wl-water-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-pb" style="--c:var(--ph-inhale)"><span class="ic" data-ic="trophy"></span><span><b data-i18n="wl_pb"></b><small id="wl-pb-sub"></small></span><span class="chev">›</span></button>
   <nav class="tabs" data-tabs><div class="tabrow" data-tabrow></div>
     <div class="legal">
@@ -406,10 +406,10 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
 <section class="screen" id="s-water-add">
   <div class="top"><h1 id="wta-title"></h1><button class="pill" id="b-wta-back" data-i18n="back"></button></div>
   <h2 data-i18n="wt_where"></h2>
-  <div class="chips2" id="wta-where" style="--c:var(--ph-exhale)"></div>
+  <div class="chips2" id="wta-where" style="--c:var(--water)"></div>
   <input class="txt" id="wta-place" type="text" maxlength="60">
   <h2 data-i18n="wt_disc"></h2>
-  <div class="chips2" id="wta-disc" style="--c:var(--ph-exhale)"></div>
+  <div class="chips2" id="wta-disc" style="--c:var(--water)"></div>
   <h2 data-i18n="wt_depth"></h2>
   <div class="pbin"><input id="wta-m" type="number" inputmode="decimal" min="0" max="400" step="0.5" placeholder="0"> <span data-i18n="pb_m"></span></div>
   <h2 data-i18n="pb_date"></h2>
@@ -464,7 +464,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <div class="top"><h1 data-i18n="cal_title"></h1><button class="pill" id="b-cal-back" data-i18n="back"></button></div>
   <div class="calh"><button id="cal-prev" aria-label="prev">‹</button><b id="cal-month"></b><button id="cal-next" aria-label="next">›</button></div>
   <div class="calg" id="cal-grid"></div>
-  <div class="legend"><span><i style="background:var(--ph-hold_full)"></i><span data-i18n="tab_breath"></span></span><span><i style="background:var(--ph-static)"></i><span data-i18n="tab_static"></span></span><span><i style="background:var(--ph-exhale)"></i><span data-i18n="cal_leg_w"></span></span><span><i style="background:var(--ph-inhale)"></i><span data-i18n="cal_leg_pb"></span></span><span><span style="color:var(--ph-inhale)">★</span> <span data-i18n="cal_star"></span></span></div>
+  <div class="legend"><span><i style="background:var(--ph-hold_full)"></i><span data-i18n="tab_breath"></span></span><span><i style="background:var(--ph-static)"></i><span data-i18n="tab_static"></span></span><span><i style="background:var(--water)"></i><span data-i18n="cal_leg_w"></span></span><span><i style="background:var(--ph-inhale)"></i><span data-i18n="cal_leg_pb"></span></span><span><span style="color:var(--ph-inhale)">★</span> <span data-i18n="cal_star"></span></span></div>
   <div id="cal-day" style="margin-top:8px"></div>
   <button class="btn ghost sm" id="b-cal-add" style="margin-top:10px"></button>
   <nav class="tabs" data-tabs></nav>
@@ -547,7 +547,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.8.3';
+const VERSION='0.8.4';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1351,7 +1351,7 @@ const ICON={
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 10.5V20h12v-9.5"/></svg>'
 };
 document.querySelectorAll('[data-ic]').forEach(el=>el.innerHTML=ICON[el.dataset.ic]);
-const TAB_DEFS=[['s-welcome','home','tab_home','var(--accent)'],['s-home','lungs','tab_breath_s','var(--ph-hold_full)'],['s-static','timer','tab_static_s','var(--ph-static)'],['s-water','sea','tab_water','var(--ph-exhale)'],['s-pb','trophy','tab_pb','var(--ph-inhale)']];
+const TAB_DEFS=[['s-welcome','home','tab_home','var(--accent)'],['s-home','lungs','tab_breath_s','var(--ph-hold_full)'],['s-static','timer','tab_static_s','var(--ph-static)'],['s-water','sea','tab_water','var(--water)'],['s-pb','trophy','tab_pb','var(--ph-inhale)']];
 const TABMAP={'s-cal':'s-welcome','s-pb-d':'s-pb','s-pb-add':'s-pb','s-water-add':'s-water','s-st-d':'s-static'};
 function renderTabs(active){active=TABMAP[active]||active;
   document.querySelectorAll('[data-tabs]').forEach(nav0=>{const nav=nav0.querySelector('[data-tabrow]')||nav0;nav.innerHTML=TAB_DEFS.map(([id,ic,k,c])=>`<button class="tab${id===active?' sel':''}" data-tab="${id}" style="--c:${c}"><span class="ic">${ICON[ic]}</span><span>${t(k)}</span></button>`).join('');
@@ -1727,7 +1727,7 @@ Object.assign(T.en,{tab_breath_s:'Breath',tab_static_s:'Static',tab_water:'Water
   wt_focus_card:'To work on since last time',wt_chart:'Best over time',wt_err:'Enter a valid value (0–400 m).',
   wt_offer:(d,v)=>`New best in ${d}: ${v}. Save it as a record too?`,wt_offer_yes:'Save as record',wt_offer_no:'No thanks',
   wl_water_sub:(n)=>n?(n===1?'1 training':n+' trainings'):'Sea and pool',cal_leg_w:'Water'});
-COL.water='var(--ph-exhale)';
+COL.water='var(--water)';
 const WDISC=['CWT','CWTB','CNF','FIM','DYN','DYNB','DNF'];
 function waterRecs(){return lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='water'&&r.status==='completed').sort((a,b)=>a.startedAt<b.startedAt?-1:1)}
 function migrateWater(){
@@ -1785,9 +1785,9 @@ function renderWater(){
   if(!rs.length&&!wtOffer){h=`<div class="pbempty"><img alt="" src="data:image/png;base64,${LOGO_B64}"><b style="font-size:18px">${t('wt_empty_t')}</b><span class="mut" style="color:var(--ink2);font-size:14px;max-width:290px">${t('wt_empty_s')}</span><button class="btn" id="b-wt-first" style="margin-top:6px;max-width:260px">+ ${t('wt_new')}</button></div>`}
   else if(rs.length){
     const lf=rs.slice().reverse().find(r=>r.actualParams&&r.actualParams.focus);
-    if(lf)h+=`<div class="pbcard" style="--c:var(--ph-exhale);border-left:3px solid var(--ph-exhale)"><small>${t('wt_focus_card')} · ${new Date(lf.startedAt).toLocaleDateString(lang)}</small><div style="margin-top:4px;font-size:16px">${esc(lf.actualParams.focus)}</div></div>`;
+    if(lf)h+=`<div class="pbcard" style="--c:var(--water);border-left:3px solid var(--water)"><small>${t('wt_focus_card')} · ${new Date(lf.startedAt).toLocaleDateString(lang)}</small><div style="margin-top:4px;font-size:16px">${esc(lf.actualParams.focus)}</div></div>`;
     const es=rs.filter(r=>r.actualParams.depth!=null).map(r=>({t:+new Date(r.startedAt),v:r.actualParams.depth}));
-    if(es.length>=2)h+=`<h2>${t('wt_chart')}</h2>`+discChart(es,'CWT','var(--ph-exhale)');
+    if(es.length>=2)h+=`<h2>${t('wt_chart')}</h2>`+discChart(es,'CWT','var(--water)');
     h+=`<div style="margin-top:8px">`+rs.slice().reverse().map(r=>{const a=r.actualParams,d=new Date(r.startedAt);
       const bits=[a.where?t('wt_'+a.where):'',a.place?esc(a.place):'',a.discipline?esc(a.discipline):'',a.depth!=null?`<b>${a.depth} m</b>`:''].filter(Boolean).join(' · ');
       return `<div class="hist"><div class="ht"><b>${d.toLocaleDateString(lang)}</b> · ${bits}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button><button class="del" data-id="${r.id}" aria-label="delete">${ICON.trash}</button></div>`}).join('')+`</div>`;
