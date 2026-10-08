@@ -547,7 +547,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.8.5';
+const VERSION='0.8.6';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -930,8 +930,8 @@ async function sendCode(){
   accErr('');$('b-send-code').disabled=true;
   try{
     let error;
-    if(accMode==='new'&&isGuest()&&user){({error}=await sb.auth.updateUser({email}));pendingType='email_change'}
-    else{({error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}}));pendingType='email'}
+    guestPrev=(isGuest()&&user)?user.id:null;
+    ({error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}}));pendingType='email';
     if(error)throw error;
     pendingEmail=email;$('acc-sent-to').textContent=T[lang].acc_sent(email);
     $('acc-step-email').style.display='none';$('acc-step-code').style.display='block';setTimeout(()=>$('acc-code').focus(),50);
@@ -941,15 +941,18 @@ async function sendCode(){
     accErr('err_generic');$('acc-err').textContent+=' ('+e.message+')'}
   finally{$('b-send-code').disabled=false}
 }
-let pendingType='email';
+let pendingType='email',guestPrev=null;
 async function verifyCode(){
   const token=$('acc-code').value.replace(/\D/g,'');
   if(token.length!==6)return accErr('err_code');
   accErr('');$('b-verify').disabled=true;
   try{
-    const {data,error}=await sb.auth.verifyOtp({email:pendingEmail,token,type:pendingType});
+    let {data,error}=await sb.auth.verifyOtp({email:pendingEmail,token,type:pendingType});
+    if(error){const r2=await sb.auth.verifyOtp({email:pendingEmail,token,type:pendingType==='email'?'signup':'email'});if(!r2.error){data=r2.data;error=null}}
     if(error)throw error;
     user=data.user||(await sb.auth.getUser()).data.user;
+    if(guestPrev&&user&&guestPrev!==user.id){const all=lsJ(KEY.sess,[]);all.forEach(r=>{if(!r.owner||r.owner===guestPrev){r.owner=user.id;r.synced=false}});lsSet(KEY.sess,JSON.stringify(all));log('auth:adopted-guest-data')}
+    guestPrev=null;
     await afterLogin('email');
   }catch(e){log('auth:verify-error',e.message);accErr('err_code')}
   finally{$('b-verify').disabled=false}
