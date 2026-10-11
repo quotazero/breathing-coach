@@ -547,7 +547,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.8.6';
+const VERSION='0.8.7';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1572,6 +1572,7 @@ const pushOK=()=>('serviceWorker' in navigator)&&('PushManager' in window)&&('No
 function pushT(){const en=lang==='en';return en?{h:'Daily reminder',on:'Turn on reminders',off:'Turn off',time:'Remind me at',streak:'Warn me if I’m about to lose my streak',s_on:'Reminders are on.',s_off:'Get a daily nudge to train.',s_ios:'To get notifications, add the app to the Home screen first.',s_no:'This browser doesn’t support notifications.',s_den:'Notifications are blocked. Enable them in your phone settings.',s_err:'Couldn’t turn on reminders. Try again.'}:{h:'Promemoria giornaliero',on:'Attiva i promemoria',off:'Disattiva',time:'Ricordamelo alle',streak:'Avvisami se rischio di perdere la serie',s_on:'Promemoria attivi.',s_off:'Ricevi ogni giorno un promemoria per allenarti.',s_ios:'Per ricevere le notifiche aggiungi prima l’app alla Home.',s_no:'Questo browser non supporta le notifiche.',s_den:'Le notifiche sono bloccate. Attivale dalle impostazioni del telefono.',s_err:'Non sono riuscito ad attivare i promemoria. Riprova.'}}
 function b64u(b){const p='='.repeat((4-b.length%4)%4);const r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))}
 function ab2b64(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+try{if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}catch(e){}
 async function pushReg(){return navigator.serviceWorker.register('sw.js')}
 async function renderPush(){
   const x=pushT();$('push-h').textContent=x.h;$('b-push-on').textContent=x.on;$('b-push-off').textContent=x.off;$('push-time-l').textContent=x.time;$('push-streak-l').textContent=x.streak;
