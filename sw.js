@@ -1,6 +1,6 @@
 // Service worker di Breathing Coach: funzionamento offline + notifiche push
-const CACHE='bc-v0.8.7';
-const CORE=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png','favicon.png','about.html','privacy.html'];
+const CACHE='bc-v0.8.8';
+const CORE=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png','favicon.png','about.html','privacy.html','centro.html','centro.webmanifest'];
 const CDN=['cdn.jsdelivr.net','fonts.googleapis.com','fonts.gstatic.com'];
 self.addEventListener('install',e=>{
   e.waitUntil(caches.open(CACHE).then(c=>Promise.all(CORE.map(u=>c.add(new Request(u,{cache:'reload'})).catch(()=>{})))).then(()=>self.skipWaiting()));

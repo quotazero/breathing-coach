@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Centro · Orbita by Quota Zero</title>
+<meta name="theme-color" content="#061A2B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Centro">
+<link rel="manifest" href="centro.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  box-sizing:border-box;
+  --bg:#061A2B; --bg2:#0B2A40; --ink:#EAF4F7; --ink2:#8FB1C2; --line:rgba(234,244,247,.14);
+  --accent:#8FE0D2; --danger:#F08A7A;
+  --ph-inhale:#8FE0D2; --ph-hold_full:#F2C879; --ph-exhale:#7FB4F0; --ph-hold_empty:#C4A6EA; --ph-warm:#A9D3B5; --ph-static:#79C9F2; --water:#9F8FD8;
+  --font:'Sora',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+html{height:100%}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);font-weight:400;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:inherit}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+.screen{display:none;min-height:100%;flex-direction:column;padding:20px 20px calc(120px + env(safe-area-inset-bottom,0px));max-width:520px;margin:0 auto}
+.screen.on{display:flex}
+h1{font-size:22px;font-weight:600;margin:8px 0 4px;letter-spacing:-.01em}
+h2{font-size:17px;font-weight:600;margin:24px 0 10px}
+p{line-height:1.55;margin:0 0 12px;color:var(--ink2);font-size:15px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pill{font-size:13px;color:var(--ink2);border:1px solid var(--line);border-radius:20px;padding:6px 12px;white-space:nowrap}
+.pill.acc{color:var(--accent);border-color:rgba(143,224,210,.4)}
+.btn{display:block;width:100%;padding:16px;border-radius:14px;font-size:17px;font-weight:600;text-align:center;background:var(--accent);color:#04131D;margin-top:10px}
+.btn:active{transform:scale(.985)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:400}
+.btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn.sm{padding:10px 12px;font-size:14px;margin-top:0;border-radius:12px;width:auto}
+.btn[disabled]{opacity:.45}
+.rbtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0}.rbtn svg{width:22px;height:22px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);gap:12px}
+.row:last-child{border-bottom:0}
+.row .lbl{font-size:15px}
+.row .lbl small{display:block;color:var(--ink2);font-size:12.5px;margin-top:2px}
+.card{background:color-mix(in srgb,var(--c) 13%,var(--bg2));border:1px solid color-mix(in srgb,var(--c) 38%,transparent);display:flex;align-items:center;gap:14px;width:100%;text-align:left;border-radius:16px;padding:16px 14px;margin-top:10px;border-left:4px solid var(--c)}
+.card .ic{width:40px;height:40px;flex-shrink:0;color:var(--c)}
+.card .ic svg{width:40px;height:40px}
+.card b{display:block;font-size:17px;font-weight:600}
+.card small{display:block;color:var(--ink2);font-size:13px;margin-top:3px}
+.card .chev{margin-left:auto;font-size:26px;color:var(--ink2)}
+.card:active{transform:scale(.985)}
+.card.x{opacity:.65}
+.card .sp{min-width:0;flex:1}
+.cbar{height:5px;background:rgba(0,0,0,.28);border-radius:3px;overflow:hidden;margin-top:8px}.cbar i{display:block;height:100%;background:var(--c)}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tg{font-size:11.5px;border:1px solid var(--line);border-radius:12px;padding:2px 8px;color:var(--ink2)}
+.tg.w{color:var(--ph-hold_full);border-color:rgba(242,200,121,.5)}.tg.d{color:var(--danger);border-color:var(--danger)}.tg.g{color:var(--accent);border-color:rgba(143,224,210,.5)}
+.wk{display:block;width:100%;background:var(--bg2);border-radius:16px;padding:14px 8px 12px;margin:12px 0 4px;text-align:center}
+.wkh{display:flex;align-items:center;justify-content:space-between;padding:0 6px 10px;font-size:13px;color:var(--ink2)}
+.wkh button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);font-size:18px;line-height:1}
+.wkg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.wkd{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--ink2);cursor:pointer}
+.wkd.today{color:var(--ink);font-weight:700}
+.wkd.sel .dr{box-shadow:0 0 0 2px var(--bg2),0 0 0 3.5px var(--accent)}
+.wkl{font-size:13px;color:var(--ink2);margin-top:10px}
+.dr{width:34px;height:34px;border-radius:50%;padding:3px;display:flex;flex-shrink:0}
+.dr>i{flex:1;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:12px;font-weight:600;color:var(--ink)}
+.dr>i svg{width:16px;height:16px}
+.dr.e{padding:0;border:1.5px solid var(--line)}.dr.e>i{background:none;color:var(--ink2);font-weight:400}
+.dr.fut{opacity:.4}
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;flex-direction:column;background:rgba(6,26,43,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 10px 0;z-index:5}
+.tabrow{display:flex;width:100%;max-width:520px;margin:0 auto}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:12px;font-size:12px;color:var(--ink2)}
+.tab .ic{height:22px;display:flex;color:var(--c,var(--ink2))}
+.tab svg{width:22px;height:22px;stroke:currentColor}
+.tab.sel{color:var(--c,var(--accent));background:color-mix(in srgb,var(--c,var(--accent)) 14%,transparent)}
+.legal{display:flex;justify-content:center;gap:26px;margin-top:14px;padding:0 0 max(8px,calc(env(safe-area-inset-bottom,0px) - 6px))}
+.legal a,.legal button{font-size:11.5px;color:var(--ink2);opacity:.65;text-decoration:underline}
+.mdl{position:fixed;inset:0;background:rgba(3,12,20,.72);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+.mdl .box{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px 20px;max-width:400px;width:100%;max-height:88vh;overflow:auto}
+.mdl h3{margin:0 0 12px;font-size:20px}
+label.f{display:block;font-size:12.5px;color:var(--ink2);margin:10px 0 4px}
+input.txt,select.txt{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:16px;color:var(--ink)}
+input.code{letter-spacing:8px;text-align:center;font-size:28px;font-weight:600}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.err{color:var(--danger);font-size:14px;min-height:20px;margin:8px 0}
+.empty{color:var(--ink2);text-align:center;padding:26px 0;font-size:14.5px}
+.demo{background:rgba(242,200,121,.16);color:var(--ph-hold_full);text-align:center;font-size:12px;padding:5px;border-bottom:1px solid rgba(242,200,121,.35)}
+#toast{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--line);padding:10px 16px;border-radius:14px;font-size:14px;opacity:0;transition:.2s;z-index:60;pointer-events:none}
+#toast.on{opacity:1}
+.chips2{display:flex;flex-wrap:wrap;gap:8px}.chips2 button{border:1px solid var(--line);border-radius:20px;padding:8px 16px;color:var(--ink2);font-size:14px}.chips2 button.sel{background:var(--accent);color:#062A2A;border-color:transparent;font-weight:600}
+.topc{display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:6px 12px 6px 8px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid color-mix(in srgb,var(--ph-hold_full) 55%,transparent);color:var(--ph-hold_full)}.topc svg{width:20px;height:20px;flex-shrink:0}.topc b{font-size:15px;font-weight:600;color:var(--ink);display:block;line-height:1.2}.topc em{font-style:normal;font-size:11.5px;color:var(--ink2);display:block}.topc.none{color:var(--ink2);border-color:var(--line);font-size:12.5px;padding:6px 12px}
+.stat{display:flex;gap:10px;margin-top:10px}.stat div{flex:1;background:var(--bg2);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:22px;font-weight:600}.stat span{font-size:12px;color:var(--ink2)}
+</style>
+</head>
+<body>
+<div id="demo"></div>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+const ICON={
+  sound:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6"/><path d="M18.3 6.5a8 8 0 0 1 0 11"/></svg>',
+  mute:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>',
+  lungs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v8"/><path d="M12 9.5c-.6 1.2-1.6 1.8-3 2.2"/><path d="M12 9.5c.6 1.2 1.6 1.8 3 2.2"/><path d="M10.2 11.2c-1.2-.4-2.6 0-3.6 1.2C5.2 14 4.6 16.4 5 18.6c.2 1.2 1.3 1.7 2.6 1.3 1.8-.6 2.6-2.2 2.6-4.2v-4.5z"/><path d="M13.8 11.2c1.2-.4 2.6 0 3.6 1.2 1.4 1.6 2 4 1.6 6.2-.2 1.2-1.3 1.7-2.6 1.3-1.8-.6-2.6-2.2-2.6-4.2v-4.5z"/></svg>',
+  timer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5"/><path d="M10 2.5h4"/><path d="M12 2.5V6"/></svg>',
+  pencil:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>',
+  diver:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8c3.2 3.9 6.2 7.1 6.2 10.4a6.2 6.2 0 0 1-12.4 0C5.8 9.9 8.8 6.7 12 2.8z"/><path d="M12 8.2v7"/><path d="M10.6 7.2 12 8.8l1.4-1.6"/><circle cx="12" cy="16.6" r=".9"/></svg>',
+  pool:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9.5h18M3 14.5h18"/><path d="M7 5v14M12 5v14M17 5v14" stroke-dasharray="1 3"/></svg>',
+  sea:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9c1.8-1.6 3.4-1.6 5 0s3.2 1.6 5 0 3.4-1.6 5 0 2.2 1 2.5.8"/><path d="M2.5 14c1.8-1.6 3.4-1.6 5 0s3.2 1.6 5 0 3.4-1.6 5 0 2.2 1 2.5.8"/><path d="M2.5 19c1.8-1.6 3.4-1.6 5 0s3.2 1.6 5 0 3.4-1.6 5 0 2.2 1 2.5.8"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  trophy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H5v1.5A3 3 0 0 0 8 10.5"/><path d="M16 6h3v1.5a3 3 0 0 1-3 3"/><path d="M12 13v4"/><path d="M10 17h4"/><path d="M8.5 20h7"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l.8 12h9.4l.8-12"/><path d="M10 11v5M14 11v5"/></svg>',
+  share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="12" r="2.6"/><circle cx="17.5" cy="6" r="2.6"/><circle cx="17.5" cy="18" r="2.6"/><path d="M8.8 10.7l6.4-3.4M8.8 13.3l6.4 3.4"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 20c.6-3.6 3.6-5.6 7-5.6s6.4 2 7 5.6"/></svg>',
+  star:'<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9 6.8 19.7l1-5.9L3.5 9.7l5.9-.8L12 3.5z"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 10.5V20h12v-9.5"/></svg>'
+};
+ICON.calendar='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>';
+ICON.users='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.5c.5-3.3 3.1-5.1 6.2-5.1s5.7 1.8 6.2 5.1"/><circle cx="17" cy="9.5" r="2.5"/><path d="M17.5 14.6c2.2.2 3.4 1.6 3.7 4"/></svg>';
+ICON.gear='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7"/></svg>';
+const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co',SUPA_KEY='sb_publishable_9YiJUA45r62HfT5KTidEdw_N0QICtoC';
+const sb=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true}}):null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const S={demo:false,user:null,centers:[],org:null,tab:'home',acts:[],members:[],levels:[],code:'',email:'',stage:'login',err:'',cachedAt:null,wk:0,selDay:null,q:''};
+const KIND={training:'Allenamento',dry:'A secco',course:'Corso'};
+const WD=['L','M','M','G','V','S','D'];
+const BST={booked:['Prenotato','g'],waitlist:['In attesa','w'],attended:['Presente','g'],no_show:['Assente','d']};
+function aStyle(a){ // colore e icona come in Breathing Coach
+  if(a.status==='cancelled')return ['var(--danger)','trash'];
+  if(a.kind==='course')return ['var(--ph-inhale)','trophy'];
+  if(a.kind==='dry')return ['var(--ph-static)','timer'];
+  return ['var(--water)',a.location_type==='pool'?'pool':'sea'];
+}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2200)}
+const dayKey=d=>{const x=new Date(d);return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`};
+const fmtD=d=>new Date(d).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+const fmtT=d=>new Date(d).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+function weekStart(off){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+7*(off||0));return d}
+const ls=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}};
+
+/* ---------- dati demo ---------- */
+function demoData(){
+  const d=(n,h,m=0)=>{const x=new Date();x.setDate(x.getDate()+n);x.setHours(h,m,0,0);return x.toISOString()};
+  S.levels=[{id:'l1',name:'Base',rank:1},{id:'l2',name:'Intermedio',rank:2},{id:'l3',name:'Avanzato',rank:3}];
+  S.centers=[{org_id:'demo',name:'Blue World Freediving',role:'admin',status:'active'}];S.org=S.centers[0];S.code='BW-4F7K2';S.name='Andrea';
+  S.acts=[
+   {id:'a0',kind:'dry',title:'Statica a secco',place:'Sede del centro',location_type:'dry',starts_at:d(0,19),ends_at:d(0,20),capacity:10,booked:6,waitlist:0,min_rank:0,instructor_name:'Andrea',status:'scheduled'},
+   {id:'a1',kind:'training',title:'Allenamento in mare',place:'Pontile di Santa Maria',location_type:'sea',starts_at:d(1,9),ends_at:d(1,12),capacity:6,booked:4,waitlist:1,min_rank:1,instructor_name:'Andrea',status:'scheduled'},
+   {id:'a2',kind:'course',title:'Corso Intermedio',place:'Piscina comunale',location_type:'pool',starts_at:d(3,18),ends_at:d(3,20,30),capacity:5,booked:5,waitlist:2,min_rank:1,course_target_rank:2,instructor_name:'Tito',status:'scheduled'},
+   {id:'a3',kind:'dry',title:'Statica a secco',place:'Sede del centro',location_type:'dry',starts_at:d(3,10),ends_at:d(3,11),capacity:10,booked:3,waitlist:0,min_rank:0,instructor_name:'Andrea',status:'scheduled'},
+   {id:'a4',kind:'training',title:'Profondità con corda',place:'Capo Mulini',location_type:'sea',starts_at:d(5,8,30),ends_at:d(5,13),capacity:4,booked:2,waitlist:0,min_rank:2,instructor_name:'Andrea',status:'cancelled'}];
+  S.members=[
+   {user_id:'u1',name:'Michela R.',role:'athlete',level_name:'Avanzato',level_rank:3,n_certs:3,status:'active',top_cert_agency:'Molchanovs Wave',top_cert_level:'Wave 4'},
+   {user_id:'u2',name:'Luca B.',role:'athlete',level_name:'Intermedio',level_rank:2,n_certs:2,status:'active',top_cert_agency:'AIDA',top_cert_level:'AIDA 3'},
+   {user_id:'u3',name:'Sara M.',role:'athlete',level_name:'Base',level_rank:1,n_certs:1,status:'active',top_cert_agency:'SSI',top_cert_level:'Level 2'},
+   {user_id:'u4',name:'Giovanni P.',role:'athlete',level_name:null,level_rank:0,n_certs:0,status:'active'},
+   {user_id:'u5',name:'Tito',role:'instructor',level_name:'Avanzato',level_rank:3,n_certs:5,status:'active',top_cert_agency:'Molchanovs Wave',top_cert_level:'Instructor Trainer'},
+   {user_id:'u6',name:'Andrea',role:'admin',level_name:'Avanzato',level_rank:3,n_certs:4,status:'active',top_cert_agency:'AIDA',top_cert_level:'Instructor'}];
+}
+const ROSTER_DEMO=[{booking_id:'b1',user_id:'u1',name:'Michela R.',status:'booked',level_name:'Avanzato',n_certs:3},{booking_id:'b2',user_id:'u2',name:'Luca B.',status:'booked',level_name:'Intermedio',n_certs:2},{booking_id:'b3',user_id:'u3',name:'Sara M.',status:'booked',level_name:'Base',n_certs:1},{booking_id:'b4',user_id:'u4',name:'Giovanni P.',status:'booked',level_name:null,n_certs:0},{booking_id:'b5',user_id:'u7',name:'Elena T.',status:'waitlist',level_name:'Base',n_certs:1}];
+
+/* ---------- accesso ---------- */
+async function init(){
+  if(!sb){S.err='Serve connessione per il primo accesso.';return render()}
+  const {data}=await sb.auth.getSession();S.user=data.session?.user||null;
+  if(S.user&&!S.user.is_anonymous)await loadCenters();
+  render();
+}
+async function sendCode(){
+  const email=$('#em').value.trim();if(!email)return;S.email=email;S.err='';
+  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+  if(error)S.err=error.message;else S.stage='code';render()
+}
+async function verify(){
+  const token=$('#cd').value.trim();S.err='';
+  const {data,error}=await sb.auth.verifyOtp({email:S.email,token,type:'email'});
+  if(error){S.err='Codice non valido o scaduto.';return render()}
+  S.user=data.user;await loadCenters();render()
+}
+async function loadCenters(){
+  const {data}=await sb.rpc('my_centers');
+  S.centers=(data||[]).filter(c=>c.status!=='left'&&['admin','instructor'].includes(c.role));
+  if(!S.centers.length){S.stage='nostaff';return}
+  S.org=S.centers[0];S.name=(S.user?.email||'').split('@')[0];
+  try{const p=await sb.from('profiles').select('display_name').eq('user_id',S.user.id).maybeSingle();if(p.data?.display_name)S.name=p.data.display_name}catch(e){}
+  await loadOrg();S.stage='app'
+}
+async function loadOrg(){
+  const id=S.org.org_id;
+  const from=new Date(Date.now()-12*36e5).toISOString();
+  const [a,m,l,o]=await Promise.all([sb.rpc('list_activities',{p_org:id,p_from:from,p_days:90}),sb.rpc('center_members',{p_org:id}),sb.from('center_levels').select('id,name,rank').eq('org_id',id).order('rank'),sb.from('organizations').select('join_code').eq('id',id).maybeSingle()]);
+  if(!a.error){S.acts=a.data||[];S.cachedAt=Date.now();ls('c_acts_'+id,{t:S.cachedAt,a:S.acts})}
+  else{const c=ls('c_acts_'+id);if(c){S.acts=c.a;S.cachedAt=c.t}}
+  S.members=m.data||[];S.levels=l.data||[];S.code=o.data?.join_code||'';
+}
+async function logout(){if(sb)await sb.auth.signOut();S.user=null;S.demo=false;S.stage='login';S.tab='home';render()}
+
+/* ---------- viste ---------- */
+const TABS=[['home','home','Home','var(--accent)'],['act','calendar','Attività','var(--ph-hold_full)'],['mem','users','Persone','var(--ph-static)'],['set','gear','Centro','var(--water)']];
+function render(){
+  $('#demo').innerHTML=S.demo&&S.stage==='app'?'<div class="demo">Anteprima con dati di prova: nulla viene salvato</div>':'';
+  const A=$('#app');
+  if(S.stage!=='app'){A.innerHTML='<section class="screen on">'+loginView()+'</section>';return}
+  const body={home:homeView,act:actView,mem:memView,set:setView}[S.tab]();
+  A.innerHTML=`<section class="screen on">${body}</section>
+  <nav class="tabs"><div class="tabrow">${TABS.map(([id,ic,l,c])=>`<button class="tab${S.tab===id?' sel':''}" style="--c:${c}" onclick="go('${id}')"><span class="ic">${ICON[ic]}</span>${l}</button>`).join('')}</div>
+  <div class="legal"><a href="privacy.html">Privacy</a><a href="about.html">Info</a></div></nav>`;
+}
+const go=t=>{S.tab=t;render();scrollTo(0,0)};
+function loginView(){
+  if(S.stage==='nostaff')return `<div class="top"><h1>Accesso non abilitato</h1></div><p>L'account ${esc(S.user?.email||'')} non è istruttore né amministratore di un centro. Chiedi all'amministratore di aggiungerti.</p><button class="btn ghost" onclick="logout()">Esci</button>`;
+  return `<div style="padding-top:8vh"><h1 style="font-size:30px;font-weight:300;margin:0">Centro</h1><h1 style="font-size:30px;margin:0 0 14px">Orbita</h1>
+  <p>Gestisci attività, atleti e presenze del tuo centro.</p>
+  ${S.stage==='code'?`<label class="f">Codice ricevuto per email (${esc(S.email)})</label><input id="cd" class="txt code" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••"><button class="btn" onclick="verify()">Entra</button>`:`<label class="f">La tua email</label><input id="em" class="txt" type="email" autocomplete="email" placeholder="nome@email.it"><button class="btn" onclick="sendCode()">Invia codice</button>`}
+  <div class="err">${esc(S.err)}</div>
+  <button class="btn ghost" onclick="startDemo()">Guarda un'anteprima con dati di prova</button></div>`;
+}
+function startDemo(){S.demo=true;demoData();S.stage='app';S.tab='home';render()}
+function actCard(a,showDay){
+  const [c,ic]=aStyle(a),x=a.status==='cancelled',pct=Math.min(100,Math.round(100*(a.booked||0)/a.capacity));
+  const lvl=a.min_rank?(S.levels.find(l=>l.rank===a.min_rank)||{}).name||'liv. '+a.min_rank:'';
+  return `<button class="card${x?' x':''}" style="--c:${c}" onclick="openAct('${a.id}')"><span class="ic">${ICON[ic]}</span><span class="sp"><b>${esc(a.title)}</b><small>${showDay?fmtD(a.starts_at)+' · ':''}${fmtT(a.starts_at)}–${fmtT(a.ends_at)}${a.place?' · '+esc(a.place):''}</small>
+  ${x?'<div class="tags"><span class="tg d">Annullata</span></div>':`<div class="cbar"><i style="width:${pct}%"></i></div><div class="tags"><span class="tg">${a.booked||0}/${a.capacity} posti</span>${a.waitlist?`<span class="tg w">${a.waitlist} in lista</span>`:''}${lvl?`<span class="tg">da ${esc(lvl)}</span>`:''}${a.instructor_name?`<span class="tg">${esc(a.instructor_name)}</span>`:''}</div>`}</span><span class="chev">›</span></button>`;
+}
+function homeView(){
+  const ws=weekStart(S.wk),today=dayKey(new Date()),by={};
+  S.acts.filter(a=>a.status!=='cancelled').forEach(a=>{(by[dayKey(a.starts_at)]=by[dayKey(a.starts_at)]||[]).push(a)});
+  if(!S.selDay||S.wk===0&&false)S.selDay=today;
+  let n=0,iscr=0,g='';
+  for(let i=0;i<7;i++){
+    const d=new Date(ws);d.setDate(ws.getDate()+i);const k=dayKey(d),a=by[k]||[];n+=a.length;a.forEach(x=>iscr+=x.booked||0);
+    const fut=d>new Date()&&k!==today;
+    const cols=[...new Set(a.map(x=>aStyle(x)[0]))];
+    const inner=a.length===1?`<span style="color:${aStyle(a[0])[0]};display:flex">${ICON[aStyle(a[0])[1]]}</span>`:a.length>1?String(a.length):'';
+    const bg=cols.length===1?cols[0]:`conic-gradient(${cols.map((c,j)=>`${c} ${j*100/cols.length}% ${(j+1)*100/cols.length}%`).join(',')})`;
+    g+=`<div class="wkd${k===today?' today':''}${k===S.selDay?' sel':''}" onclick="S.selDay='${k}';render()"><span>${WD[i]}</span>${cols.length?`<span class="dr${fut?' fut':''}" style="background:${bg}"><i>${inner}</i></span>`:`<span class="dr e${fut?' fut':''}"><i></i></span>`}</div>`;
+  }
+  const end=new Date(ws);end.setDate(end.getDate()+6);
+  const lab=S.wk===0?'Questa settimana':ws.toLocaleDateString('it-IT',{day:'numeric',month:'short'})+' – '+end.toLocaleDateString('it-IT',{day:'numeric',month:'short'});
+  const sel=S.acts.filter(a=>dayKey(a.starts_at)===S.selDay).sort((x,y)=>new Date(x.starts_at)-new Date(y.starts_at));
+  const sd=(()=>{const [y,m,d]=S.selDay.split('-').map(Number);return new Date(y,m,d)})();
+  const sdl=S.selDay===today?'Oggi':fmtD(sd);
+  const toProm=S.members.filter(m=>m.role==='athlete'&&!m.level_name&&m.status!=='left').length;
+  return `<div class="top"><h1>Ciao ${esc(S.name||'')}</h1><div style="display:flex;gap:8px;align-items:center"><span class="pill acc">${S.org.role==='admin'?'Amministratore':'Istruttore'}</span><button class="rbtn" aria-label="esci" onclick="logout()">${ICON.user}</button></div></div>
+  <div class="sum" style="font-size:14px;color:var(--ink2);margin:2px 0 0">${esc(S.org.name)}${S.cachedAt&&!S.demo?' · aggiornato alle '+fmtT(S.cachedAt):''}</div>
+  <div class="wk"><div class="wkh"><button onclick="S.wk--;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="prec">‹</button><span>${lab}</span><button onclick="S.wk++;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="succ">›</button></div><div class="wkg">${g}</div><div class="wkl">${n} attività · ${iscr} prenotazioni</div></div>
+  <h2>${sdl}</h2>${sel.map(a=>actCard(a)).join('')||'<div class="empty">Nessuna attività in questo giorno.</div>'}
+  <button class="card" style="--c:var(--accent)" onclick="editAct(null,'${S.selDay}')"><span class="ic">${ICON.plus.replace('width="15" height="15"','')}</span><span class="sp"><b>Nuova attività</b><small>Allenamento, corso o sessione a secco</small></span><span class="chev">›</span></button>
+  ${toProm?`<button class="card" style="--c:var(--ph-hold_full)" onclick="S.pt='ath';go('mem')"><span class="ic">${ICON.users}</span><span class="sp"><b>Atleti senza livello</b><small>${toProm} da valutare</small></span><span class="chev">›</span></button>`:''}`;
+}
+function actView(){
+  const up=S.acts.filter(a=>new Date(a.ends_at)>=new Date()).sort((x,y)=>new Date(x.starts_at)-new Date(y.starts_at));
+  let h=`<div class="top"><h1>Attività</h1><button class="btn sm" onclick="editAct()">+ Nuova</button></div>`;
+  if(!up.length)return h+'<div class="empty">Nessuna attività in programma.</div>';
+  let last='';
+  for(const a of up){const dd=fmtD(a.starts_at);if(dd!==last){h+=`<h2 style="text-transform:capitalize">${dd}</h2>`;last=dd}h+=actCard(a)}
+  return h;
+}
+function topCert(m){return m.top_cert_level?`<span class="topc">${ICON.trophy}<span><b>${esc(m.top_cert_level)}</b>${m.top_cert_agency?'<em>'+esc(m.top_cert_agency)+'</em>':''}</span></span>`:'<span class="topc none">Nessun brevetto inserito</span>'}
+function memView(){
+  const q=(S.q||'').toLowerCase(),pt=S.pt||'ath';
+  const all=S.members.filter(m=>m.status!=='left');
+  const ath=all.filter(m=>m.role==='athlete'),ist=all.filter(m=>m.role!=='athlete');
+  const list=(pt==='ath'?ath:ist).filter(m=>!q||(m.name||'').toLowerCase().includes(q));
+  const nextCount=n=>S.acts.filter(a=>a.status==='scheduled'&&new Date(a.ends_at)>=new Date()&&a.instructor_name===n).length;
+  let h=`<div class="top"><h1>Persone</h1>${S.org.role==='admin'?'<button class="btn sm ghost" onclick="addMember()">+ Aggiungi</button>':''}</div>
+  <div class="chips2" style="margin:10px 0 4px"><button class="${pt==='ath'?'sel':''}" onclick="S.pt='ath';render()">Atleti <span style="opacity:.7">${ath.length}</span></button><button class="${pt==='ist'?'sel':''}" onclick="S.pt='ist';render()">Istruttori <span style="opacity:.7">${ist.length}</span></button></div>
+  <input class="txt" style="margin-top:6px" placeholder="Cerca per nome…" value="${esc(S.q||'')}" oninput="S.q=this.value;const p=this.selectionStart;render();const i=document.querySelector('input.txt');i.focus();i.setSelectionRange(p,p)">`;
+  for(const m of list){
+    if(pt==='ath'){const c=m.level_rank>=3?'var(--ph-inhale)':m.level_rank===2?'var(--ph-static)':m.level_rank===1?'var(--water)':'var(--ink2)';
+      h+=`<button class="card" style="--c:${c}" onclick="openMember('${m.user_id}')"><span class="ic">${ICON.user}</span><span class="sp"><b>${esc(m.name||'Atleta')}</b><small>Livello centro: ${esc(m.level_name||'nessuno')}</small>${topCert(m)}</span><span class="chev">›</span></button>`}
+    else{const n=nextCount(m.name);
+      h+=`<button class="card" style="--c:var(--ph-hold_full)" onclick="openMember('${m.user_id}')"><span class="ic">${ICON.diver}</span><span class="sp"><b>${esc(m.name||'Istruttore')}</b><small>${m.role==='admin'?'Amministratore':'Istruttore'} · ${n} attività in programma</small>${topCert(m)}</span><span class="chev">›</span></button>`}
+  }
+  if(!list.length)h+=`<div class="empty">${pt==='ath'?'Nessun atleta trovato.':'Nessun istruttore trovato.'}</div>`;
+  if(pt==='ist'&&S.org.role==='admin')h+='<p style="font-size:13px;margin-top:14px">Per aggiungere un istruttore, la persona deve avere già un account: usa “+ Aggiungi” e scegli il ruolo.</p>';
+  return h;
+}
+function setView(){
+  return `<div class="top"><h1>Centro</h1></div><div class="sum" style="font-size:14px;color:var(--ink2)">${esc(S.org.name)}</div>
+  <h2>Codice di iscrizione</h2><div class="wk" style="text-align:left;padding:16px"><div style="font-size:26px;font-weight:600;letter-spacing:.12em">${esc(S.code||'—')}</div><p style="margin:6px 0 12px;font-size:13.5px">Gli atleti lo inseriscono in “Il mio centro” dentro Breathing Coach.</p><div style="display:flex;gap:8px"><button class="btn ghost sm" onclick="copyCode()">Copia</button>${S.org.role==='admin'?'<button class="btn danger sm" onclick="newCode()">Nuovo codice</button>':''}</div></div>
+  <h2>Livelli</h2><div class="wk" style="text-align:left;padding:4px 16px">${S.levels.map(l=>`<div class="row"><div class="lbl">${esc(l.name)}</div><span class="pill">livello ${l.rank}</span></div>`).join('')||'<div class="empty">Nessun livello</div>'}</div>
+  <p style="font-size:13px;margin-top:10px">Un'attività con “da livello X” è prenotabile solo da chi ha almeno quel livello; gli altri vedono la proposta di corso.</p>
+  <button class="btn ghost" onclick="logout()">Esci</button>`;
+}
+
+/* ---------- azioni ---------- */
+function modal(html){closeModal();const d=document.createElement('div');d.className='mdl';d.onclick=e=>{if(e.target===d)d.remove()};d.innerHTML='<div class="box">'+html+'</div>';document.body.appendChild(d)}
+const closeModal=()=>document.querySelector('.mdl')?.remove();
+async function openAct(id){
+  const a=S.acts.find(x=>x.id===id);let ro=[];
+  if(S.demo)ro=ROSTER_DEMO;else{const r=await sb.rpc('activity_roster',{p_act:id});ro=r.data||[]}
+  const row=r=>`<div class="row"><div class="lbl">${esc(r.name)}<small>${esc(r.level_name||'Senza livello')} · ${r.n_certs||0} brevetti</small></div>${r.status==='waitlist'?'<span class="tg w">In attesa</span>':`<div style="display:flex;gap:6px"><button class="btn ghost sm" onclick="mark('${r.booking_id}','attended')">✓</button><button class="btn danger sm" onclick="mark('${r.booking_id}','no_show')">Assente</button></div>`}</div>`;
+  const ins=ro.filter(r=>r.status!=='waitlist'),wl=ro.filter(r=>r.status==='waitlist'),[c,ic]=aStyle(a);
+  modal(`<div class="top"><h3>${esc(a.title)}</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
+  <div class="sum" style="font-size:14px;color:var(--ink2);margin-bottom:6px;text-transform:capitalize">${fmtD(a.starts_at)}</div><div style="font-size:14px;color:var(--ink2)">${fmtT(a.starts_at)}–${fmtT(a.ends_at)}${a.place?' · '+esc(a.place):''}</div>
+  <div class="stat"><div><b>${ins.length}/${a.capacity}</b><span>partecipanti</span></div><div><b>${wl.length}</b><span>in lista</span></div></div>
+  <h2 style="font-size:15px;margin:16px 0 0">Partecipanti</h2>${ins.map(row).join('')||'<div class="empty">Nessun partecipante</div>'}
+  ${wl.length?'<h2 style="font-size:15px;margin:16px 0 0">Lista d\'attesa</h2>'+wl.map(row).join(''):''}
+  ${a.status==='scheduled'?`${a.kind==='course'?`<button class="btn" onclick="finishCourse('${a.id}')">Concludi corso</button>`:''}<button class="btn ghost" onclick="editAct('${a.id}')">Modifica / sposta</button><button class="btn danger" onclick="cancelAct('${a.id}')">Annulla attività</button>`:''}`);
+}
+async function mark(bid,st){
+  if(S.demo){toast(st==='attended'?'Segnato presente':'Segnato assente');return}
+  const {error}=await sb.rpc('set_booking_status',{p_booking:bid,p_status:st});
+  toast(error?'Errore: '+error.message:'Salvato');
+}
+function editAct(id,dayk){
+  let base=new Date();base.setDate(base.getDate()+1);base.setHours(9,0,0,0);
+  if(dayk){const [y,m,d]=dayk.split('-').map(Number);base=new Date(y,m,d,9,0)}
+  const a=id?S.acts.find(x=>x.id===id):{kind:'training',title:'',place:'',location_type:'sea',capacity:6,min_rank:0,starts_at:base.toISOString(),ends_at:new Date(base.getTime()+36e5*2).toISOString()};
+  const loc=iso=>{const d=new Date(iso);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
+  modal(`<div class="top"><h3>${id?'Modifica attività':'Nuova attività'}</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
+  <label class="f">Tipo</label><select id="f_kind" class="txt">${Object.entries(KIND).map(([k,v])=>`<option value="${k}" ${a.kind===k?'selected':''}>${v}</option>`).join('')}</select>
+  <label class="f">Titolo</label><input id="f_title" class="txt" value="${esc(a.title)}" placeholder="Allenamento in mare">
+  <div class="g2"><div><label class="f">Inizio</label><input id="f_s" class="txt" type="datetime-local" value="${loc(a.starts_at)}"></div><div><label class="f">Fine</label><input id="f_e" class="txt" type="datetime-local" value="${loc(a.ends_at)}"></div></div>
+  <div class="g2"><div><label class="f">Luogo</label><input id="f_place" class="txt" value="${esc(a.place||'')}"></div><div><label class="f">Ambiente</label><select id="f_loc" class="txt">${[['sea','Mare'],['pool','Piscina'],['dry','A secco']].map(([k,v])=>`<option value="${k}" ${a.location_type===k?'selected':''}>${v}</option>`).join('')}</select></div></div>
+  <div class="g2"><div><label class="f">Posti</label><input id="f_cap" class="txt" type="number" min="1" value="${a.capacity}"></div><div><label class="f">Livello minimo</label><select id="f_rank" class="txt"><option value="0">Nessuno</option>${S.levels.map(l=>`<option value="${l.rank}" ${a.min_rank===l.rank?'selected':''}>${esc(l.name)}</option>`).join('')}</select></div></div>
+  <button class="btn" onclick="saveAct('${id||''}')">Salva</button>`);
+}
+async function saveAct(id){
+  const rec={org_id:S.org.org_id,kind:$('#f_kind').value,title:$('#f_title').value.trim(),place:$('#f_place').value.trim(),location_type:$('#f_loc').value,starts_at:new Date($('#f_s').value).toISOString(),ends_at:new Date($('#f_e').value).toISOString(),capacity:+$('#f_cap').value||1,min_rank:+$('#f_rank').value||0};
+  if(!rec.title){toast('Scrivi un titolo');return}
+  if(rec.kind==='course'){const r=rec.min_rank+1;rec.course_target_rank=S.levels.some(l=>l.rank===r)?r:null}
+  if(S.demo){closeModal();toast('Salvato (prova)');return}
+  const q=id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert(rec);
+  const {error}=await q;if(error){toast('Errore: '+error.message);return}
+  closeModal();toast('Salvato');await loadOrg();render();
+}
+async function cancelAct(id){
+  const why=prompt('Motivo dell\'annullamento (visibile ai partecipanti):','Condizioni meteo');if(why===null)return;
+  if(S.demo){closeModal();toast('Annullata (prova)');return}
+  const {error}=await sb.from('activities').update({status:'cancelled',cancel_reason:why}).eq('id',id);
+  closeModal();toast(error?'Errore: '+error.message:'Annullata: i partecipanti vengono avvisati');await loadOrg();render();
+}
+async function finishCourse(id){
+  if(!confirm('Concludere il corso? I presenti passano al livello successivo.'))return;
+  if(S.demo){closeModal();toast('Corso concluso (prova)');return}
+  const {data,error}=await sb.rpc('complete_course',{p_act:id});
+  closeModal();toast(error?'Errore: '+error.message:`Corso concluso: ${data} promossi`);await loadOrg();render();
+}
+async function openMember(uid){
+  const m=S.members.find(x=>x.user_id===uid);let certs=[];
+  if(S.demo)certs=[{agency:'AIDA',level:'AIDA 2',issued_at:'2024-06-14',instructor:'T. Hassan'}];
+  else{const r=await sb.rpc('member_certifications',{p_org:S.org.org_id,p_user:uid});certs=r.data||[]}
+  modal(`<div class="top"><h3>${esc(m.name||'Atleta')}</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
+  <div style="font-size:14px;color:var(--ink2)">Livello centro: ${esc(m.level_name||'nessuno')}</div>${topCert(m)}
+  <h2 style="font-size:15px;margin:16px 0 0">Tutti i brevetti</h2>${certs.map(c=>`<div class="row"><div class="lbl">${esc(c.agency||'')} ${esc(c.level||c.level_name||'')}<small>${esc(c.issued_at||'')}${c.instructor?' · '+esc(c.instructor):''}</small></div></div>`).join('')||'<div class="empty">Nessun brevetto inserito</div>'}
+  ${m.role!=='athlete'?`<h2 style="font-size:15px;margin:16px 0 0">Prossime attività</h2>${S.acts.filter(a=>a.status==='scheduled'&&a.instructor_name===m.name&&new Date(a.ends_at)>=new Date()).map(a=>`<div class="row"><div class="lbl">${esc(a.title)}<small>${fmtD(a.starts_at)} · ${fmtT(a.starts_at)}</small></div></div>`).join('')||'<div class="empty">Nessuna attività in programma</div>'}`:''}
+  <h2 style="font-size:15px;margin:16px 0 6px">Livello nel centro</h2><select id="lv" class="txt"><option value="">Senza livello</option>${S.levels.map(l=>`<option value="${l.id}" ${l.name===m.level_name?'selected':''}>${esc(l.name)}</option>`).join('')}</select><button class="btn" onclick="setLevel('${uid}')">Assegna livello</button>${S.org.role==='admin'&&m.user_id!==S.user?.id?`<h2 style="font-size:15px;margin:18px 0 6px">Ruolo</h2><select id="rl" class="txt"><option value="athlete" ${m.role==='athlete'?'selected':''}>Atleta</option><option value="instructor" ${m.role==='instructor'?'selected':''}>Istruttore</option><option value="admin" ${m.role==='admin'?'selected':''}>Amministratore</option></select><button class="btn ghost" onclick="setRole('${uid}')">Cambia ruolo</button>`:''}`);
+}
+async function setRole(uid){
+  if(S.demo){closeModal();toast('Ruolo cambiato');return}
+  const {error}=await sb.rpc('set_member_role',{p_org:S.org.org_id,p_user:uid,p_role:$('#rl').value});
+  closeModal();toast(error?'Errore: '+error.message:'Ruolo cambiato');await loadOrg();render();
+}
+async function setLevel(uid){
+  if(S.demo){closeModal();toast('Livello assegnato');return}
+  const {error}=await sb.rpc('set_member_level',{p_org:S.org.org_id,p_user:uid,p_level:$('#lv').value||null,p_note:null});
+  closeModal();toast(error?'Errore: '+error.message:'Livello assegnato');await loadOrg();render();
+}
+function addMember(){modal(`<div class="top"><h3>Aggiungi persona</h3><button class="rbtn" onclick="closeModal()">✕</button></div><label class="f">Email (deve avere già un account)</label><input id="ae" class="txt" type="email"><label class="f">Ruolo</label><select id="ar" class="txt"><option value="athlete">Atleta</option><option value="instructor">Istruttore</option></select><button class="btn" onclick="doAdd()">Aggiungi</button>`)}
+async function doAdd(){
+  if(S.demo){closeModal();toast('Aggiunto');return}
+  const {error}=await sb.rpc('add_member_by_email',{p_org:S.org.org_id,p_email:$('#ae').value.trim(),p_role:$('#ar').value});
+  closeModal();toast(error?'Errore: '+error.message:'Aggiunto');await loadOrg();render();
+}
+function copyCode(){navigator.clipboard?.writeText(S.code);toast('Codice copiato')}
+async function newCode(){
+  if(!confirm('Il vecchio codice smette di funzionare. Continuare?'))return;
+  if(S.demo){toast('Nuovo codice creato');return}
+  const {data,error}=await sb.rpc('regenerate_join_code',{p_org:S.org.org_id});
+  if(!error)S.code=data;toast(error?'Errore: '+error.message:'Nuovo codice creato');render();
+}
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+if(new URLSearchParams(location.search).has('demo'))startDemo();else init();
+</script>
+</body>
+</html>
