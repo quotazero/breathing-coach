@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="qr.js"></script>
 <style>
 :root{
   box-sizing:border-box;
@@ -85,7 +86,7 @@ p{line-height:1.55;margin:0 0 12px;color:var(--ink2);font-size:15px}
 label.f{display:block;font-size:12.5px;color:var(--ink2);margin:10px 0 4px}
 input.txt,select.txt{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-size:16px;color:var(--ink)}
 input.code{letter-spacing:8px;text-align:center;font-size:28px;font-weight:600}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.g2 input,.g2 select{min-width:0;max-width:100%}input[type=datetime-local]{font-size:14px;padding:12px 8px}
 .err{color:var(--danger);font-size:14px;min-height:20px;margin:8px 0}
 .empty{color:var(--ink2);text-align:center;padding:26px 0;font-size:14.5px}
 .demo{background:rgba(242,200,121,.16);color:var(--ph-hold_full);text-align:center;font-size:12px;padding:5px;border-bottom:1px solid rgba(242,200,121,.35)}
@@ -93,6 +94,11 @@ input.code{letter-spacing:8px;text-align:center;font-size:28px;font-weight:600}
 #toast.on{opacity:1}
 .chips2{display:flex;flex-wrap:wrap;gap:8px}.chips2 button{border:1px solid var(--line);border-radius:20px;padding:8px 16px;color:var(--ink2);font-size:14px}.chips2 button.sel{background:var(--accent);color:#062A2A;border-color:transparent;font-weight:600}
 .topc{display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:6px 12px 6px 8px;border-radius:12px;background:rgba(0,0,0,.25);border:1px solid color-mix(in srgb,var(--ph-hold_full) 55%,transparent);color:var(--ph-hold_full)}.topc svg{width:20px;height:20px;flex-shrink:0}.topc b{font-size:15px;font-weight:600;color:var(--ink);display:block;line-height:1.2}.topc em{font-style:normal;font-size:11.5px;color:var(--ink2);display:block}.topc.none{color:var(--ink2);border-color:var(--line);font-size:12.5px;padding:6px 12px}
+.calh{display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px}.calh b{font-size:17px}.calh button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);font-size:20px}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:8px 2px;justify-items:center;background:var(--bg2);border-radius:16px;padding:12px 6px;touch-action:pan-y}
+.calg .wd{font-size:11px;color:var(--ink2)}
+.cd{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;position:relative}.cd em{font-style:normal;font-size:11px;color:var(--ink2)}.cd.today em{color:var(--ink);font-weight:700}
+.cd .dr{width:36px;height:36px}.cd.sel .dr{box-shadow:0 0 0 2px var(--bg2),0 0 0 3.5px var(--accent)}
 .stat{display:flex;gap:10px;margin-top:10px}.stat div{flex:1;background:var(--bg2);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:22px;font-weight:600}.stat span{font-size:12px;color:var(--ink2)}
 </style>
 </head>
@@ -125,9 +131,11 @@ const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co',SUPA_KEY='sb_publishab
 const sb=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true}}):null;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const S={demo:false,user:null,centers:[],org:null,tab:'home',acts:[],members:[],levels:[],code:'',email:'',stage:'login',err:'',cachedAt:null,wk:0,selDay:null,q:''};
+const S={demo:false,user:null,centers:[],org:null,tab:'home',acts:[],members:[],levels:[],code:'',email:'',stage:'login',err:'',cachedAt:null,wk:0,selDay:null,q:'',cal:false,calM:null,calSel:null,actF:'up',pt:'ath'};
 const KIND={training:'Allenamento',dry:'A secco',course:'Corso'};
 const WD=['L','M','M','G','V','S','D'];
+const ACC={boat:'Da barca',shore:'Da riva / atollo'};
+const JOINURL=c=>'https://quotazero.github.io/breathing-coach/?join='+encodeURIComponent(c);
 const BST={booked:['Prenotato','g'],waitlist:['In attesa','w'],attended:['Presente','g'],no_show:['Assente','d']};
 function aStyle(a){ // colore e icona come in Breathing Coach
   if(a.status==='cancelled')return ['var(--danger)','trash'];
@@ -149,10 +157,10 @@ function demoData(){
   S.centers=[{org_id:'demo',name:'Blue World Freediving',role:'admin',status:'active'}];S.org=S.centers[0];S.code='BW-4F7K2';S.name='Andrea';
   S.acts=[
    {id:'a0',kind:'dry',title:'Statica a secco',place:'Sede del centro',location_type:'dry',starts_at:d(0,19),ends_at:d(0,20),capacity:10,booked:6,waitlist:0,min_rank:0,instructor_name:'Andrea',status:'scheduled'},
-   {id:'a1',kind:'training',title:'Allenamento in mare',place:'Pontile di Santa Maria',location_type:'sea',starts_at:d(1,9),ends_at:d(1,12),capacity:6,booked:4,waitlist:1,min_rank:1,instructor_name:'Andrea',status:'scheduled'},
+   {id:'a1',kind:'training',access:'boat',title:'Profondità da barca',place:'Pontile di Santa Maria',location_type:'sea',starts_at:d(1,9),ends_at:d(1,12),capacity:6,booked:4,waitlist:1,min_rank:1,instructor_name:'Andrea',status:'scheduled'},
    {id:'a2',kind:'course',title:'Corso Intermedio',place:'Piscina comunale',location_type:'pool',starts_at:d(3,18),ends_at:d(3,20,30),capacity:5,booked:5,waitlist:2,min_rank:1,course_target_rank:2,instructor_name:'Tito',status:'scheduled'},
    {id:'a3',kind:'dry',title:'Statica a secco',place:'Sede del centro',location_type:'dry',starts_at:d(3,10),ends_at:d(3,11),capacity:10,booked:3,waitlist:0,min_rank:0,instructor_name:'Andrea',status:'scheduled'},
-   {id:'a4',kind:'training',title:'Profondità con corda',place:'Capo Mulini',location_type:'sea',starts_at:d(5,8,30),ends_at:d(5,13),capacity:4,booked:2,waitlist:0,min_rank:2,instructor_name:'Andrea',status:'cancelled'}];
+   {id:'a4',kind:'training',access:'shore',title:'Profondità da riva',place:'Capo Mulini',location_type:'sea',starts_at:d(5,8,30),ends_at:d(5,13),capacity:4,booked:2,waitlist:0,min_rank:2,instructor_name:'Andrea',status:'cancelled'}];
   S.members=[
    {user_id:'u1',name:'Michela R.',role:'athlete',level_name:'Avanzato',level_rank:3,n_certs:3,status:'active',top_cert_agency:'Molchanovs Wave',top_cert_level:'Wave 4'},
    {user_id:'u2',name:'Luca B.',role:'athlete',level_name:'Intermedio',level_rank:2,n_certs:2,status:'active',top_cert_agency:'AIDA',top_cert_level:'AIDA 3'},
@@ -191,8 +199,8 @@ async function loadCenters(){
 }
 async function loadOrg(){
   const id=S.org.org_id;
-  const from=new Date(Date.now()-12*36e5).toISOString();
-  const [a,m,l,o]=await Promise.all([sb.rpc('list_activities',{p_org:id,p_from:from,p_days:90}),sb.rpc('center_members',{p_org:id}),sb.from('center_levels').select('id,name,rank').eq('org_id',id).order('rank'),sb.from('organizations').select('join_code').eq('id',id).maybeSingle()]);
+  const from=new Date(Date.now()-400*864e5).toISOString();
+  const [a,m,l,o]=await Promise.all([sb.rpc('list_activities',{p_org:id,p_from:from,p_days:800}),sb.rpc('center_members',{p_org:id}),sb.from('center_levels').select('id,name,rank').eq('org_id',id).order('rank'),sb.from('organizations').select('join_code').eq('id',id).maybeSingle()]);
   if(!a.error){S.acts=a.data||[];S.cachedAt=Date.now();ls('c_acts_'+id,{t:S.cachedAt,a:S.acts})}
   else{const c=ls('c_acts_'+id);if(c){S.acts=c.a;S.cachedAt=c.t}}
   S.members=m.data||[];S.levels=l.data||[];S.code=o.data?.join_code||'';
@@ -205,12 +213,12 @@ function render(){
   $('#demo').innerHTML=S.demo&&S.stage==='app'?'<div class="demo">Anteprima con dati di prova: nulla viene salvato</div>':'';
   const A=$('#app');
   if(S.stage!=='app'){A.innerHTML='<section class="screen on">'+loginView()+'</section>';return}
-  const body={home:homeView,act:actView,mem:memView,set:setView}[S.tab]();
+  const body=(S.tab==='home'&&S.cal)?calView():{home:homeView,act:actView,mem:memView,set:setView}[S.tab]();
   A.innerHTML=`<section class="screen on">${body}</section>
   <nav class="tabs"><div class="tabrow">${TABS.map(([id,ic,l,c])=>`<button class="tab${S.tab===id?' sel':''}" style="--c:${c}" onclick="go('${id}')"><span class="ic">${ICON[ic]}</span>${l}</button>`).join('')}</div>
   <div class="legal"><a href="privacy.html">Privacy</a><a href="about.html">Info</a></div></nav>`;
 }
-const go=t=>{S.tab=t;render();scrollTo(0,0)};
+const go=t=>{S.tab=t;S.cal=false;render();scrollTo(0,0)};
 function loginView(){
   if(S.stage==='nostaff')return `<div class="top"><h1>Accesso non abilitato</h1></div><p>L'account ${esc(S.user?.email||'')} non è istruttore né amministratore di un centro. Chiedi all'amministratore di aggiungerti.</p><button class="btn ghost" onclick="logout()">Esci</button>`;
   return `<div style="padding-top:8vh"><h1 style="font-size:30px;font-weight:300;margin:0">Centro</h1><h1 style="font-size:30px;margin:0 0 14px">Orbita</h1>
@@ -224,7 +232,7 @@ function actCard(a,showDay){
   const [c,ic]=aStyle(a),x=a.status==='cancelled',pct=Math.min(100,Math.round(100*(a.booked||0)/a.capacity));
   const lvl=a.min_rank?(S.levels.find(l=>l.rank===a.min_rank)||{}).name||'liv. '+a.min_rank:'';
   return `<button class="card${x?' x':''}" style="--c:${c}" onclick="openAct('${a.id}')"><span class="ic">${ICON[ic]}</span><span class="sp"><b>${esc(a.title)}</b><small>${showDay?fmtD(a.starts_at)+' · ':''}${fmtT(a.starts_at)}–${fmtT(a.ends_at)}${a.place?' · '+esc(a.place):''}</small>
-  ${x?'<div class="tags"><span class="tg d">Annullata</span></div>':`<div class="cbar"><i style="width:${pct}%"></i></div><div class="tags"><span class="tg">${a.booked||0}/${a.capacity} posti</span>${a.waitlist?`<span class="tg w">${a.waitlist} in lista</span>`:''}${lvl?`<span class="tg">da ${esc(lvl)}</span>`:''}${a.instructor_name?`<span class="tg">${esc(a.instructor_name)}</span>`:''}</div>`}</span><span class="chev">›</span></button>`;
+  ${x?'<div class="tags"><span class="tg d">Annullata</span></div>':`<div class="cbar"><i style="width:${pct}%"></i></div><div class="tags">${a.access?`<span class="tg g">${ACC[a.access]}</span>`:''}<span class="tg">${a.booked||0}/${a.capacity} posti</span>${a.waitlist?`<span class="tg w">${a.waitlist} in lista</span>`:''}${lvl?`<span class="tg">da ${esc(lvl)}</span>`:''}${a.instructor_name?`<span class="tg">${esc(a.instructor_name)}</span>`:''}</div>`}</span><span class="chev">›</span></button>`;
 }
 function homeView(){
   const ws=weekStart(S.wk),today=dayKey(new Date()),by={};
@@ -247,17 +255,43 @@ function homeView(){
   const toProm=S.members.filter(m=>m.role==='athlete'&&!m.level_name&&m.status!=='left').length;
   return `<div class="top"><h1>Ciao ${esc(S.name||'')}</h1><div style="display:flex;gap:8px;align-items:center"><span class="pill acc">${S.org.role==='admin'?'Amministratore':'Istruttore'}</span><button class="rbtn" aria-label="esci" onclick="logout()">${ICON.user}</button></div></div>
   <div class="sum" style="font-size:14px;color:var(--ink2);margin:2px 0 0">${esc(S.org.name)}${S.cachedAt&&!S.demo?' · aggiornato alle '+fmtT(S.cachedAt):''}</div>
-  <div class="wk"><div class="wkh"><button onclick="S.wk--;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="prec">‹</button><span>${lab}</span><button onclick="S.wk++;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="succ">›</button></div><div class="wkg">${g}</div><div class="wkl">${n} attività · ${iscr} prenotazioni</div></div>
+  <div class="wk"><div class="wkh"><button onclick="S.wk--;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="prec">‹</button><button onclick="openCal()" style="font-size:13px;color:var(--ink2)">${lab}</button><button onclick="S.wk++;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="succ">›</button></div><div class="wkg">${g}</div><button class="wkl" style="display:block;width:100%" onclick="openCal()">${n} attività · ${iscr} prenotazioni · <span style="color:var(--accent)">Apri calendario ›</span></button></div>
   <h2>${sdl}</h2>${sel.map(a=>actCard(a)).join('')||'<div class="empty">Nessuna attività in questo giorno.</div>'}
   <button class="card" style="--c:var(--accent)" onclick="editAct(null,'${S.selDay}')"><span class="ic">${ICON.plus.replace('width="15" height="15"','')}</span><span class="sp"><b>Nuova attività</b><small>Allenamento, corso o sessione a secco</small></span><span class="chev">›</span></button>
   ${toProm?`<button class="card" style="--c:var(--ph-hold_full)" onclick="S.pt='ath';go('mem')"><span class="ic">${ICON.users}</span><span class="sp"><b>Atleti senza livello</b><small>${toProm} da valutare</small></span><span class="chev">›</span></button>`:''}`;
 }
+function openCal(){const [y,m,d]=(S.selDay||dayKey(new Date())).split('-').map(Number);S.calM=new Date(y,m,1);S.calSel=S.selDay||dayKey(new Date());S.cal=true;render();scrollTo(0,0)}
+function calMove(n){S.calM=new Date(S.calM.getFullYear(),S.calM.getMonth()+n,1);render()}
+function calView(){
+  const M=S.calM,y=M.getFullYear(),mo=M.getMonth(),today=dayKey(new Date()),by={};
+  S.acts.forEach(a=>{(by[dayKey(a.starts_at)]=by[dayKey(a.starts_at)]||[]).push(a)});
+  const first=new Date(y,mo,1),off=(first.getDay()+6)%7,nd=new Date(y,mo+1,0).getDate();
+  let g=WD.map(w=>`<span class="wd">${w}</span>`).join('');
+  for(let i=0;i<off;i++)g+='<span></span>';
+  for(let d=1;d<=nd;d++){
+    const k=`${y}-${mo}-${d}`,a=(by[k]||[]).filter(x=>x.status!=='cancelled'),cols=[...new Set(a.map(x=>aStyle(x)[0]))];
+    const inner=a.length===1?`<span style="color:${aStyle(a[0])[0]};display:flex">${ICON[aStyle(a[0])[1]]}</span>`:a.length>1?String(a.length):'';
+    const bg=cols.length===1?cols[0]:`conic-gradient(${cols.map((c,j)=>`${c} ${j*100/cols.length}% ${(j+1)*100/cols.length}%`).join(',')})`;
+    g+=`<button class="cd${k===S.calSel?' sel':''}${k===today?' today':''}" onclick="S.calSel='${k}';render()"><em>${d}</em>${cols.length?`<span class="dr" style="background:${bg}"><i>${inner}</i></span>`:`<span class="dr e"><i></i></span>`}</button>`;
+  }
+  const sel=(by[S.calSel]||[]).sort((x,z)=>new Date(x.starts_at)-new Date(z.starts_at));
+  const [sy,sm,sd]=S.calSel.split('-').map(Number);
+  const lab=M.toLocaleDateString('it-IT',{month:'long',year:'numeric'});
+  return `<div class="top"><h1>Calendario</h1><button class="pill" onclick="S.cal=false;render()">Indietro</button></div>
+  <div class="calh"><button onclick="calMove(-1)" aria-label="mese precedente">‹</button><b style="text-transform:capitalize">${lab}</b><button onclick="calMove(1)" aria-label="mese successivo">›</button></div>
+  <div class="calg" id="calg" ontouchstart="S._tx=event.touches[0].clientX" ontouchend="const dx=event.changedTouches[0].clientX-S._tx;if(Math.abs(dx)>60)calMove(dx<0?1:-1)">${g}</div>
+  <h2 style="text-transform:capitalize">${fmtD(new Date(sy,sm,sd))}</h2>
+  ${sel.map(a=>actCard(a)).join('')||'<div class="empty">Nessuna attività in questo giorno.</div>'}
+  <button class="card" style="--c:var(--accent)" onclick="editAct(null,'${S.calSel}')"><span class="ic">${ICON.plus.replace('width="15" height="15"','')}</span><span class="sp"><b>Nuova attività</b><small>in questo giorno</small></span><span class="chev">›</span></button>`;
+}
 function actView(){
-  const up=S.acts.filter(a=>new Date(a.ends_at)>=new Date()).sort((x,y)=>new Date(x.starts_at)-new Date(y.starts_at));
-  let h=`<div class="top"><h1>Attività</h1><button class="btn sm" onclick="editAct()">+ Nuova</button></div>`;
-  if(!up.length)return h+'<div class="empty">Nessuna attività in programma.</div>';
+  const now=new Date(),past=S.actF==='past';
+  const list=S.acts.filter(a=>past?new Date(a.ends_at)<now:new Date(a.ends_at)>=now).sort((x,y)=>(past?-1:1)*(new Date(x.starts_at)-new Date(y.starts_at)));
+  let h=`<div class="top"><h1>Attività</h1><button class="btn sm" onclick="editAct()">+ Nuova</button></div>
+  <div class="chips2" style="margin:10px 0 0"><button class="${!past?'sel':''}" onclick="S.actF='up';render()">Prossime</button><button class="${past?'sel':''}" onclick="S.actF='past';render()">Passate</button></div>`;
+  if(!list.length)return h+`<div class="empty">${past?'Nessuna attività passata.':'Nessuna attività in programma.'}</div>`;
   let last='';
-  for(const a of up){const dd=fmtD(a.starts_at);if(dd!==last){h+=`<h2 style="text-transform:capitalize">${dd}</h2>`;last=dd}h+=actCard(a)}
+  for(const a of list){const dd=fmtD(a.starts_at);if(dd!==last){h+=`<h2 style="text-transform:capitalize">${dd}</h2>`;last=dd}h+=actCard(a)}
   return h;
 }
 function topCert(m){return m.top_cert_level?`<span class="topc">${ICON.trophy}<span><b>${esc(m.top_cert_level)}</b>${m.top_cert_agency?'<em>'+esc(m.top_cert_agency)+'</em>':''}</span></span>`:'<span class="topc none">Nessun brevetto inserito</span>'}
@@ -281,12 +315,25 @@ function memView(){
   return h;
 }
 function setView(){
+  const adm=S.org.role==='admin';
   return `<div class="top"><h1>Centro</h1></div><div class="sum" style="font-size:14px;color:var(--ink2)">${esc(S.org.name)}</div>
-  <h2>Codice di iscrizione</h2><div class="wk" style="text-align:left;padding:16px"><div style="font-size:26px;font-weight:600;letter-spacing:.12em">${esc(S.code||'—')}</div><p style="margin:6px 0 12px;font-size:13.5px">Gli atleti lo inseriscono in “Il mio centro” dentro Breathing Coach.</p><div style="display:flex;gap:8px"><button class="btn ghost sm" onclick="copyCode()">Copia</button>${S.org.role==='admin'?'<button class="btn danger sm" onclick="newCode()">Nuovo codice</button>':''}</div></div>
+  <h2>Collega gli atleti</h2>
+  <div class="wk" style="text-align:center;padding:18px 16px">
+    <div style="font-size:12.5px;color:var(--ink2);margin-bottom:6px">Codice del centro</div>
+    <div style="font-size:30px;font-weight:600;letter-spacing:.14em">${esc(S.code||'—')}</div>
+    <div style="margin:14px 0 4px">${S.code&&window.QZ?QZ.qr(JOINURL(S.code)):''}</div>
+    <p style="margin:10px 0 12px;font-size:13.5px">L'atleta inquadra il QR con la fotocamera del telefono, oppure scrive il codice in “Il mio centro” dentro Breathing Coach.</p>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn ghost sm" onclick="copyCode()">Copia codice</button><button class="btn ghost sm" onclick="copyLink()">Copia link</button>${adm?'<button class="btn ghost sm" onclick="editCode()">Cambia codice</button>':''}</div>
+  </div>
+  <button class="card" style="--c:var(--accent)" onclick="scanAthlete()"><span class="ic">${ICON.user}</span><span class="sp"><b>Scansiona il QR di un atleta</b><small>Aggiungi subito una persona che ti mostra il suo QR in Breathing Coach</small></span><span class="chev">›</span></button>
+  <h2>Tipi di attività</h2>
+  <div class="wk" style="text-align:left;padding:4px 16px">${ACT_TYPES.map(t=>`<div class="row"><div class="lbl">${t[0]}<small>${t[1]}</small></div></div>`).join('')}</div>
+  <p style="font-size:13px;margin-top:10px">Elenco fisso per ora. La personalizzazione per ogni centro (tipi, durate, posti, livelli richiesti) è in studio.</p>
   <h2>Livelli</h2><div class="wk" style="text-align:left;padding:4px 16px">${S.levels.map(l=>`<div class="row"><div class="lbl">${esc(l.name)}</div><span class="pill">livello ${l.rank}</span></div>`).join('')||'<div class="empty">Nessun livello</div>'}</div>
   <p style="font-size:13px;margin-top:10px">Un'attività con “da livello X” è prenotabile solo da chi ha almeno quel livello; gli altri vedono la proposta di corso.</p>
   <button class="btn ghost" onclick="logout()">Esci</button>`;
 }
+const ACT_TYPES=[['Profondità da barca','Allenamento in mare su cavo, con barca di appoggio'],['Profondità da riva / atollo','Allenamento su cavo con partenza da terra o dall\'atollo'],['Allenamento in piscina','Dinamica, statica, sessioni in vasca'],['Apnea a secco','Statica a secco, tabelle CO2/O2, respirazione'],['Corso','Percorso didattico: chi lo conclude sale di livello']];
 
 /* ---------- azioni ---------- */
 function modal(html){closeModal();const d=document.createElement('div');d.className='mdl';d.onclick=e=>{if(e.target===d)d.remove()};d.innerHTML='<div class="box">'+html+'</div>';document.body.appendChild(d)}
@@ -314,20 +361,34 @@ function editAct(id,dayk){
   const a=id?S.acts.find(x=>x.id===id):{kind:'training',title:'',place:'',location_type:'sea',capacity:6,min_rank:0,starts_at:base.toISOString(),ends_at:new Date(base.getTime()+36e5*2).toISOString()};
   const loc=iso=>{const d=new Date(iso);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
   modal(`<div class="top"><h3>${id?'Modifica attività':'Nuova attività'}</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
-  <label class="f">Tipo</label><select id="f_kind" class="txt">${Object.entries(KIND).map(([k,v])=>`<option value="${k}" ${a.kind===k?'selected':''}>${v}</option>`).join('')}</select>
+  <label class="f">Tipo</label><select id="f_kind" class="txt" onchange="autoTitle()">${Object.entries(KIND).map(([k,v])=>`<option value="${k}" ${a.kind===k?'selected':''}>${v}</option>`).join('')}</select>
   <label class="f">Titolo</label><input id="f_title" class="txt" value="${esc(a.title)}" placeholder="Allenamento in mare">
   <div class="g2"><div><label class="f">Inizio</label><input id="f_s" class="txt" type="datetime-local" value="${loc(a.starts_at)}"></div><div><label class="f">Fine</label><input id="f_e" class="txt" type="datetime-local" value="${loc(a.ends_at)}"></div></div>
-  <div class="g2"><div><label class="f">Luogo</label><input id="f_place" class="txt" value="${esc(a.place||'')}"></div><div><label class="f">Ambiente</label><select id="f_loc" class="txt">${[['sea','Mare'],['pool','Piscina'],['dry','A secco']].map(([k,v])=>`<option value="${k}" ${a.location_type===k?'selected':''}>${v}</option>`).join('')}</select></div></div>
+  <div class="g2"><div><label class="f">Luogo</label><input id="f_place" class="txt" value="${esc(a.place||'')}"></div><div><label class="f">Ambiente</label><select id="f_loc" class="txt" onchange="autoTitle()">${[['sea','Mare'],['pool','Piscina'],['dry','A secco']].map(([k,v])=>`<option value="${k}" ${a.location_type===k?'selected':''}>${v}</option>`).join('')}</select></div></div>
+  <div id="f_accw" style="display:none"><label class="f">Profondità su cavo</label><select id="f_acc" class="txt" onchange="autoTitle()"><option value="boat" ${a.access==='boat'||!a.access?'selected':''}>Da barca</option><option value="shore" ${a.access==='shore'?'selected':''}>Da riva / atollo</option></select></div>
   <div class="g2"><div><label class="f">Posti</label><input id="f_cap" class="txt" type="number" min="1" value="${a.capacity}"></div><div><label class="f">Livello minimo</label><select id="f_rank" class="txt"><option value="0">Nessuno</option>${S.levels.map(l=>`<option value="${l.rank}" ${a.min_rank===l.rank?'selected':''}>${esc(l.name)}</option>`).join('')}</select></div></div>
   <button class="btn" onclick="saveAct('${id||''}')">Salva</button>`);
+  S._autoT=a.title;autoTitle(true);
+}
+function autoTitle(init){
+  const k=$('#f_kind').value,l=$('#f_loc').value,sea=l==='sea'&&k!=='dry';
+  $('#f_accw').style.display=sea?'block':'none';
+  const t=$('#f_title');if(init&&t.value)return;
+  if(t.value&&t.value!==S._autoT)return;
+  let n='';
+  if(k==='course')n='Corso';else if(k==='dry'||l==='dry')n='Apnea a secco';else if(l==='pool')n='Allenamento in piscina';else n=$('#f_acc').value==='shore'?'Profondità da riva / atollo':'Profondità da barca';
+  t.value=n;S._autoT=n;
 }
 async function saveAct(id){
   const rec={org_id:S.org.org_id,kind:$('#f_kind').value,title:$('#f_title').value.trim(),place:$('#f_place').value.trim(),location_type:$('#f_loc').value,starts_at:new Date($('#f_s').value).toISOString(),ends_at:new Date($('#f_e').value).toISOString(),capacity:+$('#f_cap').value||1,min_rank:+$('#f_rank').value||0};
+  rec.access=(rec.location_type==='sea'&&rec.kind!=='dry')?$('#f_acc').value:null;
   if(!rec.title){toast('Scrivi un titolo');return}
   if(rec.kind==='course'){const r=rec.min_rank+1;rec.course_target_rank=S.levels.some(l=>l.rank===r)?r:null}
   if(S.demo){closeModal();toast('Salvato (prova)');return}
   const q=id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert(rec);
-  const {error}=await q;if(error){toast('Errore: '+error.message);return}
+  let {error}=await q;
+  if(error&&/access/i.test(error.message)){delete rec.access;toast('Tipo di accesso non ancora attivo sul server: salvato senza');({error}=await (id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert(rec)))}
+  if(error){toast('Errore: '+error.message);return}
   closeModal();toast('Salvato');await loadOrg();render();
 }
 async function cancelAct(id){
@@ -350,7 +411,7 @@ async function openMember(uid){
   <div style="font-size:14px;color:var(--ink2)">Livello centro: ${esc(m.level_name||'nessuno')}</div>${topCert(m)}
   <h2 style="font-size:15px;margin:16px 0 0">Tutti i brevetti</h2>${certs.map(c=>`<div class="row"><div class="lbl">${esc(c.agency||'')} ${esc(c.level||c.level_name||'')}<small>${esc(c.issued_at||'')}${c.instructor?' · '+esc(c.instructor):''}</small></div></div>`).join('')||'<div class="empty">Nessun brevetto inserito</div>'}
   ${m.role!=='athlete'?`<h2 style="font-size:15px;margin:16px 0 0">Prossime attività</h2>${S.acts.filter(a=>a.status==='scheduled'&&a.instructor_name===m.name&&new Date(a.ends_at)>=new Date()).map(a=>`<div class="row"><div class="lbl">${esc(a.title)}<small>${fmtD(a.starts_at)} · ${fmtT(a.starts_at)}</small></div></div>`).join('')||'<div class="empty">Nessuna attività in programma</div>'}`:''}
-  <h2 style="font-size:15px;margin:16px 0 6px">Livello nel centro</h2><select id="lv" class="txt"><option value="">Senza livello</option>${S.levels.map(l=>`<option value="${l.id}" ${l.name===m.level_name?'selected':''}>${esc(l.name)}</option>`).join('')}</select><button class="btn" onclick="setLevel('${uid}')">Assegna livello</button>${S.org.role==='admin'&&m.user_id!==S.user?.id?`<h2 style="font-size:15px;margin:18px 0 6px">Ruolo</h2><select id="rl" class="txt"><option value="athlete" ${m.role==='athlete'?'selected':''}>Atleta</option><option value="instructor" ${m.role==='instructor'?'selected':''}>Istruttore</option><option value="admin" ${m.role==='admin'?'selected':''}>Amministratore</option></select><button class="btn ghost" onclick="setRole('${uid}')">Cambia ruolo</button>`:''}`);
+  <h2 style="font-size:15px;margin:16px 0 6px">Livello nel centro</h2><select id="lv" class="txt"><option value="">Senza livello</option>${S.levels.map(l=>`<option value="${l.id}" ${l.name===m.level_name?'selected':''}>${esc(l.name)}</option>`).join('')}</select><div class="err" id="lverr"></div><button class="btn" onclick="setLevel('${uid}')">Assegna livello</button>${S.org.role==='admin'&&m.user_id!==S.user?.id?`<h2 style="font-size:15px;margin:18px 0 6px">Ruolo</h2><select id="rl" class="txt"><option value="athlete" ${m.role==='athlete'?'selected':''}>Atleta</option><option value="instructor" ${m.role==='instructor'?'selected':''}>Istruttore</option><option value="admin" ${m.role==='admin'?'selected':''}>Amministratore</option></select><button class="btn ghost" onclick="setRole('${uid}')">Cambia ruolo</button>`:''}`);
 }
 async function setRole(uid){
   if(S.demo){closeModal();toast('Ruolo cambiato');return}
@@ -360,7 +421,8 @@ async function setRole(uid){
 async function setLevel(uid){
   if(S.demo){closeModal();toast('Livello assegnato');return}
   const {error}=await sb.rpc('set_member_level',{p_org:S.org.org_id,p_user:uid,p_level:$('#lv').value||null,p_note:null});
-  closeModal();toast(error?'Errore: '+error.message:'Livello assegnato');await loadOrg();render();
+  if(error){const e=$('#lverr');if(e)e.textContent='Non riuscito: '+error.message;return}
+  closeModal();toast('Livello assegnato');await loadOrg();render();
 }
 function addMember(){modal(`<div class="top"><h3>Aggiungi persona</h3><button class="rbtn" onclick="closeModal()">✕</button></div><label class="f">Email (deve avere già un account)</label><input id="ae" class="txt" type="email"><label class="f">Ruolo</label><select id="ar" class="txt"><option value="athlete">Atleta</option><option value="instructor">Istruttore</option></select><button class="btn" onclick="doAdd()">Aggiungi</button>`)}
 async function doAdd(){
@@ -369,6 +431,25 @@ async function doAdd(){
   closeModal();toast(error?'Errore: '+error.message:'Aggiunto');await loadOrg();render();
 }
 function copyCode(){navigator.clipboard?.writeText(S.code);toast('Codice copiato')}
+function copyLink(){navigator.clipboard?.writeText(JOINURL(S.code));toast('Link copiato')}
+function editCode(){modal(`<div class="top"><h3>Cambia codice</h3><button class="rbtn" onclick="closeModal()">✕</button></div><p style="font-size:14px">Scegli un codice facile da dire a voce: da 4 a 12 tra lettere e numeri (es. BLUEWORLD). Il vecchio codice smette di funzionare.</p><input id="nc" class="txt" maxlength="12" autocapitalize="characters" value="${esc(S.code)}"><div class="err" id="nce"></div><button class="btn" onclick="saveCode()">Salva</button>`)}
+async function saveCode(){
+  const c=$('#nc').value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(c.length<4||c.length>12){$('#nce').textContent='Da 4 a 12 caratteri, solo lettere e numeri.';return}
+  if(S.demo){S.code=c;closeModal();toast('Codice cambiato');render();return}
+  const {data,error}=await sb.rpc('set_join_code',{p_org:S.org.org_id,p_code:c});
+  if(error){$('#nce').textContent=/taken|exists|unique/i.test(error.message)?'Questo codice è già usato da un altro centro.':'Non riuscito: '+error.message;return}
+  S.code=data||c;closeModal();toast('Codice cambiato');render();
+}
+function scanAthlete(){
+  QZ.scan('Inquadra il QR mostrato dall\'atleta in Breathing Coach',async txt=>{
+    if(!/^QZA1:/.test(txt)){toast('QR non riconosciuto');return}
+    if(S.demo){toast('Aggiunto: Elena T. (prova)');return}
+    const {data,error}=await sb.rpc('add_member_by_token',{p_org:S.org.org_id,p_token:txt.slice(5),p_role:'athlete'});
+    if(error){toast(/expired|not valid|invalid/i.test(error.message)?'QR scaduto: chiedi all\'atleta di aprirne uno nuovo':'Errore: '+error.message);return}
+    toast('Aggiunto: '+(data&&data.name||'atleta'));await loadOrg();render();
+  });
+}
 async function newCode(){
   if(!confirm('Il vecchio codice smette di funzionare. Continuare?'))return;
   if(S.demo){toast('Nuovo codice creato');return}

@@ -14,6 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="qr.js"></script>
 <style>
 :root{
   box-sizing:border-box;
@@ -230,6 +231,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <button class="card" id="wl-static" style="--c:var(--ph-static)"><span class="ic" data-ic="timer"></span><span><b data-i18n="wl_static"></b><small id="wl-static-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-water" style="--c:var(--water)"><span class="ic" data-ic="sea"></span><span><b data-i18n="wl_water"></b><small id="wl-water-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-pb" style="--c:var(--ph-inhale)"><span class="ic" data-ic="trophy"></span><span><b data-i18n="wl_pb"></b><small id="wl-pb-sub"></small></span><span class="chev">›</span></button>
+  <button class="card" id="wl-center" style="--c:var(--ph-warm)"><span class="ic" data-ic="users"></span><span><b id="wl-center-t"></b><small id="wl-center-sub"></small></span><span class="chev">›</span></button>
   <nav class="tabs" data-tabs><div class="tabrow" data-tabrow></div>
     <div class="legal">
       <button class="link" id="b-history" data-i18n="history"></button>
@@ -459,6 +461,13 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <nav class="tabs" data-tabs></nav>
 </section>
 
+<!-- ===== IL MIO CENTRO ===== -->
+<section class="screen wtabs" id="s-center">
+  <div class="top"><h1 id="ct-h"></h1><button class="pill" id="b-ct-back"></button></div>
+  <div id="ct-body"></div>
+  <nav class="tabs" data-tabs></nav>
+</section>
+
 <!-- ===== CALENDARIO ===== -->
 <section class="screen wtabs" id="s-cal">
   <div class="top"><h1 data-i18n="cal_title"></h1><button class="pill" id="b-cal-back" data-i18n="back"></button></div>
@@ -547,7 +556,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.8.7';
+const VERSION='0.9.0';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -981,7 +990,7 @@ async function afterLogin(method){
   await registerDevice();
   await pullSessions();await pushSessions();await flushEvents();
   renderAccountPill();renderAccount();
-  if(!profile||!profile.onboarding_done){renderOnb();show('s-onb')}else goTab('s-welcome');
+  if(!profile||!profile.onboarding_done){renderOnb();show('s-onb')}else{goTab('s-welcome');handlePendingJoin()}
 }
 // "Ho già un account": consenso accettato, nessun utente anonimo, vai subito al login
 function haveAccount(){
@@ -1351,16 +1360,89 @@ const ICON={
   share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="12" r="2.6"/><circle cx="17.5" cy="6" r="2.6"/><circle cx="17.5" cy="18" r="2.6"/><path d="M8.8 10.7l6.4-3.4M8.8 13.3l6.4 3.4"/></svg>',
   user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 20c.6-3.6 3.6-5.6 7-5.6s6.4 2 7 5.6"/></svg>',
   star:'<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9 6.8 19.7l1-5.9L3.5 9.7l5.9-.8L12 3.5z"/></svg>',
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.3"/><path d="M2.8 19.5c.5-3.3 3.1-5.1 6.2-5.1s5.7 1.8 6.2 5.1"/><circle cx="17" cy="9.5" r="2.5"/><path d="M17.5 14.6c2.2.2 3.4 1.6 3.7 4"/></svg>',
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 10.5V20h12v-9.5"/></svg>'
 };
 document.querySelectorAll('[data-ic]').forEach(el=>el.innerHTML=ICON[el.dataset.ic]);
 const TAB_DEFS=[['s-welcome','home','tab_home','var(--accent)'],['s-home','lungs','tab_breath_s','var(--ph-hold_full)'],['s-static','timer','tab_static_s','var(--ph-static)'],['s-water','sea','tab_water','var(--water)'],['s-pb','trophy','tab_pb','var(--ph-inhale)']];
-const TABMAP={'s-cal':'s-welcome','s-pb-d':'s-pb','s-pb-add':'s-pb','s-water-add':'s-water','s-st-d':'s-static'};
+const TABMAP={'s-center':'s-welcome','s-cal':'s-welcome','s-pb-d':'s-pb','s-pb-add':'s-pb','s-water-add':'s-water','s-st-d':'s-static'};
 function renderTabs(active){active=TABMAP[active]||active;
   document.querySelectorAll('[data-tabs]').forEach(nav0=>{const nav=nav0.querySelector('[data-tabrow]')||nav0;nav.innerHTML=TAB_DEFS.map(([id,ic,k,c])=>`<button class="tab${id===active?' sel':''}" data-tab="${id}" style="--c:${c}"><span class="ic">${ICON[ic]}</span><span>${t(k)}</span></button>`).join('');
     nav.querySelectorAll('.tab').forEach(b=>b.onclick=()=>goTab(b.dataset.tab))});
 }
 function goTab(id){if(id==='s-water'){renderWater();track('water_open')}if(id==='s-pb'){renderPB();track('pb_open')}if(id==='s-static'){renderStatic();track('static_open')}if(id==='s-welcome')renderWelcome();renderTabs(id);show(id)}
+
+/* ---------- il mio centro ---------- */
+const L2=(it,en)=>lang==='en'?en:it;
+function parseJoin(txt){
+  try{const u=new URL(txt);const c=u.searchParams.get('join');if(c)return c.toUpperCase().replace(/[^A-Z0-9-]/g,'')}catch(e){}
+  const c=String(txt||'').trim().toUpperCase();return /^[A-Z0-9-]{4,16}$/.test(c)?c:null;
+}
+async function myCenters(){
+  if(isGuest()||!sb)return lsJ('bc.centers.v1',[]);
+  try{const {data,error}=await sb.rpc('my_centers');if(error)throw error;const a=(data||[]).filter(c=>c.status!=='left'&&c.role==='athlete'||c.role!=='athlete'&&c.status!=='left');lsSet('bc.centers.v1',JSON.stringify(a));return a}catch(e){return lsJ('bc.centers.v1',[])}
+}
+async function renderCenter(){
+  $('ct-h').textContent=L2('Il mio centro','My center');$('b-ct-back').textContent=t('back');
+  const B=$('ct-body');
+  if(isGuest()){
+    const pend=localStorage.getItem('bc.join.pending');
+    B.innerHTML=`<p class="lead" style="margin-top:14px">${L2('Per collegarti a un centro serve un account: così il centro ti riconosce e le prenotazioni restano tue.','To connect to a center you need an account, so the center can recognize you.')}</p>${pend?`<p>${L2('Codice in attesa','Pending code')}: <b>${esc(pend)}</b></p>`:''}<button class="btn" id="ct-acc">${L2('Crea il tuo account','Create your account')}</button>`;
+    $('ct-acc').onclick=()=>openAccount(false);return;
+  }
+  B.innerHTML='<p>…</p>';
+  const cs=await myCenters();
+  B.innerHTML=`
+    <h2 style="margin-top:14px">${L2('I miei centri','My centers')}</h2>
+    ${cs.length?cs.map(c=>`<div class="note" style="margin-top:8px"><b>${esc(c.name)}</b><br><span style="color:var(--ink2);font-size:13px">${c.role==='athlete'?(c.level_name?L2('Livello','Level')+': '+esc(c.level_name):L2('Livello non ancora assegnato','Level not assigned yet')):L2('Istruttore / staff','Instructor / staff')}</span></div>`).join(''):`<p>${L2('Non sei ancora collegato a nessun centro.','You are not connected to any center yet.')}</p>`}
+    <h2>${L2('Entra in un centro','Join a center')}</h2>
+    <input class="txt" id="ct-code" autocapitalize="characters" autocomplete="off" placeholder="${L2('Codice del centro','Center code')}" style="text-transform:uppercase">
+    <div class="err" id="ct-err"></div>
+    <button class="btn" id="ct-join">${L2('Entra','Join')}</button>
+    <button class="btn ghost" id="ct-scan">${L2('Scansiona il QR del centro','Scan the center QR')}</button>
+    <h2>${L2('Il mio QR','My QR')}</h2>
+    <p>${L2('Mostralo al centro: lo inquadra e ti aggiunge subito, senza scrivere nulla.','Show it to the center: they scan it and add you right away.')}</p>
+    <div id="ct-qr" style="text-align:center"></div>
+    <button class="btn ghost" id="ct-myqr">${L2('Mostra il mio QR','Show my QR')}</button>`;
+  $('ct-join').onclick=()=>{const c=parseJoin($('ct-code').value);if(!c){$('ct-err').textContent=L2('Codice non valido.','Invalid code.');return}joinCenter(c)};
+  $('ct-scan').onclick=()=>QZ.scan(L2('Inquadra il QR del centro','Scan the center QR'),txt=>{const c=parseJoin(txt);if(!c){toast(L2('QR non riconosciuto','QR not recognized'));return}joinCenter(c)});
+  $('ct-myqr').onclick=showMyQR;
+}
+async function joinCenter(code){
+  localStorage.removeItem('bc.join.pending');
+  if(isGuest()){localStorage.setItem('bc.join.pending',code);renderTabs('s-center');show('s-center');renderCenter();return}
+  try{
+    const {data,error}=await sb.rpc('join_center',{p_code:code});
+    if(error)throw error;
+    toast(L2('Collegato a ','Connected to ')+(data&&data.name||''));track('center_join');
+  }catch(e){
+    const m=/not valid/i.test(e.message||'')?L2('Codice non valido.','Invalid code.'):L2('Non riuscito. Controlla la connessione e riprova.','Failed. Check your connection and try again.');
+    if($('ct-err'))$('ct-err').textContent=m;else toast(m);return;
+  }
+  renderTabs('s-center');show('s-center');renderCenter();renderCenterCard();
+}
+let qrTimer=null;
+async function showMyQR(){
+  const box=$('ct-qr');box.innerHTML='<p>…</p>';
+  try{
+    const {data,error}=await sb.rpc('my_onboarding_token');if(error)throw error;
+    const exp=Date.now()+9*60000;
+    box.innerHTML=QZ.qr('QZA1:'+data)+'<p id="ct-qrt" style="margin-top:10px"></p>';
+    clearInterval(qrTimer);
+    const tick=()=>{const s=Math.max(0,Math.round((exp-Date.now())/1000));const e=$('ct-qrt');if(!e){clearInterval(qrTimer);return}e.textContent=s>0?L2('Valido ancora ','Valid for ')+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):L2('Scaduto: mostralo di nuovo','Expired: show it again');if(!s){clearInterval(qrTimer);box.innerHTML=''}};
+    tick();qrTimer=setInterval(tick,1000);
+  }catch(e){box.innerHTML='<p>'+(/function|schema cache|not find/i.test((e&&e.message)||'')?L2('Funzione non ancora attiva: riprova tra poco.','Not active yet: try again soon.'):L2('Serve connessione per generare il QR.','You need a connection to generate the QR.'))+'</p>'}
+}
+async function renderCenterCard(){
+  $('wl-center-t').textContent=L2('Il mio centro','My center');
+  const cs=lsJ('bc.centers.v1',[]);
+  $('wl-center-sub').textContent=localStorage.getItem('bc.join.pending')?L2('Codice in attesa: crea l’account','Code pending: create your account'):cs.length?cs.map(c=>c.name).join(', '):L2('Collegati al tuo diving center','Connect to your dive center');
+  if(!isGuest()&&sb)myCenters().then(c=>{if(c.length)$('wl-center-sub').textContent=c.map(x=>x.name).join(', ')});
+}
+$('wl-center').onclick=()=>{renderTabs('s-center');show('s-center');renderCenter()};
+$('b-ct-back').onclick=()=>goTab('s-welcome');
+try{const j=new URLSearchParams(location.search).get('join');if(j){localStorage.setItem('bc.join.pending',j.toUpperCase().replace(/[^A-Z0-9-]/g,''));history.replaceState(null,'',location.pathname)}}catch(e){}
+async function handlePendingJoin(){const c=localStorage.getItem('bc.join.pending');if(!c)return;if(isGuest()){renderTabs('s-center');show('s-center');renderCenter();return}await joinCenter(c)}
 
 /* ---------- welcome ---------- */
 function dayKey(d){const x=new Date(d);return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`}
@@ -1843,7 +1925,7 @@ function renderWeek(){
 }
 
 /* --- welcome --- */
-function renderWelcome(){
+function renderWelcome(){renderCenterCard();
   $('wl-hi').textContent=T[lang].wl_hi(userLabel()||(profile&&profile.display_name)||'');
   renderWeek();
   const br=lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='breathing'&&r.status==='completed').pop();
@@ -2060,7 +2142,8 @@ applyLang();
   track('app_open',{standalone:env().standalone,lang});
   renderAccountPill();
   if(user){registerDevice();if(profile&&profile.onboarding_done)saveProfile({});pullPrefs();await pullSessions();await syncAll()}
-  renderAccountPill();
+  renderAccountPill();renderCenterCard();
+  if(profile&&profile.onboarding_done)handlePendingJoin();
 })();
 </script>
 </body>
