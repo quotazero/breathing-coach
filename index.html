@@ -560,7 +560,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.1';
+const VERSION='0.9.2';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1065,6 +1065,7 @@ function setPhaseUI(s){
 }
 function completedCycles(){const ct=audio.currentTime;const main=run.tl.segs.filter(s=>s.block==='main');let c=0;for(const s of main){if(ct>=s.end&&s.type==='hold_empty')c=s.rep;else if(ct>=s.end&&params.holdEmpty<=0&&s.type==='exhale')c=s.rep}return c}
 function currentPhase(){const ct=audio.currentTime;const s=run.tl.segs.find(s=>ct>=s.start&&ct<s.end);return s?{block:s.block,type:s.type,rep:s.rep}:null}
+function upsertRec(rec){try{const all=lsJ(KEY.sess,[]);const i=all.findIndex(r=>r.id===rec.id);rec.synced=false;if(i>=0)all[i]=rec;else all.push(rec);lsSet(KEY.sess,JSON.stringify(all))}catch(e){log('autosave:error',e.message)}}
 function abort(reason){log('session:abort',reason);finish(true,reason)}
 function finish(aborted,reason){
   if(!run)return;
@@ -1088,6 +1089,7 @@ function finish(aborted,reason){
   releaseWake();
   $('s-session').style.background='var(--bg)';$('s-session').classList.remove('dark');
   if(aborted&&cyc===0&&ct<30){log('session:discarded-short');track('session_discard',{where:'auto'});run=null;$('b-start').disabled=false;stopArm=0;$('b-stop').textContent=t('stop');goTab('s-home');toast(t('discarded'));return}
+  upsertRec(run.record);log('session:autosaved',run.record.id);try{pushSessions()}catch(e){}
   $('fb-title').textContent=aborted?t('abort_title'):t('done_title');
   $('fb-sub').textContent=`${cyc}/${params.cycles} ${t('cycle')} · ${t2(ct)}`;
   document.querySelectorAll('.fb button').forEach(b=>b.classList.remove('sel'));$('fb-notes').value='';fbChoice=null;
@@ -1097,7 +1099,7 @@ let fbChoice=null;
 document.querySelectorAll('.fb button').forEach(b=>b.onclick=()=>{fbChoice=b.dataset.v;document.querySelectorAll('.fb button').forEach(x=>x.classList.toggle('sel',x===b))});
 $('b-save').onclick=()=>{
   if(!run||!run.record)return show('s-home');
-  run.record.feedback=fbChoice;run.record.notes=$('fb-notes').value.trim();
+  run.record.feedback=fbChoice;run.record.notes=$('fb-notes').value.trim();upsertRec(run.record);
   track('feedback_given',{feedback:fbChoice,hasNotes:!!run.record.notes});
   openNext();
 };
@@ -1130,7 +1132,7 @@ function renderNext(){
 document.querySelectorAll('#nx-mode button').forEach(b=>b.onclick=()=>{nx.mode=b.dataset.v;nx.p=proposal(nx.mode,run.plannedParams);renderNext()});
 function finalizeSession(nextParams,accepted){
   run.record.nextParams=nextParams;
-  const all=lsJ(KEY.sess,[]);all.push(run.record);lsSet(KEY.sess,JSON.stringify(all));
+  upsertRec(run.record);const all=lsJ(KEY.sess,[]);
   log('session:saved',run.record.id);track('next_params',{accepted,mode:nx.mode,changed:NX_KEYS.filter(k=>nextParams[k]!==run.plannedParams[k])});
   if(accepted){params={...params,...nextParams};save();track('params_changed',{source:'proposal'})}
   const completed=all.filter(r=>r.status==='completed').length;
@@ -1273,6 +1275,7 @@ function stFinish(aborted,reason){
   $('s-static-run').style.background='var(--bg)';$('s-static-run').classList.remove('dark');
   $('str-title').textContent=aborted?t('st_aborted'):t('st_done');
   const recs=staticRecords(),last=recs[recs.length-1];
+  upsertRec(srun.record);try{pushSessions()}catch(e){}
   $('str-sub').textContent=pbBefore?T[lang].st_vs(fmt(pbBefore),last?fmt(last.actualParams.holdSec):''):'';
   $('str-total').textContent=fmt1(holdSec);$('str-first').textContent=srun.contr.length?fmt1(srun.contr[0]):'–';$('str-contr').textContent=srun.contr.length;
   const newPB=!aborted&&holdSec>pbBefore&&pbBefore>0;$('str-pb').style.display=newPB?'block':'none';$('str-pb').textContent=newPB?t('st_newpb')+' +'+fmt1(holdSec-pbBefore):'';
@@ -1295,7 +1298,7 @@ function startRecovery(){
 }
 function endRecovery(skipped){
   if(!rec)return;cancelAnimationFrame(rec.raf);const el=Math.min(REC_SEC,Math.round((Date.now()-rec.t0)/1000));rec=null;releaseWake();
-  if(srun&&srun.record)srun.record.actualParams.recoverySec=el;
+  if(srun&&srun.record){srun.record.actualParams.recoverySec=el;upsertRec(srun.record);try{pushSessions()}catch(e){}}
   if(!skipped){try{audio.src=renderCues(2,tr=>CUES.end(tr,0));audio.loop=false;audio.play().catch(()=>{})}catch(e){}if('vibrate'in navigator)navigator.vibrate(120)}
   log('static:recovery-end',{el,skipped});show('s-static-result');
 }
@@ -1303,7 +1306,7 @@ $('b-rec-skip').onclick=()=>endRecovery(true);
 $('b-str-save').onclick=()=>{
   if(!srun||!srun.record)return show('s-static');
   srun.record.notes=$('str-notes').value.trim();
-  const all=lsJ(KEY.sess,[]);all.push(srun.record);lsSet(KEY.sess,JSON.stringify(all));
+  upsertRec(srun.record);
   log('static:saved',srun.record.id);srun=null;pushSessions();renderStatic();show('s-static');
 };
 function stHelpTexts(){const en=lang==='en';return en?{t:'How it works',l:['A spoken countdown guides your warm-up.','At zero, the hold starts.','1 tap on the screen = contraction','2 quick taps = stop the test'],n:'Don’t show again',ok:'Got it, start'}:{t:'Come funziona',l:['Il riscaldamento ti guida a voce con il conto alla rovescia.','Allo zero inizia l’apnea.','1 tap sullo schermo = contrazione','2 tap ravvicinati = fine della prova'],n:'Non mostrare più',ok:'Ho capito, inizia'}}
@@ -2093,7 +2096,7 @@ $('b-std-back').onclick=()=>{if(stDetBack==='s-pb-d'&&pbCur&&allEntries(pbCur).l
 $('b-std-del').onclick=async()=>{if(!confirm(t('del_confirm')))return;await deleteSession(stDetId);if(stDetBack==='s-pb-d'&&pbCur&&allEntries(pbCur).length)openDisc(pbCur);else goTab('s-static')};
 
 /* --- annulla allenamento --- */
-$('b-fb-discard').onclick=()=>{if(!confirm(t('discard_confirm')))return;log('session:discarded');track('session_discard',{where:'feedback'});run=null;goTab('s-home');toast(t('discarded'))};
+$('b-fb-discard').onclick=()=>{if(!confirm(t('discard_confirm')))return;if(run&&run.record)deleteSession(run.record.id);log('session:discarded');track('session_discard',{where:'feedback'});run=null;goTab('s-home');toast(t('discarded'))};
 let stopArm=0;
 $('b-stop').onclick=()=>{
   const el=run&&audio.currentTime||0;
