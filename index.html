@@ -116,6 +116,10 @@ input.code{letter-spacing:8px;text-align:center;font-size:28px;font-weight:600}
 .sess .meta{display:flex;gap:28px;font-size:15px;opacity:.85;font-variant-numeric:tabular-nums}
 .sess .meta b{display:block;font-size:22px;font-weight:600}
 .sess .btn{max-width:360px}
+.sess .btn.danger{background:#04131D;color:#fff;border:2px solid #04131D;font-size:19px;padding:20px 16px;border-radius:16px;letter-spacing:.01em}
+.sess .btn.danger:active{transform:scale(.97)}
+.sess .btn.danger.armed{background:#C2362A;border-color:#C2362A;color:#fff;animation:armp .7s ease-in-out infinite alternate}
+@keyframes armp{from{box-shadow:0 0 0 0 rgba(194,54,42,.55)}to{box-shadow:0 0 0 10px rgba(194,54,42,0)}}
 .bar{height:4px;width:100%;background:rgba(0,0,0,.25);border-radius:2px;overflow:hidden;margin-top:18px}
 .bar i{display:block;height:100%;background:rgba(255,255,255,.9);width:0%;transition:width .25s linear}
 .dark .sess{color:#04131D}
@@ -556,7 +560,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.0';
+const VERSION='0.9.1';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1007,7 +1011,7 @@ async function logout(){
 /* ---------- session engine ---------- */
 let run=null;
 const $=id=>document.getElementById(id);
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));window.scrollTo(0,0)}
+function show(id){if(id!=='s-session'){const b=document.getElementById('b-stop');if(b)b.classList.remove('armed')}document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));window.scrollTo(0,0)}
 
 async function startSession(){
   $('b-start').disabled=true;
@@ -1967,7 +1971,7 @@ function renderCal(){
   $('cal-grid').querySelectorAll('.cd').forEach(b=>b.onclick=()=>{calSel=b.dataset.k;renderCal()});
   const L=[];const sel=calSel;
   lsJ(KEY.sess,[]).forEach(r=>{if(dayKey(r.startedAt)!==sel)return;const ty=actType(r);const a=r.actualParams||{},p=r.plannedParams||{};
-    if(ty==='breath')L.push([r,'breath',T[lang].cal_act_b(t2(r.elapsedSec||0),r.cyclesCompleted||0,p.cycles||0)]);
+    if(ty==='breath')L.push([r,'breath',T[lang].cal_act_b(t2(r.elapsedSec||0),r.cyclesCompleted||0,p.cycles||0)+(r.status==='aborted'?` <span style="color:var(--danger);font-weight:600">· ${lang==='en'?'stopped':'interrotta'}</span>`:'')]);
     else if(ty==='static')L.push([r,'static',T[lang].cal_act_s(fmt(a.holdSec||0))]);
     else if(ty==='water'){const w=r.actualParams||{};L.push([r,'water',[t('tab_water'),w.where?t('wt_'+w.where):'',w.place?esc(w.place):'',w.discipline||'',w.depth!=null?w.depth+' m':''].filter(Boolean).join(' · ')])}
     else if(r.exerciseId==='pb'&&r.status==='completed')L.push([r,'pb',T[lang].cal_act_p(esc(T[lang]['D_'+a.discipline]||a.discipline),pbFmt(a.discipline,a.value))])});
@@ -2093,8 +2097,8 @@ $('b-fb-discard').onclick=()=>{if(!confirm(t('discard_confirm')))return;log('ses
 let stopArm=0;
 $('b-stop').onclick=()=>{
   const el=run&&audio.currentTime||0;
-  if(el<30||Date.now()-stopArm<3000){stopArm=0;$('b-stop').textContent=t('stop');return abort('user')}
-  stopArm=Date.now();$('b-stop').textContent=t('stop_again');setTimeout(()=>{if(Date.now()-stopArm>=2900){stopArm=0;$('b-stop').textContent=t('stop')}},3000);
+  if(el<30||Date.now()-stopArm<5000){stopArm=0;$('b-stop').textContent=t('stop');$('b-stop').classList.remove('armed');return abort('user')}
+  stopArm=Date.now();$('b-stop').textContent=t('stop_again');$('b-stop').classList.add('armed');try{navigator.vibrate&&navigator.vibrate(40)}catch(e){}setTimeout(()=>{if(Date.now()-stopArm>=4900){stopArm=0;$('b-stop').textContent=t('stop');$('b-stop').classList.remove('armed')}},5000);
 };
 
 
