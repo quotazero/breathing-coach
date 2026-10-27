@@ -560,7 +560,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.2';
+const VERSION='0.9.3';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1227,7 +1227,13 @@ function stHold(){
 function stTick(){
   if(!srun)return;
   if(srun.phase==='warm'){
-    const el=srun.W>0?audio.currentTime:0;const left=Math.max(0,srun.W-el);const s=Math.ceil(left);
+    // il tempo segue l'orologio, non l'audio: se la voce di sistema ferma l'audio (iOS), il timer continua
+    const wall=srun.wallStart?(Date.now()-srun.wallStart)/1000:audio.currentTime;
+    if(srun.W>0&&wall<srun.W){
+      if(audio.paused&&!audio.ended){if(!srun.resuming){srun.resuming=true;log('audio:resume-after-pause');audio.play().catch(()=>{}).finally(()=>{srun.resuming=false})}}
+      else if(Math.abs(audio.currentTime-wall)>0.7){try{audio.currentTime=Math.min(wall,srun.W)}catch(e){}}
+    }
+    const el=srun.W>0?wall:0;const left=Math.max(0,srun.W-el);const s=Math.ceil(left);
     $('st-num').textContent=fmt(s);$('st-bar').style.width=(srun.W?el/srun.W*100:100).toFixed(1)+'%';
     if(s!==srun.lastS){srun.lastS=s;if(s>0&&(s<=10||s%30===0)&&!srun.spoken.has(s)){srun.spoken.add(s);sayRemaining(s)}}
     if(srun.W>0&&el>=srun.W)stHold();
