@@ -135,6 +135,16 @@ async function sendCode(){
   if(error)S.err=error.message.includes('not allowed')||error.message.includes('Signups')?'Questo indirizzo non risulta abilitato.':error.message;else S.stage='code';
   render()
 }
+let cdT=null;
+async function resendCode(){if(S.cd>0)return;S.err='';const {error}=await sb.auth.signInWithOtp({email:S.email,options:{shouldCreateUser:true}});
+  S.err=error?(/rate|seconds|limit/i.test(error.message)?'Troppe richieste ravvicinate: attendi un minuto o accedi con la password.':error.message):'Nuovo codice inviato. Controlla anche lo spam.';
+  S.cd=error?0:45;clearInterval(cdT);cdT=setInterval(()=>{S.cd--;if(S.cd<=0){S.cd=0;clearInterval(cdT)}const b=$('#rs');if(b){b.disabled=S.cd>0;b.textContent=S.cd>0?'Reinvia codice ('+S.cd+'s)':'Reinvia codice'}},1000);render()}
+async function pwLogin(){const email=$('#em').value.trim(),pw=$('#pw').value;if(!email||!pw)return;S.email=email;S.err='';
+  const {error}=await sb.auth.signInWithPassword({email,password:pw});
+  if(error){S.err='Email o password non corretti.';return render()}
+  await loadCenter();render()}
+function setPwModal(){modal(`<h3>Imposta password</h3><p class="note" style="margin:4px 0 8px">Ti permette di entrare anche quando l'email con il codice non arriva.</p><label>Nuova password (minimo 8 caratteri)</label><input id="np" type="password" autocomplete="new-password"><div class="row" style="margin-top:16px"><button class="btn" onclick="savePw()">Salva</button><button class="btn ghost" onclick="closeModal()">Annulla</button></div>`)}
+async function savePw(){const p=$('#np').value;if(p.length<8)return toast('Minimo 8 caratteri');const {error}=await sb.auth.updateUser({password:p});if(error)return toast('Non riuscito: '+error.message);closeModal();toast('Password impostata')}
 async function verify(){
   const token=$('#cd').value.trim();S.err='';
   const {error}=await sb.auth.verifyOtp({email:S.email,token,type:'email'});
@@ -183,10 +193,15 @@ const nInstr=()=>S.people.filter(p=>p.role==='instructor').length;
 
 /* ---------- viste ---------- */
 function loginView(){
-  const code=S.stage==='code';
+  const code=S.stage==='code',cd=S.cd||0;
   return `<div class="login"><img class="lg" src="icons/blueworld-logo.png?v=2" alt="Blue World Freediving"><h1>Dashboard</h1><p>Accesso riservato a gestori e istruttori.</p>
-  ${code?`<label>Codice ricevuto per email</label><input id="cd" inputmode="numeric" autocomplete="one-time-code" autofocus><button class="btn" onclick="verify()">Entra</button><button class="btn ghost" style="margin-top:8px" onclick="S.stage='login';render()">Cambia email</button>`
-        :`<label>Email</label><input id="em" type="email" autocomplete="email" autofocus value="${esc(S.email)}"><button class="btn" onclick="sendCode()">Invia codice</button>`}
+  ${code?`<label>Codice ricevuto per email</label><input id="cd" inputmode="numeric" autocomplete="one-time-code" autofocus onkeydown="if(event.key==='Enter')verify()"><button class="btn" onclick="verify()">Entra</button>
+    <button class="btn ghost" id="rs" style="margin-top:8px" ${cd>0?'disabled':''} onclick="resendCode()">${cd>0?'Reinvia codice ('+cd+'s)':'Reinvia codice'}</button>
+    <button class="btn ghost" style="margin-top:8px" onclick="S.stage='login';S.err='';render()">Cambia email o usa la password</button>`
+        :`<label>Email</label><input id="em" type="email" autocomplete="email" autofocus value="${esc(S.email)}">
+    <label>Password (se l'hai impostata)</label><input id="pw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')pwLogin()">
+    <button class="btn" onclick="pwLogin()">Entra con password</button>
+    <button class="btn ghost" style="margin-top:8px" onclick="sendCode()">Ricevi un codice via email</button>`}
   <div class="err">${esc(S.err)}</div></div>`
 }
 function nostaffView(){return `<div class="login"><h1>Accesso non abilitato</h1><p>Questo account non ha un ruolo di gestore o istruttore in un centro.</p><button class="btn ghost" onclick="logout()">Esci</button></div>`}
@@ -196,7 +211,7 @@ function shell(inner){
   return `<div class="app"><aside class="side"><div class="brand"><img src="icons/blueworld-logo.png?v=2" alt="Blue World Freediving"><small>Dashboard</small></div>
   <nav class="nav">${VIEWS.filter(v=>isAdmin()||!['sim'].includes(v[0])).map(v=>`<button class="${S.view===v[0]?'sel':''}" onclick="go('${v[0]}')">${v[1]}</button>`).join('')}</nav>
   <div class="sidefoot"><label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" style="width:auto" ${S.hide?'checked':''} onchange="S.hide=this.checked;render()">Nascondi cognomi</label>
-  <span>${esc(isAdmin()?'Gestore':'Istruttore')}</span><button onclick="logout()">Esci</button></div></aside>
+  <span>${esc(isAdmin()?'Gestore':'Istruttore')}</span><button onclick="setPwModal()">Imposta password</button><button onclick="logout()">Esci</button></div></aside>
   <main class="main">${S.loadErr?`<div class="banner">Alcuni dati non sono stati caricati: ${esc(S.loadErr)}</div>`:''}${inner}</main></div>`
 }
 function go(v){S.view=v;S.open=null;render()}
