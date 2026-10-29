@@ -217,7 +217,7 @@ function loginView(){
 }
 function nostaffView(){return `<div class="login"><h1>Accesso non abilitato</h1><p>Questo account non ha un ruolo di gestore o istruttore in un centro.</p><button class="btn ghost" onclick="logout()">Esci</button></div>`}
 
-const VIEWS=[['home','Panoramica'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['cal','Calendario'],['map','Mappa funzioni']];
+const VIEWS=[['home','Panoramica'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['types','Attività'],['cal','Calendario'],['map','Mappa funzioni']];
 function shell(inner){
   return `<div class="app"><aside class="side"><div class="brand"><img src="icons/blueworld-logo.png?v=2" alt="Blue World Freediving"><small>Dashboard</small></div>
   <nav class="nav">${VIEWS.filter(v=>isAdmin()||!['sim'].includes(v[0])).map(v=>`<button class="${S.view===v[0]?'sel':''}" onclick="go('${v[0]}')">${v[1]}</button>`).join('')}</nav>
@@ -386,24 +386,32 @@ function actModal(id,day){const a=id?S.acts.find(x=>x.id===id):null;
   <label>Istruttore <span class="muted">(si può assegnare anche dopo)</span></label><select id="ai"><option value="">— Da assegnare —</option>${instrOptions(a?a.instructor_person_id:'',ty.id)}</select><div id="ai_h" class="note" style="margin-top:4px"></div>
   <label>Posti</label><select id="ac">${seats.map(n=>`<option${n===(a?a.capacity:ty.capacity)?' selected':''}>${n}</option>`).join('')}</select>
   <div class="row" style="margin-top:16px"><button class="btn" onclick="saveActD('${id||''}')">Salva</button><button class="btn ghost" onclick="closeModal()">Annulla</button>${a?`<button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="cancelActD('${id}')">Annulla attività</button>`:''}</div>`);refreshInstr()}
+function instrOf(t){return S.people.filter(p=>p.role==='instructor'&&S.links.some(l=>l.person_id===p.id&&l.type_id===t.id))}
+const TSORT={name:t=>t.name.toLowerCase(),kind:t=>kindLab(t.kind),env:t=>envLab(t.env),cap:t=>t.capacity,dur:t=>t.duration_min,ins:t=>-instrOf(t).filter(p=>p.instr_active).length};
+function tth(k,l){const on=S.tsort&&S.tsort.k===k;return `<th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="S.tsort=S.tsort&&S.tsort.k==='${k}'?{k:'${k}',d:-S.tsort.d}:{k:'${k}',d:1};render()">${l} <span style="opacity:${on?1:.3}">${on?(S.tsort.d===1?'▲':'▼'):'↕'}</span></th>`}
+function typesView(){const k=(S.tsort&&S.tsort.k)||'name',d=(S.tsort&&S.tsort.d)||1,f=TSORT[k];const list=[...S.types].sort((a,b)=>{const x=f(a),y=f(b);const c=typeof x==='number'?x-y:String(x).localeCompare(String(y),'it');return c*d||a.name.localeCompare(b.name,'it')});
+  return `<div class="top"><div><h1>Attività</h1><p>Catalogo di ciò che il centro offre. Da qui dipendono gli istruttori abilitati e le sessioni del calendario.</p></div>${isAdmin()?`<button class="btn" onclick="typeForm()">＋ Nuova attività</button>`:''}</div>
+  <div class="panel" style="padding:6px 10px">${list.length?`<table><thead><tr>${tth('name','Attività')}${tth('kind','Si comporta come')}${tth('env','Ambiente')}${tth('cap','Posti')}${tth('dur','Durata')}${tth('ins','Istruttori abilitati')}</tr></thead><tbody>
+  ${list.map(t=>{const ins=instrOf(t);return `<tr ${isAdmin()?`class="click" onclick="typeForm('${t.id}')"`:''}><td style="white-space:nowrap"><b>${esc(t.name)}</b></td><td>${esc(kindLab(t.kind))}</td><td>${esc(envLab(t.env))}</td><td class="num">${t.capacity}</td><td>${durLab(t.duration_min)}</td><td>${ins.length?ins.map(p=>`<span class="chip ${p.instr_active?'a':'w'}" title="${p.instr_active?'':'Non attivo'}">${esc(p.full_name)}</span>`).join(''):'<span class="chip w">nessun istruttore</span>'}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Nessuna attività nel catalogo. Creane una con "Nuova attività".</div>'}</div>
+  <div class="note">Per abilitare un istruttore: Persone → Istruttori → clic sul nome → "Attivo per".</div>`}
 function typesModal(){modal(`<h3>Tipi di attività</h3><p class="note" style="margin:4px 0 10px">Elenco unico: da qui dipendono il calendario e le specialità degli istruttori.</p>
   ${S.types.map(t=>`<div class="item" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span><b>${esc(t.name)}</b> <small class="muted">· ${esc(kindLab(t.kind))} · ${esc(envLab(t.env))} · ${t.capacity} posti · ${durLab(t.duration_min)}</small></span><span style="white-space:nowrap"><button class="btn ghost" style="padding:4px 10px" onclick="typeForm('${t.id}')">Modifica</button> <button class="btn ghost" style="padding:4px 10px" onclick="delType('${t.id}')">Elimina</button></span></div>`).join('')||'<div class="muted">Nessun tipo.</div>'}
   <div class="row" style="margin-top:16px"><button class="btn" onclick="typeForm()">＋ Nuovo tipo</button><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`)}
 const KL={training:'Allenamento',course:'Corso',dry:'Apnea a secco'},EL={sea:'Mare',pool:'Piscina',dry:'A secco'};
 function kindLab(k){return KL[k]||k}function envLab(e){return EL[e]||e}function durLab(m){return m%60?m+' min':(m/60)+' h'}
 function typeForm(id){const t=id?S.types.find(x=>x.id===id):{name:'',kind:'training',env:'sea',capacity:6,duration_min:120};
-  modal(`<h3>${id?'Modifica tipo':'Nuovo tipo di attività'}</h3><label>Nome</label><input id="tn" value="${esc(t.name)}">
+  modal(`<h3>${id?'Modifica attività':'Nuova attività'}</h3><label>Nome</label><input id="tn" value="${esc(t.name)}">
   <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-width:0"><label>Si comporta come</label><select id="tk">${Object.entries(KL).map(([k,l])=>`<option value="${k}"${t.kind===k?' selected':''}>${l}</option>`).join('')}</select></div><div style="flex:1;min-width:0"><label>Ambiente</label><select id="te">${Object.entries(EL).map(([k,l])=>`<option value="${k}"${t.env===k?' selected':''}>${l}</option>`).join('')}</select></div></div>
   <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-width:0"><label>Posti predefiniti</label><input id="tc" type="number" min="1" value="${t.capacity}"></div><div style="flex:1;min-width:0"><label>Durata (minuti)</label><input id="td" type="number" min="15" step="15" value="${t.duration_min}"></div></div>
-  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveType('${id||''}')">Salva</button><button class="btn ghost" onclick="typesModal()">Annulla</button></div>`)}
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveType('${id||''}')">Salva</button><button class="btn ghost" onclick="${S.view==='types'?'closeModal()':'typesModal()'}">Annulla</button>${id&&S.view==='types'?`<button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="delType('${id}')">Elimina</button>`:''}</div>`)}
 async function saveType(id){const n=$('#tn').value.trim();if(!n)return toast('Scrivi un nome');const rec={name:n,kind:$('#tk').value,env:$('#te').value,capacity:+$('#tc').value||1,duration_min:+$('#td').value||60};
   const q=id?sb.from('activity_types').update(rec).eq('id',id).select().single():sb.from('activity_types').insert({...rec,org_id:S.org.org_id}).select().single();
   const {data,error}=await q;if(error)return toast(/duplicate|unique/i.test(error.message)?'Esiste già un tipo con questo nome':'Non riuscito: '+error.message);
-  if(id)Object.assign(S.types.find(x=>x.id===id),data);else S.types.push(data);S.types.sort((a,b)=>a.name.localeCompare(b.name));typesModal();toast('Tipo salvato')}
+  if(id)Object.assign(S.types.find(x=>x.id===id),data);else S.types.push(data);S.types.sort((a,b)=>a.name.localeCompare(b.name));S.view==='types'?(closeModal(),render()):typesModal();toast('Attività salvata')}
 async function delType(id){const t=S.types.find(x=>x.id===id);const used=S.acts.filter(a=>a.type_id===id).length,inst=S.links.filter(l=>l.type_id===id).length;
   if(!confirm('Eliminare "'+t.name+'"?'+(inst?'\nVerrà tolto da '+inst+' istruttori.':'')+(used?'\nLe '+used+' attività già create restano ma non avranno più il tipo.':'')))return;
   const {error}=await sb.from('activity_types').delete().eq('id',id);if(error)return toast('Non riuscito: '+error.message);
-  S.types=S.types.filter(x=>x.id!==id);S.links=S.links.filter(l=>l.type_id!==id);typesModal();toast('Tipo eliminato')}
+  S.types=S.types.filter(x=>x.id!==id);S.links=S.links.filter(l=>l.type_id!==id);S.view==='types'?(closeModal(),render()):typesModal();toast('Attività eliminata')}
 async function saveActD(id){const ty=S.types.find(x=>x.id===$('#aty').value);if(!ty)return toast('Scegli il tipo di attività');const t=$('#at').value.trim();if(!t)return toast('Scrivi un titolo');const s=new Date($('#as').value),e=new Date($('#ae2').value);if(isNaN(s)||isNaN(e)||e<=s)return toast('Controlla data e orari');
   const rec={type_id:ty.id,kind:ty.kind,location_type:ty.env,title:t,place:($('#ap').value==='__new'?'':$('#ap').value.trim()),starts_at:s.toISOString(),ends_at:e.toISOString(),capacity:+$('#ac').value||1,instructor_person_id:$('#ai').value||null};
   const q=id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert({...rec,org_id:S.org.org_id,min_rank:0});
@@ -517,7 +525,7 @@ function render(){
   if(S.stage==='boot'){r.innerHTML='';return}
   if(S.stage==='login'||S.stage==='code'){r.innerHTML=loginView();return}
   if(S.stage==='nostaff'){r.innerHTML=nostaffView();return}
-  const v={home:homeView,people:peopleView,out:outView,opp:oppView,sim:simView,cal:calView,map:mapView}[S.view]||homeView;
+  const v={home:homeView,people:peopleView,out:outView,opp:oppView,sim:simView,cal:calView,types:typesView,map:mapView}[S.view]||homeView;
   r.innerHTML=shell(v())
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter'){if($('#cd'))verify();else if($('#em'))sendCode()}if(e.key==='Escape')closeModal()});
