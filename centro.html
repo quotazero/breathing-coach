@@ -7,8 +7,11 @@
 <meta name="theme-color" content="#061A2B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Centro">
-<script>(function(){try{var p=new URLSearchParams(location.search),n=p.get('n');if(!n){var b=JSON.parse(localStorage.getItem('cn.brand')||'null');n=b&&b.name}if(n){document.title=n;var m=document.querySelector('meta[name=apple-mobile-web-app-title]');if(m)m.content=n}}catch(e){}})()</script>
-<link rel="manifest" href="centro.webmanifest">
+<script>(function(){try{var q=new URLSearchParams(location.search),n=q.get('n'),c=q.get('c'),b=null;try{b=JSON.parse(localStorage.getItem('cn.brand')||'null')}catch(e){}
+if(!n&&b)n=b.name;if(!c&&b)c=b.slug;var l=document.createElement('link');l.rel='manifest';
+if(n){document.title=n;var t=document.querySelector('meta[name=apple-mobile-web-app-title]');if(t)t.content=n;var base=new URL('./',location.href).href;
+var m={name:n,short_name:n,start_url:base+'centro.html?'+(c?'c='+encodeURIComponent(c)+'&':'')+'n='+encodeURIComponent(n),scope:base,display:'standalone',background_color:'#061A2B',theme_color:'#061A2B',lang:'it',icons:[{src:base+'icon-192.png',sizes:'192x192',type:'image/png'},{src:base+'icon-512.png',sizes:'512x512',type:'image/png'}]};
+l.href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}))}else l.href='centro.webmanifest';document.head.appendChild(l)}catch(e){var x=document.createElement('link');x.rel='manifest';x.href='centro.webmanifest';document.head.appendChild(x)}})()</script>
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
