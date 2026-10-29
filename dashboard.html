@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Dashboard · Blue World Freediving</title>
-<link rel="icon" href="icons/blueworld-fav.png">
+<link rel="icon" href="icons/blueworld-fav.png?v=2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root{
@@ -184,7 +184,7 @@ const nInstr=()=>S.people.filter(p=>p.role==='instructor').length;
 /* ---------- viste ---------- */
 function loginView(){
   const code=S.stage==='code';
-  return `<div class="login"><img class="lg" src="icons/blueworld-logo.png" alt="Blue World Freediving"><h1>Dashboard</h1><p>Accesso riservato a gestori e istruttori.</p>
+  return `<div class="login"><img class="lg" src="icons/blueworld-logo.png?v=2" alt="Blue World Freediving"><h1>Dashboard</h1><p>Accesso riservato a gestori e istruttori.</p>
   ${code?`<label>Codice ricevuto per email</label><input id="cd" inputmode="numeric" autocomplete="one-time-code" autofocus><button class="btn" onclick="verify()">Entra</button><button class="btn ghost" style="margin-top:8px" onclick="S.stage='login';render()">Cambia email</button>`
         :`<label>Email</label><input id="em" type="email" autocomplete="email" autofocus value="${esc(S.email)}"><button class="btn" onclick="sendCode()">Invia codice</button>`}
   <div class="err">${esc(S.err)}</div></div>`
@@ -193,7 +193,7 @@ function nostaffView(){return `<div class="login"><h1>Accesso non abilitato</h1>
 
 const VIEWS=[['home','Panoramica'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['cal','Calendario'],['map','Mappa funzioni']];
 function shell(inner){
-  return `<div class="app"><aside class="side"><div class="brand"><img src="icons/blueworld-logo.png" alt="Blue World Freediving"><small>Dashboard</small></div>
+  return `<div class="app"><aside class="side"><div class="brand"><img src="icons/blueworld-logo.png?v=2" alt="Blue World Freediving"><small>Dashboard</small></div>
   <nav class="nav">${VIEWS.filter(v=>isAdmin()||!['sim'].includes(v[0])).map(v=>`<button class="${S.view===v[0]?'sel':''}" onclick="go('${v[0]}')">${v[1]}</button>`).join('')}</nav>
   <div class="sidefoot"><label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" style="width:auto" ${S.hide?'checked':''} onchange="S.hide=this.checked;render()">Nascondi cognomi</label>
   <span>${esc(isAdmin()?'Gestore':'Istruttore')}</span><button onclick="logout()">Esci</button></div></aside>
@@ -354,14 +354,36 @@ function closeModal(){$('#mdl')?.remove()}
 function addPerson(){modal(`<h3>Aggiungi persona</h3><label>Nome e cognome</label><input id="pn"><label>Ruolo</label><select id="pr"><option value="athlete">Atleta</option><option value="instructor">Istruttore</option></select><div class="row" style="margin-top:18px"><button class="btn" onclick="savePerson()">Aggiungi</button><button class="btn ghost" onclick="closeModal()">Annulla</button></div>`)}
 async function savePerson(){const n=$('#pn').value.trim();if(!n)return;const {data,error}=await sb.from('people').insert({org_id:S.org.org_id,full_name:n,role:$('#pr').value}).select().single();if(error)return toast('Non riuscito: '+error.message);S.people.push(data);S.people.sort((a,b)=>a.full_name.localeCompare(b.full_name));closeModal();render()}
 function openPerson(id){
-  const p=S.people.find(x=>x.id===id);if(!p)return;const cs=S.certs.filter(c=>c.person_id===id);
-  modal(`<h3>${esc(nm(p))}</h3><p class="note" style="margin:4px 0 12px">${p.role==='instructor'?'Istruttore':'Atleta'}${p.note?' · '+esc(p.note):''}</p>
-  ${isAdmin()&&p.phone?`<div class="note" style="margin-bottom:10px">Telefono: ${esc(p.phone)}</div>`:''}<div class="note" style="margin-bottom:6px">Brevetti</div>${cs.length?cs.map(c=>`<div class="item">${certLabel(c)}${c.cert_date?`<small>${esc(c.cert_date)}</small>`:''}</div>`).join(''):'<div class="muted" style="font-size:14px">Nessun brevetto registrato.</div>'}
-  ${isAdmin()?`<label>Aggiungi brevetto</label><div class="row" style="flex-wrap:nowrap"><input id="ca" placeholder="Agenzia (es. AIDA, Molchanovs)"><input id="cl" placeholder="Livello (es. Wave 2)"></div>
-  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveCert('${id}')">Salva brevetto</button><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`:`<div class="row" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`}`)
+  const p=S.people.find(x=>x.id===id);if(!p)return;const cs=S.certs.filter(c=>c.person_id===id);const ad=isAdmin();
+  const head=ad?`<h3>Anagrafica</h3><label>Nome e cognome</label><input id="en" value="${esc(p.full_name||'')}">
+  <div class="row" style="flex-wrap:nowrap"><div style="flex:1"><label>Ruolo</label><select id="er"><option value="athlete"${p.role==='athlete'?' selected':''}>Atleta</option><option value="instructor"${p.role==='instructor'?' selected':''}>Istruttore</option></select></div>
+  <div style="flex:1"><label>Telefono</label><input id="ep" value="${esc(p.phone||'')}"></div></div>
+  <label>Note</label><input id="eo" value="${esc(p.note||'')}">
+  <div class="row" style="margin-top:12px"><button class="btn" onclick="savePersonEdit('${id}')">Salva anagrafica</button></div>`
+  :`<h3>${esc(nm(p))}</h3><p class="note" style="margin:4px 0 12px">${p.role==='instructor'?'Istruttore':'Atleta'}${p.note?' · '+esc(p.note):''}</p>`;
+  modal(`${head}<div class="note" style="margin:16px 0 6px">Brevetti</div>${cs.length?cs.map(c=>`<div class="item" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span>${certLabel(c)}${c.cert_date?` <small>${esc(c.cert_date)}</small>`:''}</span>${ad?`<span style="white-space:nowrap"><button class="btn ghost" style="padding:4px 10px" onclick="editCert('${c.id}')">Modifica</button> <button class="btn ghost" style="padding:4px 10px" onclick="delCert('${c.id}','${id}')">Elimina</button></span>`:''}</div>`).join(''):'<div class="muted" style="font-size:14px">Nessun brevetto registrato.</div>'}
+  ${ad?`<label>Aggiungi brevetto</label><div class="row" style="flex-wrap:nowrap"><input id="ca" placeholder="Agenzia (es. AIDA, Molchanovs)"><input id="cl" placeholder="Livello (es. Wave 2)"></div>
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveCert('${id}')">Salva brevetto</button><button class="btn ghost" onclick="closeModal()">Chiudi</button><button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="delPerson('${id}')">Elimina persona</button></div>`:`<div class="row" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`}`)
 }
+async function savePersonEdit(id){const n=$('#en').value.trim();if(!n)return toast('Il nome non può essere vuoto');
+  const u={full_name:n,role:$('#er').value,phone:$('#ep').value.trim()||null,note:$('#eo').value.trim()||null};
+  const {data,error}=await sb.from('people').update(u).eq('id',id).select().single();if(error)return toast('Non riuscito: '+error.message);
+  Object.assign(S.people.find(x=>x.id===id),data);S.people.sort((a,b)=>a.full_name.localeCompare(b.full_name));render();openPerson(id);toast('Anagrafica salvata')}
+async function delPerson(id){const p=S.people.find(x=>x.id===id);if(!confirm('Eliminare definitivamente '+p.full_name+' con brevetti e interessi?'))return;
+  for(const t of ['person_certs','interests']){const {error}=await sb.from(t).delete().eq('person_id',id);if(error)return toast('Non riuscito ('+t+'): '+error.message)}
+  const {error}=await sb.from('people').delete().eq('id',id);if(error)return toast('Non riuscito: '+error.message);
+  S.people=S.people.filter(x=>x.id!==id);S.certs=S.certs.filter(c=>c.person_id!==id);if(S.interests)S.interests=S.interests.filter(i=>i.person_id!==id);closeModal();render();toast('Persona eliminata')}
+function editCert(cid){const c=S.certs.find(x=>x.id===cid);const pid=c.person_id;
+  modal(`<h3>Modifica brevetto</h3><label>Agenzia</label><input id="ca2" value="${esc(c.agency||'')}"><label>Livello</label><input id="cl2" value="${esc(c.level_name||'')}"><label>Data (opzionale)</label><input id="cd2" type="date" value="${esc(c.cert_date||'')}">
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveCertEdit('${cid}')">Salva</button><button class="btn ghost" onclick="openPerson('${pid}')">Annulla</button></div>`)}
+async function saveCertEdit(cid){const a=$('#ca2').value.trim(),l=$('#cl2').value.trim();if(!a||!l)return toast('Indica agenzia e livello');
+  const {data,error}=await sb.from('person_certs').update({agency:a,level_name:l,cert_date:$('#cd2').value||null}).eq('id',cid).select().single();if(error)return toast('Non riuscito: '+error.message);
+  Object.assign(S.certs.find(x=>x.id===cid),data);render();openPerson(data.person_id);toast('Brevetto aggiornato')}
+async function delCert(cid,pid){if(!confirm('Eliminare questo brevetto?'))return;
+  const {error}=await sb.from('person_certs').delete().eq('id',cid);if(error)return toast('Non riuscito: '+error.message);
+  S.certs=S.certs.filter(x=>x.id!==cid);render();openPerson(pid);toast('Brevetto eliminato')}
 async function saveCert(id){const a=$('#ca').value.trim(),l=$('#cl').value.trim();if(!a||!l)return toast('Indica agenzia e livello');
-  const {data,error}=await sb.from('person_certs').insert({person_id:id,agency:a,level_name:l}).select().single();if(error)return toast('Non riuscito: '+error.message);S.certs.push(data);closeModal();render();toast('Brevetto aggiunto')}
+  const {data,error}=await sb.from('person_certs').insert({person_id:id,agency:a,level_name:l}).select().single();if(error)return toast('Non riuscito: '+error.message);S.certs.push(data);render();openPerson(id);toast('Brevetto aggiunto')}
 
 /* ---------- render ---------- */
 function render(){
