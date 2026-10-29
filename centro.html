@@ -100,6 +100,10 @@ input.code{letter-spacing:8px;text-align:center;font-size:28px;font-weight:600}
 .cd{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;position:relative}.cd em{font-style:normal;font-size:11px;color:var(--ink2)}.cd.today em{color:var(--ink);font-weight:700}
 .cd .dr{width:36px;height:36px}.cd.sel .dr{box-shadow:0 0 0 2px var(--bg2),0 0 0 3.5px var(--accent)}
 .stat{display:flex;gap:10px;margin-top:10px}.stat div{flex:1;background:var(--bg2);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:22px;font-weight:600}.stat span{font-size:12px;color:var(--ink2)}
+.wxg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.wxd{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--ink2);border-radius:12px;padding:8px 2px;border:1px solid var(--line);text-align:center}.wxd b{font-size:14px;color:var(--ink)}.wxd.g{border-color:rgba(143,224,210,.45)}.wxd.w{border-color:rgba(242,200,121,.7)}.wxd.d{border-color:var(--danger);background:rgba(240,138,122,.08)}
+.tdo{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-left-width:4px;border-radius:14px;padding:12px;margin-top:8px;background:var(--bg2)}.tdo small{display:block;color:var(--ink2);font-size:12.5px;margin-top:3px;line-height:1.5}.tdo b{font-size:15px}.tbt{display:flex;gap:8px}.tbt .btn{flex:1}
+.urg{border:1px solid rgba(240,138,122,.6);background:rgba(240,138,122,.07);border-radius:16px;padding:10px 12px;margin-top:8px}.urg .tdo{background:transparent}
+.th{font-size:14px;font-weight:600;margin:16px 0 0}.note2{font-size:13px;line-height:1.6;margin:10px 0;color:var(--ink)}textarea.txt{width:100%;font-size:14px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg)}
 </style>
 </head>
 <body>
@@ -204,6 +208,7 @@ async function loadOrg(){
   if(!a.error){S.acts=a.data||[];S.cachedAt=Date.now();ls('c_acts_'+id,{t:S.cachedAt,a:S.acts})}
   else{const c=ls('c_acts_'+id);if(c){S.acts=c.a;S.cachedAt=c.t}}
   S.members=m.data||[];S.levels=l.data||[];S.code=o.data?.join_code||'';
+  await loadOrg2();
 }
 async function logout(){if(sb)await sb.auth.signOut();S.user=null;S.demo=false;S.stage='login';S.tab='home';render()}
 
@@ -232,7 +237,7 @@ function actCard(a,showDay){
   const [c,ic]=aStyle(a),x=a.status==='cancelled',pct=Math.min(100,Math.round(100*(a.booked||0)/a.capacity));
   const lvl=a.min_rank?(S.levels.find(l=>l.rank===a.min_rank)||{}).name||'liv. '+a.min_rank:'';
   return `<button class="card${x?' x':''}" style="--c:${c}" onclick="openAct('${a.id}')"><span class="ic">${ICON[ic]}</span><span class="sp"><b>${esc(a.title)}</b><small>${showDay?fmtD(a.starts_at)+' · ':''}${fmtT(a.starts_at)}–${fmtT(a.ends_at)}${a.place?' · '+esc(a.place):''}</small>
-  ${x?'<div class="tags"><span class="tg d">Annullata</span></div>':`<div class="cbar"><i style="width:${pct}%"></i></div><div class="tags">${a.access?`<span class="tg g">${ACC[a.access]}</span>`:''}<span class="tg">${a.booked||0}/${a.capacity} posti</span>${a.waitlist?`<span class="tg w">${a.waitlist} in lista</span>`:''}${lvl?`<span class="tg">da ${esc(lvl)}</span>`:''}${a.instructor_name?`<span class="tg">${esc(a.instructor_name)}</span>`:''}</div>`}</span><span class="chev">›</span></button>`;
+  ${x?'<div class="tags"><span class="tg d">Annullata</span></div>':`<div class="cbar"><i style="width:${pct}%"></i></div><div class="tags">${stTag(a)}${!a.instructor_name&&!x?'<span class="tg w">Istruttore da assegnare</span>':''}${a.access?`<span class="tg g">${ACC[a.access]}</span>`:''}<span class="tg">${a.booked||0}/${a.capacity} posti</span>${a.waitlist?`<span class="tg w">${a.waitlist} in lista</span>`:''}${lvl?`<span class="tg">da ${esc(lvl)}</span>`:''}${a.instructor_name?`<span class="tg">${esc(a.instructor_name)}</span>`:''}</div>`}</span><span class="chev">›</span></button>`;
 }
 function homeView(){
   const ws=weekStart(S.wk),today=dayKey(new Date()),by={};
@@ -255,6 +260,8 @@ function homeView(){
   const toProm=S.members.filter(m=>m.role==='athlete'&&!m.level_name&&m.status!=='left').length;
   return `<div class="top"><h1>Ciao ${esc(S.name||'')}</h1><div style="display:flex;gap:8px;align-items:center"><span class="pill acc">${S.org.role==='admin'?'Amministratore':'Istruttore'}</span><button class="rbtn" aria-label="esci" onclick="logout()">${ICON.user}</button></div></div>
   <div class="sum" style="font-size:14px;color:var(--ink2);margin:2px 0 0">${esc(S.org.name)}${S.cachedAt&&!S.demo?' · aggiornato alle '+fmtT(S.cachedAt):''}</div>
+  ${S.demo?'':wxStrip()+todoView()}
+  <h2 style="margin-top:22px">Calendario</h2>
   <div class="wk"><div class="wkh"><button onclick="S.wk--;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="prec">‹</button><button onclick="openCal()" style="font-size:13px;color:var(--ink2)">${lab}</button><button onclick="S.wk++;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="succ">›</button></div><div class="wkg">${g}</div><button class="wkl" style="display:block;width:100%" onclick="openCal()">${n} attività · ${iscr} prenotazioni · <span style="color:var(--accent)">Apri calendario ›</span></button></div>
   <h2>${sdl}</h2>${sel.map(a=>actCard(a)).join('')||'<div class="empty">Nessuna attività in questo giorno.</div>'}
   <button class="card" style="--c:var(--accent)" onclick="editAct(null,'${S.selDay}')"><span class="ic">${ICON.plus.replace('width="15" height="15"','')}</span><span class="sp"><b>Nuova attività</b><small>Allenamento, corso o sessione a secco</small></span><span class="chev">›</span></button>
@@ -295,25 +302,6 @@ function actView(){
   return h;
 }
 function topCert(m){return m.top_cert_level?`<span class="topc">${ICON.trophy}<span><b>${esc(m.top_cert_level)}</b>${m.top_cert_agency?'<em>'+esc(m.top_cert_agency)+'</em>':''}</span></span>`:'<span class="topc none">Nessun brevetto inserito</span>'}
-function memView(){
-  const q=(S.q||'').toLowerCase(),pt=S.pt||'ath';
-  const all=S.members.filter(m=>m.status!=='left');
-  const ath=all.filter(m=>m.role==='athlete'),ist=all.filter(m=>m.role!=='athlete');
-  const list=(pt==='ath'?ath:ist).filter(m=>!q||(m.name||'').toLowerCase().includes(q));
-  const nextCount=n=>S.acts.filter(a=>a.status==='scheduled'&&new Date(a.ends_at)>=new Date()&&a.instructor_name===n).length;
-  let h=`<div class="top"><h1>Persone</h1>${S.org.role==='admin'?'<button class="btn sm ghost" onclick="addMember()">+ Aggiungi</button>':''}</div>
-  <div class="chips2" style="margin:10px 0 4px"><button class="${pt==='ath'?'sel':''}" onclick="S.pt='ath';render()">Atleti <span style="opacity:.7">${ath.length}</span></button><button class="${pt==='ist'?'sel':''}" onclick="S.pt='ist';render()">Istruttori <span style="opacity:.7">${ist.length}</span></button></div>
-  <input class="txt" style="margin-top:6px" placeholder="Cerca per nome…" value="${esc(S.q||'')}" oninput="S.q=this.value;const p=this.selectionStart;render();const i=document.querySelector('input.txt');i.focus();i.setSelectionRange(p,p)">`;
-  for(const m of list){
-    if(pt==='ath'){const c=m.level_rank>=3?'var(--ph-inhale)':m.level_rank===2?'var(--ph-static)':m.level_rank===1?'var(--water)':'var(--ink2)';
-      h+=`<button class="card" style="--c:${c}" onclick="openMember('${m.user_id}')"><span class="ic">${ICON.user}</span><span class="sp"><b>${esc(m.name||'Atleta')}</b><small>Livello centro: ${esc(m.level_name||'nessuno')}</small>${topCert(m)}</span><span class="chev">›</span></button>`}
-    else{const n=nextCount(m.name);
-      h+=`<button class="card" style="--c:var(--ph-hold_full)" onclick="openMember('${m.user_id}')"><span class="ic">${ICON.diver}</span><span class="sp"><b>${esc(m.name||'Istruttore')}</b><small>${m.role==='admin'?'Amministratore':'Istruttore'} · ${n} attività in programma</small>${topCert(m)}</span><span class="chev">›</span></button>`}
-  }
-  if(!list.length)h+=`<div class="empty">${pt==='ath'?'Nessun atleta trovato.':'Nessun istruttore trovato.'}</div>`;
-  if(pt==='ist'&&S.org.role==='admin')h+='<p style="font-size:13px;margin-top:14px">Per aggiungere un istruttore, la persona deve avere già un account: usa “+ Aggiungi” e scegli il ruolo.</p>';
-  return h;
-}
 function setView(){
   const adm=S.org.role==='admin';
   return `<div class="top"><h1>Centro</h1></div><div class="sum" style="font-size:14px;color:var(--ink2)">${esc(S.org.name)}</div>
@@ -327,8 +315,8 @@ function setView(){
   </div>
   <button class="card" style="--c:var(--accent)" onclick="scanAthlete()"><span class="ic">${ICON.user}</span><span class="sp"><b>Scansiona il QR di un atleta</b><small>Aggiungi subito una persona che ti mostra il suo QR in Breathing Coach</small></span><span class="chev">›</span></button>
   <h2>Tipi di attività</h2>
-  <div class="wk" style="text-align:left;padding:4px 16px">${ACT_TYPES.map(t=>`<div class="row"><div class="lbl">${t[0]}<small>${t[1]}</small></div></div>`).join('')}</div>
-  <p style="font-size:13px;margin-top:10px">Elenco fisso per ora. La personalizzazione per ogni centro (tipi, durate, posti, livelli richiesti) è in studio.</p>
+  <div class="wk" style="text-align:left;padding:4px 16px">${S.types.map(t=>`<div class="row"><div class="lbl">${esc(t.name)}<small>${esc(({training:'Allenamento',course:'Corso',dry:'Apnea a secco'})[t.kind]||t.kind)} · ${({sea:'Mare',pool:'Piscina',dry:'A secco'})[t.env]||t.env} · ${t.capacity} posti · ${t.duration_min} min</small></div></div>`).join('')||'<div class="empty">Nessun tipo</div>'}</div>
+  <p style="font-size:13px;margin-top:10px">Il catalogo si modifica dalla dashboard sul PC (pagina Attività).</p>
   <h2>Livelli</h2><div class="wk" style="text-align:left;padding:4px 16px">${S.levels.map(l=>`<div class="row"><div class="lbl">${esc(l.name)}</div><span class="pill">livello ${l.rank}</span></div>`).join('')||'<div class="empty">Nessun livello</div>'}</div>
   <p style="font-size:13px;margin-top:10px">Un'attività con “da livello X” è prenotabile solo da chi ha almeno quel livello; gli altri vedono la proposta di corso.</p>
   <button class="btn ghost" onclick="logout()">Esci</button>`;
@@ -338,64 +326,10 @@ const ACT_TYPES=[['Profondità da barca','Allenamento in mare su cavo, con barca
 /* ---------- azioni ---------- */
 function modal(html){closeModal();const d=document.createElement('div');d.className='mdl';d.onclick=e=>{if(e.target===d)d.remove()};d.innerHTML='<div class="box">'+html+'</div>';document.body.appendChild(d)}
 const closeModal=()=>document.querySelector('.mdl')?.remove();
-async function openAct(id){
-  const a=S.acts.find(x=>x.id===id);let ro=[];
-  if(S.demo)ro=ROSTER_DEMO;else{const r=await sb.rpc('activity_roster',{p_act:id});ro=r.data||[]}
-  const row=r=>`<div class="row"><div class="lbl">${esc(r.name)}<small>${esc(r.level_name||'Senza livello')} · ${r.n_certs||0} brevetti</small></div>${r.status==='waitlist'?'<span class="tg w">In attesa</span>':`<div style="display:flex;gap:6px"><button class="btn ghost sm" onclick="mark('${r.booking_id}','attended')">✓</button><button class="btn danger sm" onclick="mark('${r.booking_id}','no_show')">Assente</button></div>`}</div>`;
-  const ins=ro.filter(r=>r.status!=='waitlist'),wl=ro.filter(r=>r.status==='waitlist'),[c,ic]=aStyle(a);
-  modal(`<div class="top"><h3>${esc(a.title)}</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
-  <div class="sum" style="font-size:14px;color:var(--ink2);margin-bottom:6px;text-transform:capitalize">${fmtD(a.starts_at)}</div><div style="font-size:14px;color:var(--ink2)">${fmtT(a.starts_at)}–${fmtT(a.ends_at)}${a.place?' · '+esc(a.place):''}</div>
-  <div class="stat"><div><b>${ins.length}/${a.capacity}</b><span>partecipanti</span></div><div><b>${wl.length}</b><span>in lista</span></div></div>
-  <h2 style="font-size:15px;margin:16px 0 0">Partecipanti</h2>${ins.map(row).join('')||'<div class="empty">Nessun partecipante</div>'}
-  ${wl.length?'<h2 style="font-size:15px;margin:16px 0 0">Lista d\'attesa</h2>'+wl.map(row).join(''):''}
-  ${a.status==='scheduled'?`${a.kind==='course'?`<button class="btn" onclick="finishCourse('${a.id}')">Concludi corso</button>`:''}<button class="btn ghost" onclick="editAct('${a.id}')">Modifica / sposta</button><button class="btn danger" onclick="cancelAct('${a.id}')">Annulla attività</button>`:''}`);
-}
 async function mark(bid,st){
   if(S.demo){toast(st==='attended'?'Segnato presente':'Segnato assente');return}
   const {error}=await sb.rpc('set_booking_status',{p_booking:bid,p_status:st});
   toast(error?'Errore: '+error.message:'Salvato');
-}
-function editAct(id,dayk){
-  let base=new Date();base.setDate(base.getDate()+1);base.setHours(9,0,0,0);
-  if(dayk){const [y,m,d]=dayk.split('-').map(Number);base=new Date(y,m,d,9,0)}
-  const a=id?S.acts.find(x=>x.id===id):{kind:'training',title:'',place:'',location_type:'sea',capacity:6,min_rank:0,starts_at:base.toISOString(),ends_at:new Date(base.getTime()+36e5*2).toISOString()};
-  const loc=iso=>{const d=new Date(iso);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
-  modal(`<div class="top"><h3>${id?'Modifica attività':'Nuova attività'}</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
-  <label class="f">Tipo</label><select id="f_kind" class="txt" onchange="autoTitle()">${Object.entries(KIND).map(([k,v])=>`<option value="${k}" ${a.kind===k?'selected':''}>${v}</option>`).join('')}</select>
-  <label class="f">Titolo</label><input id="f_title" class="txt" value="${esc(a.title)}" placeholder="Allenamento in mare">
-  <div class="g2"><div><label class="f">Inizio</label><input id="f_s" class="txt" type="datetime-local" value="${loc(a.starts_at)}"></div><div><label class="f">Fine</label><input id="f_e" class="txt" type="datetime-local" value="${loc(a.ends_at)}"></div></div>
-  <div class="g2"><div><label class="f">Luogo</label><input id="f_place" class="txt" value="${esc(a.place||'')}"></div><div><label class="f">Ambiente</label><select id="f_loc" class="txt" onchange="autoTitle()">${[['sea','Mare'],['pool','Piscina'],['dry','A secco']].map(([k,v])=>`<option value="${k}" ${a.location_type===k?'selected':''}>${v}</option>`).join('')}</select></div></div>
-  <div id="f_accw" style="display:none"><label class="f">Profondità su cavo</label><select id="f_acc" class="txt" onchange="autoTitle()"><option value="boat" ${a.access==='boat'||!a.access?'selected':''}>Da barca</option><option value="shore" ${a.access==='shore'?'selected':''}>Da riva / atollo</option></select></div>
-  <div class="g2"><div><label class="f">Posti</label><input id="f_cap" class="txt" type="number" min="1" value="${a.capacity}"></div><div><label class="f">Livello minimo</label><select id="f_rank" class="txt"><option value="0">Nessuno</option>${S.levels.map(l=>`<option value="${l.rank}" ${a.min_rank===l.rank?'selected':''}>${esc(l.name)}</option>`).join('')}</select></div></div>
-  <button class="btn" onclick="saveAct('${id||''}')">Salva</button>`);
-  S._autoT=a.title;autoTitle(true);
-}
-function autoTitle(init){
-  const k=$('#f_kind').value,l=$('#f_loc').value,sea=l==='sea'&&k!=='dry';
-  $('#f_accw').style.display=sea?'block':'none';
-  const t=$('#f_title');if(init&&t.value)return;
-  if(t.value&&t.value!==S._autoT)return;
-  let n='';
-  if(k==='course')n='Corso';else if(k==='dry'||l==='dry')n='Apnea a secco';else if(l==='pool')n='Allenamento in piscina';else n=$('#f_acc').value==='shore'?'Profondità da riva / atollo':'Profondità da barca';
-  t.value=n;S._autoT=n;
-}
-async function saveAct(id){
-  const rec={org_id:S.org.org_id,kind:$('#f_kind').value,title:$('#f_title').value.trim(),place:$('#f_place').value.trim(),location_type:$('#f_loc').value,starts_at:new Date($('#f_s').value).toISOString(),ends_at:new Date($('#f_e').value).toISOString(),capacity:+$('#f_cap').value||1,min_rank:+$('#f_rank').value||0};
-  rec.access=(rec.location_type==='sea'&&rec.kind!=='dry')?$('#f_acc').value:null;
-  if(!rec.title){toast('Scrivi un titolo');return}
-  if(rec.kind==='course'){const r=rec.min_rank+1;rec.course_target_rank=S.levels.some(l=>l.rank===r)?r:null}
-  if(S.demo){closeModal();toast('Salvato (prova)');return}
-  const q=id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert(rec);
-  let {error}=await q;
-  if(error&&/access/i.test(error.message)){delete rec.access;toast('Tipo di accesso non ancora attivo sul server: salvato senza');({error}=await (id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert(rec)))}
-  if(error){toast('Errore: '+error.message);return}
-  closeModal();toast('Salvato');await loadOrg();render();
-}
-async function cancelAct(id){
-  const why=prompt('Motivo dell\'annullamento (visibile ai partecipanti):','Condizioni meteo');if(why===null)return;
-  if(S.demo){closeModal();toast('Annullata (prova)');return}
-  const {error}=await sb.from('activities').update({status:'cancelled',cancel_reason:why}).eq('id',id);
-  closeModal();toast(error?'Errore: '+error.message:'Annullata: i partecipanti vengono avvisati');await loadOrg();render();
 }
 async function finishCourse(id){
   if(!confirm('Concludere il corso? I presenti passano al livello successivo.'))return;
@@ -456,6 +390,169 @@ async function newCode(){
   const {data,error}=await sb.rpc('regenerate_join_code',{p_org:S.org.org_id});
   if(!error)S.code=data;toast(error?'Errore: '+error.message:'Nuovo codice creato');render();
 }
+/* ===== v2: funzioni da campo (catalogo, meteo, da fare, avvisi, persone) ===== */
+Object.assign(S,{people:[],types:[],links:[],opts:{place:[]},notices:[],wx:null,wxBusy:false});
+const isAdm=()=>S.org&&S.org.role==='admin';
+const isSea=a=>a.location_type==='sea'&&a.kind!=='dry';
+const dkey=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return dkey(d)};
+const fmtDT=x=>new Date(x).toLocaleString('it-IT',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+const dl=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,16)};
+const personOf=uid=>S.people.find(p=>p.user_id===uid);
+const WX_LAT=37.6205,WX_LON=15.1925;
+async function loadWx(){if(S.wxBusy||(S.wx&&Date.now()-S.wx.t<18e5))return;S.wxBusy=true;
+  try{const q=`latitude=${WX_LAT}&longitude=${WX_LON}&timezone=Europe%2FRome&forecast_days=4`;
+    const [a,m]=await Promise.all([fetch(`https://api.open-meteo.com/v1/forecast?${q}&wind_speed_unit=kn&daily=weather_code,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant`).then(r=>r.json()),
+      fetch(`https://marine-api.open-meteo.com/v1/marine?${q}&daily=wave_height_max,wave_period_max`).then(r=>r.json())]);
+    if(!a.daily)throw 0;S.wx={t:Date.now(),a:a.daily,m:m.daily||null}}catch(e){S.wxErr=true}
+  S.wxBusy=false;if(S.stage==='app'&&S.tab==='home'&&!S.cal&&!document.querySelector('.mdl'))render()}
+const WXI=c=>c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=57?'🌦️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌧️':c<=86?'🌨️':'⛈️';
+const DIRS=['N','NE','E','SE','S','SO','O','NO'],dirL=d=>d==null?'':DIRS[Math.round(d/45)%8];
+const seaState=h=>h==null?['—','']:h<0.5?['Calmo','g']:h<1?['Poco mosso','g']:h<1.5?['Mosso','w']:h<2.5?['Molto mosso','d']:['Agitato','d'];
+function wxFor(key){if(!S.wx)return null;const a=S.wx.a,m=S.wx.m,i=a.time.indexOf(key);if(i<0)return null;return {rain:a.precipitation_sum[i],prob:a.precipitation_probability_max[i],wind:Math.round(a.wind_speed_10m_max[i]),gust:Math.round(a.wind_gusts_10m_max[i]),wdir:a.wind_direction_10m_dominant[i],wave:m?m.wave_height_max[i]:null,code:a.weather_code[i]}}
+function wxRisk(w){if(!w)return '';const wv=w.wave||0;return(wv>=1.5||w.wind>=20||w.rain>=10)?'d':(wv>=1||w.wind>=15||w.rain>=3)?'w':'g'}
+function wxLine(w){if(!w)return '<span style="color:var(--ink2)">Previsione non ancora disponibile (copre oggi e 3 giorni).</span>';const sl=seaState(w.wave);return `${WXI(w.code)} 🌧 <b>${w.rain}</b> mm (${w.prob??'—'}%) · 💨 <b>${w.wind}</b> nodi ${dirL(w.wdir)}, raff. ${w.gust} · 🌊 <b>${w.wave==null?'—':w.wave.toFixed(1)}</b> m <span class="tg ${sl[1]}">${sl[0]}</span>`}
+function stTag(a){if(a.status==='cancelled')return '';if(isSea(a))return a.weather_status==='confirmed'?'<span class="tg g">Confermata</span>':'<span class="tg w">Osservazione meteo</span>';return ''}
+function wxStrip(){
+  if(!S.wx){loadWx();return `<div class="wk" style="text-align:left;padding:12px 14px"><b style="font-size:14px">Meteo e mare · Stazzo</b><div style="color:var(--ink2);font-size:13px;margin-top:4px">${S.wxErr?'Previsione non disponibile (serve connessione).':'Caricamento…'}</div></div>`}
+  const days=[0,1,2,3].map(n=>{const k=addDays(n),w=wxFor(k);const lab=n===0?'Oggi':n===1?'Domani':new Date(k+'T12:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric'});
+    if(!w)return `<div class="wxd"><span>${lab}</span></div>`;const r=wxRisk(w);
+    return `<div class="wxd ${r}"><span>${lab}</span><div style="font-size:20px">${WXI(w.code)}</div><b>${w.wave==null?'—':w.wave.toFixed(1)} m</b><span>${w.wind} kn ${dirL(w.wdir)}</span><span>${w.rain} mm</span></div>`}).join('');
+  return `<div class="wk" style="text-align:left;padding:12px 10px"><b style="font-size:14px;padding-left:4px">Meteo e mare · Stazzo</b><div class="wxg">${days}</div></div>`}
+async function loadOrg2(){
+  const id=S.org.org_id,safe=async f=>{try{const r=await f();return r.data||[]}catch(e){return []}};
+  const [pp,ty,lk,op,nt]=await Promise.all([
+    safe(()=>sb.from('people').select('*').eq('org_id',id).order('full_name')),
+    safe(()=>sb.from('activity_types').select('*').eq('org_id',id).order('name')),
+    safe(()=>sb.from('instructor_activity_types').select('*')),
+    safe(()=>sb.from('activity_options').select('id,field,label').eq('org_id',id).eq('field','place').order('label')),
+    safe(()=>sb.from('activity_notices').select('*').eq('org_id',id).is('done_at',null).order('created_at'))]);
+  S.people=pp;S.types=ty;S.links=lk;S.opts={place:op};S.notices=nt;
+}
+/* --- Da fare --- */
+function todoView(){
+  const ad=isAdm(),t0=addDays(0),t1=addDays(1);
+  const live=S.acts.filter(a=>a.status==='scheduled'),sea=live.filter(isSea);
+  const need=sea.filter(a=>a.weather_status!=='confirmed');
+  const urgent=need.filter(a=>dkey(a.starts_at)===t0),tomorrow=need.filter(a=>dkey(a.starts_at)===t1),later=need.filter(a=>{const k=dkey(a.starts_at);return k>t1&&k<=addDays(3)});
+  const nUrg=S.notices.filter(n=>{const a=S.acts.find(x=>x.id===n.activity_id);return a&&dkey(a.starts_at)<=t1}),nOth=S.notices.filter(n=>!nUrg.includes(n));
+  const noInstr=live.filter(a=>!a.instructor_person_id&&!a.instructor_name&&dkey(a.starts_at)>=t0&&dkey(a.starts_at)<=addDays(7));
+  const day=a=>new Date(a.starts_at).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  const arow=(a,lab,col)=>{const w=wxFor(dkey(a.starts_at));return `<div class="tdo" style="border-color:${col}"><div onclick="openAct('${a.id}')"><b>${fmtT(a.starts_at)} · ${esc(a.title)}</b><small>${esc(day(a))}${a.place?' · '+esc(a.place):''} · ${a.booked||0} iscritti${a.waitlist?' (+'+a.waitlist+')':''}</small><small style="color:${col}">${lab}</small><small>${wxLine(w)}</small></div>${ad?`<div class="tbt"><button class="btn sm" onclick="confirmAct('${a.id}')">Conferma</button><button class="btn sm ghost" style="color:var(--danger)" onclick="cancelAct('${a.id}')">Annulla</button></div>`:''}</div>`};
+  const nrow=n=>{const a=S.acts.find(x=>x.id===n.activity_id);return a?`<div class="tdo" style="border-color:var(--danger)"><div><b>Avvisa gli iscritti · ${n.kind==='cancelled'?'annullata':'spostata'}</b><small>${esc(a.title)} · ${esc(day(a))} · ${a.booked||0} iscritti</small></div>${ad?`<div class="tbt"><button class="btn sm" onclick="noticeModal('${n.id}')">Prepara avviso</button></div>`:''}</div>`:''};
+  const h=[];
+  if(urgent.length||nUrg.length)h.push(`<div class="urg"><b style="color:var(--danger)">URGENTE</b>${urgent.map(a=>arow(a,'Doveva essere decisa ieri: conferma o annulla ora','var(--danger)')).join('')}${nUrg.map(nrow).join('')}</div>`);
+  if(tomorrow.length)h.push(`<h3 class="th">Da decidere oggi: domani</h3>${tomorrow.map(a=>arow(a,'Conferma in base alla previsione','var(--ph-hold_full)')).join('')}`);
+  if(later.length)h.push(`<h3 class="th">Nei prossimi giorni (osservazione meteo)</h3>${later.map(a=>arow(a,'In osservazione','var(--ink2)')).join('')}`);
+  if(nOth.length)h.push(`<h3 class="th">Comunicazioni da fare</h3>${nOth.map(nrow).join('')}`);
+  if(noInstr.length)h.push(`<h3 class="th">Istruttore da assegnare</h3>${noInstr.map(a=>`<div class="tdo" style="border-color:var(--ph-hold_full)" onclick="openAct('${a.id}')"><div><b>${esc(a.title)}</b><small>${esc(day(a))} · ${fmtT(a.starts_at)}</small></div></div>`).join('')}`);
+  return `<h2 style="margin-top:18px">Da fare oggi</h2>${h.join('')||'<div class="empty" style="padding:12px 0">Niente di urgente. Tutto in ordine.</div>'}`}
+async function confirmAct(id){const {error}=await sb.from('activities').update({weather_status:'confirmed'}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);const a=S.acts.find(x=>x.id===id);if(a)a.weather_status='confirmed';closeModal();render();toast('Attività confermata')}
+async function noticeModal(nid){const n=S.notices.find(x=>x.id===nid),a=n&&S.acts.find(x=>x.id===n.activity_id);if(!n||!a)return toast('Attività non trovata');
+  const r=await sb.rpc('activity_roster',{p_act:a.id});const ro=(r.data||[]).filter(x=>x.status!=='cancelled');const when=fmtDT(a.starts_at);
+  const txt=n.kind==='cancelled'?`Ciao, purtroppo l'attività "${a.title}" di ${when} è stata annullata (${n.detail||'condizioni meteo'}). Ti ricontatteremo per riprogrammarla. — ${S.org.name}`:`Ciao, l'attività "${a.title}" è stata spostata: ora ${when}${a.place?' – '+a.place:''}. Se non riesci a partecipare scrivici. — ${S.org.name}`;
+  modal(`<div class="top"><h3>${n.kind==='cancelled'?'Annullata':'Spostata'}: da comunicare</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
+  <p style="font-size:13.5px">${esc(a.title)} · ${esc(when)}<br>Chi usa l'app ha già ricevuto l'avviso interno. Qui mandi il messaggio diretto.</p>
+  <label class="f">Iscritti da avvisare (${ro.length})</label>${ro.map(x=>{const pe=personOf(x.user_id);return `<div class="row"><div class="lbl">${esc(x.name)}<small>${x.status==='waitlist'?'in lista d\'attesa':'iscritto'}</small></div>${pe&&pe.phone?`<button class="btn sm" onclick="waSend('${pe.phone}','${esc((pe.full_name||x.name).split(' ')[0]).replace(/'/g,'')}')">WhatsApp</button>`:`<span class="tg w">${pe?'senza telefono':'non collegato'}</span>`}</div>`}).join('')||'<div class="empty">Nessun iscritto.</div>'}
+  <label class="f">Messaggio proposto</label><textarea id="nmsg" rows="5" class="txt">${esc(txt)}</textarea>
+  <button class="btn ghost" onclick="navigator.clipboard.writeText($('#nmsg').value).then(()=>toast('Messaggio copiato'))">Copia messaggio</button><button class="btn" onclick="noticeDone('${nid}')">Segna come comunicato</button>`)}
+function waSend(phone,first){const t=$('#nmsg').value.replace(/^Ciao,/,'Ciao '+first+',');window.open('https://wa.me/'+String(phone).replace(/\D/g,'')+'?text='+encodeURIComponent(t),'_blank','noopener')}
+async function noticeDone(nid){const {error}=await sb.from('activity_notices').update({done_at:new Date().toISOString()}).eq('id',nid);if(error)return toast('Non riuscito: '+error.message);S.notices=S.notices.filter(x=>x.id!==nid);closeModal();render();toast('Segnato come comunicato')}
+/* --- Scheda attività --- */
+async function openAct(id){
+  const a=S.acts.find(x=>x.id===id);let ro=[];
+  if(S.demo)ro=ROSTER_DEMO;else{const r=await sb.rpc('activity_roster',{p_act:id});ro=r.data||[]}
+  const row=r=>`<div class="row"><div class="lbl">${esc(r.name)}<small>${esc(r.level_name||'Senza livello')} · ${r.n_certs||0} brevetti</small></div>${r.status==='waitlist'?'<span class="tg w">In attesa</span>':`<div style="display:flex;gap:6px"><button class="btn ghost sm" onclick="mark('${r.booking_id}','attended')">✓</button><button class="btn ghost sm" onclick="mark('${r.booking_id}','no_show')">✗</button></div>`}</div>`;
+  const ins=ro.filter(r=>r.status!=='waitlist'&&r.status!=='cancelled'),wl=ro.filter(r=>r.status==='waitlist');
+  const w=isSea(a)?wxFor(dkey(a.starts_at)):null;
+  modal(`<div class="top"><h3>${esc(a.title)}</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
+  <div style="font-size:14px;color:var(--ink2);text-transform:capitalize">${fmtD(a.starts_at)}</div><div style="font-size:14px;color:var(--ink2)">${fmtT(a.starts_at)}–${fmtT(a.ends_at)}${a.place?' · '+esc(a.place):''}</div>
+  <div class="tags">${a.status==='cancelled'?'<span class="tg d">Annullata</span>':stTag(a)}<span class="tg ${a.instructor_name?'':'w'}">${a.instructor_name?esc(a.instructor_name):'Istruttore da assegnare'}</span></div>
+  ${isSea(a)&&a.status==='scheduled'?`<div class="note2">${wxLine(w)}</div>`:''}
+  <div class="stat"><div><b>${ins.length}/${a.capacity}</b><span>partecipanti</span></div><div><b>${wl.length}</b><span>in lista</span></div></div>
+  <h2 style="font-size:15px;margin:16px 0 0">Partecipanti</h2>${ins.map(row).join('')||'<div class="empty">Nessun partecipante</div>'}
+  ${wl.length?'<h2 style="font-size:15px;margin:16px 0 0">Lista d\'attesa</h2>'+wl.map(row).join(''):''}
+  ${a.status==='scheduled'?`${isSea(a)&&a.weather_status!=='confirmed'?`<button class="btn" onclick="confirmAct('${a.id}')">Conferma attività</button>`:''}${a.kind==='course'?`<button class="btn" onclick="finishCourse('${a.id}')">Concludi corso</button>`:''}<button class="btn ghost" onclick="editAct('${a.id}')">Modifica / sposta</button><button class="btn danger" onclick="cancelAct('${a.id}')">Annulla attività</button>`:''}`);
+}
+/* --- Modifica attività (da catalogo) --- */
+function typeFor(a){if(!a)return S.types[0];return S.types.find(t=>t.id===a.type_id)||S.types.find(t=>t.name===a.title)||S.types.find(t=>t.kind===a.kind&&t.env===a.location_type)||S.types[0]}
+function instrOptions(sel,typeId){return S.people.filter(p=>p.role==='instructor'&&((p.instr_active&&S.links.some(l=>l.person_id===p.id&&l.type_id===typeId))||p.id===sel)).map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${esc(p.full_name)}${p.instr_active?'':' (non attivo)'}</option>`).join('')}
+function typePick(){const t=S.types.find(x=>x.id===$('#aty').value);if(!t)return;const prev=S.types.find(x=>x.id===S._prevT);const ti=$('#at');if(!ti.value||(prev&&ti.value===prev.name))ti.value=t.name;S._prevT=t.id;
+  $('#ac').value=t.capacity;const st=new Date($('#as').value);if(!isNaN(st))$('#ae2').value=dl(new Date(st.getTime()+t.duration_min*6e4));updWx();
+  const el=$('#ai'),cur=el.value;el.innerHTML='<option value="">— Da assegnare —</option>'+instrOptions(cur,t.id);const h=$('#ai_h');if(h)h.textContent=el.options.length>1?'':'Nessun istruttore attivo abilitato per questo tipo.'}
+function updWx(){const t=S.types.find(x=>x.id===$('#aty').value);const box=$('#awbox');if(!t||!box)return;const sea=isSea({location_type:t.env,kind:t.kind});box.style.display=sea?'block':'none';const st=new Date($('#as').value);const l=$('#wxl');if(sea&&l&&!isNaN(st)){if(!S.wx)loadWx();l.innerHTML=wxLine(wxFor(dkey(st)))}}
+function placeSel(cur){const list=S.opts.place.map(x=>x.label);if(cur&&!list.includes(cur))list.push(cur);return `<select id="ap" class="txt" onchange="if(this.value==='__new')newPlace()"><option value="">— Scegli —</option>${list.map(l=>`<option${l===cur?' selected':''}>${esc(l)}</option>`).join('')}<option value="__new">＋ Nuovo luogo…</option></select>`}
+async function newPlace(){const n=(prompt('Nome del nuovo luogo:')||'').trim();if(!n){$('#ap').value='';return}
+  const {data,error}=await sb.from('activity_options').insert({org_id:S.org.org_id,field:'place',label:n}).select().single();if(error){toast('Non riuscito: '+error.message);$('#ap').value='';return}
+  S.opts.place.push(data);S.opts.place.sort((a,b)=>a.label.localeCompare(b.label,'it'));$('#ap').outerHTML=placeSel(n)}
+function editAct(id,dayk){
+  if(S.demo){toast('Modifica non disponibile nell\'anteprima');return}
+  if(!S.types.length){modal(`<div class="top"><h3>Nuova attività</h3><button class="rbtn" onclick="closeModal()">✕</button></div><p>Prima crea almeno un tipo di attività dal PC (pagina Attività della dashboard).</p>`);return}
+  const a=id?S.acts.find(x=>x.id===id):null,ty=typeFor(a);S._prevT=ty.id;
+  let st=a?new Date(a.starts_at):new Date(Date.now()+864e5);if(!a){if(dayk){const [y,m,d]=dayk.split('-').map(Number);st=new Date(y,m,d)}st.setHours(9,0,0,0)}
+  const en=a?new Date(a.ends_at):new Date(st.getTime()+ty.duration_min*6e4);
+  modal(`<div class="top"><h3>${a?'Modifica attività':'Nuova attività'}</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
+  <label class="f">Tipo di attività</label><select id="aty" class="txt" onchange="typePick()">${S.types.map(t=>`<option value="${t.id}"${t.id===ty.id?' selected':''}>${esc(t.name)}</option>`).join('')}</select>
+  <label class="f">Titolo</label><input id="at" class="txt" value="${esc(a?a.title:ty.name)}">
+  <label class="f">Luogo</label>${placeSel(a?a.place||'':'')}
+  <div class="g2"><div><label class="f">Inizio</label><input id="as" class="txt" type="datetime-local" value="${dl(st)}" onchange="${a?'updWx()':'typePick()'}"></div><div><label class="f">Fine</label><input id="ae2" class="txt" type="datetime-local" value="${dl(en)}"></div></div>
+  <div id="awbox" style="display:${isSea({location_type:ty.env,kind:ty.kind})?'block':'none'}"><label class="f">Stato (attività in mare)</label><select id="aw" class="txt"><option value="watch"${!a||a.weather_status!=='confirmed'?' selected':''}>Osservazione meteo</option><option value="confirmed"${a&&a.weather_status==='confirmed'?' selected':''}>Confermata</option></select><div id="wxl" class="note2"></div></div>
+  <label class="f">Istruttore (anche dopo)</label><select id="ai" class="txt"><option value="">— Da assegnare —</option>${instrOptions(a?a.instructor_person_id:'',ty.id)}</select><div id="ai_h" style="font-size:12.5px;color:var(--ink2);margin-top:4px"></div>
+  <label class="f">Posti</label><input id="ac" class="txt" type="number" min="1" value="${a?a.capacity:ty.capacity}">
+  <button class="btn" onclick="saveAct('${id||''}')">Salva</button>`);
+  updWx();
+}
+async function saveAct(id){
+  const ty=S.types.find(x=>x.id===$('#aty').value);if(!ty)return toast('Scegli il tipo');const t=$('#at').value.trim();if(!t)return toast('Scrivi un titolo');
+  const s=new Date($('#as').value),e=new Date($('#ae2').value);if(isNaN(s)||isNaN(e)||e<=s)return toast('Controlla data e orari');
+  const pl=$('#ap').value==='__new'?'':$('#ap').value;
+  const rec={type_id:ty.id,kind:ty.kind,location_type:ty.env,title:t,place:pl,starts_at:s.toISOString(),ends_at:e.toISOString(),capacity:+$('#ac').value||1,instructor_person_id:$('#ai').value||null,weather_status:isSea({location_type:ty.env,kind:ty.kind})?$('#aw').value:null};
+  const old=id?S.acts.find(x=>x.id===id):null;
+  const moved=old&&old.status==='scheduled'&&(old.booked>0||old.waitlist>0)&&(new Date(old.starts_at).getTime()!==s.getTime()||(old.place||'')!==rec.place);
+  const {error}=await(id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert({...rec,org_id:S.org.org_id,min_rank:0}));
+  if(error)return toast('Non riuscito: '+error.message);
+  if(moved)await sb.from('activity_notices').insert({org_id:S.org.org_id,activity_id:id,kind:'moved',detail:'Prima: '+fmtDT(old.starts_at)+(old.place?' – '+old.place:'')});
+  closeModal();await loadOrg();render();toast('Salvata'+(moved?': ricordati di avvisare gli iscritti':''));
+}
+async function cancelAct(id){
+  const why=prompt('Motivo dell\'annullamento (visibile ai partecipanti):','Condizioni meteo');if(why===null)return;
+  if(S.demo){closeModal();toast('Annullata (prova)');return}
+  const act=S.acts.find(x=>x.id===id);
+  const {error}=await sb.from('activities').update({status:'cancelled',cancel_reason:why}).eq('id',id);
+  if(error)return toast('Errore: '+error.message);
+  const has=act&&(act.booked>0||act.waitlist>0);
+  if(has)await sb.from('activity_notices').insert({org_id:S.org.org_id,activity_id:id,kind:'cancelled',detail:why});
+  closeModal();toast('Annullata'+(has?': ricordati di avvisare gli iscritti':''));await loadOrg();render();
+}
+/* --- Persone: rubrica dal centro --- */
+function memView(){
+  const q=(S.q||'').toLowerCase(),pt=S.pt||'ath',lf=S.lf||'all';
+  const all=S.people.filter(p=>p.role==='athlete'||p.role==='instructor');
+  const ath=all.filter(p=>p.role==='athlete'),ist=all.filter(p=>p.role==='instructor');
+  const list=(pt==='ath'?ath:ist).filter(p=>(!q||(p.full_name||'').toLowerCase().includes(q))&&(lf==='all'||pt!=='ath'||(lf==='loc'?p.is_local:!p.is_local)));
+  const types=p=>S.types.filter(t=>S.links.some(l=>l.person_id===p.id&&l.type_id===t.id)).map(t=>t.name);
+  let h=`<div class="top"><h1>Persone</h1>${isAdm()?'<button class="btn sm ghost" onclick="addMember()">+ Accesso app</button>':''}</div>
+  <div class="chips2" style="margin:10px 0 4px"><button class="${pt==='ath'?'sel':''}" onclick="S.pt='ath';render()">Atleti <span style="opacity:.7">${ath.length}</span></button><button class="${pt==='ist'?'sel':''}" onclick="S.pt='ist';render()">Istruttori <span style="opacity:.7">${ist.length}</span></button></div>
+  ${pt==='ath'?`<div class="chips2" style="margin:6px 0"><button class="${lf==='all'?'sel':''}" onclick="S.lf='all';render()">Tutti</button><button class="${lf==='loc'?'sel':''}" onclick="S.lf='loc';render()">Locali</button><button class="${lf==='non'?'sel':''}" onclick="S.lf='non';render()">Non locali</button></div>`:''}
+  <input class="txt" style="margin-top:6px" placeholder="Cerca per nome…" value="${esc(S.q||'')}" oninput="S.q=this.value;const p=this.selectionStart;render();const i=document.querySelector('input.txt');i.focus();i.setSelectionRange(p,p)">`;
+  for(const p of list){
+    const ty=pt==='ist'?types(p):[];
+    h+=`<button class="card" style="--c:${pt==='ist'?'var(--ph-hold_full)':p.is_local?'var(--accent)':'var(--ph-static)'}" onclick="openPerson('${p.id}')"><span class="ic">${pt==='ist'?ICON.diver:ICON.user}</span><span class="sp"><b>${esc(p.full_name)}</b><small>${pt==='ist'?(p.instr_active?'Attivo':'Non attivo')+(ty.length?' · '+esc(ty.join(', ')):''):(p.is_local?'Locale':'Non locale')}${p.user_id?' · app collegata':''}</small></span><span class="chev">›</span></button>`;
+  }
+  if(!list.length)h+=`<div class="empty">${S.people.length?'Nessuna persona trovata.':'Elenco persone non disponibile per questo accesso.'}</div>`;
+  return h+'<p style="font-size:13px;margin-top:14px">Anagrafiche, brevetti e modifiche si gestiscono dalla dashboard sul PC.</p>';
+}
+function openPerson(pid){
+  const p=S.people.find(x=>x.id===pid);if(!p)return;const m=p.user_id&&S.members.find(x=>x.user_id===p.user_id);
+  const ph=p.phone?String(p.phone).replace(/\s/g,''):'';
+  const nxt=S.acts.filter(a=>a.status==='scheduled'&&new Date(a.ends_at)>=new Date()&&a.instructor_person_id===p.id).slice(0,5);
+  modal(`<div class="top"><h3>${esc(p.full_name)}</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
+  <div class="tags"><span class="tg">${p.role==='instructor'?'Istruttore':'Atleta'}</span>${p.role==='athlete'?`<span class="tg ${p.is_local?'g':''}">${p.is_local?'Locale':'Non locale'}</span>`:''}${p.user_id?'<span class="tg g">app collegata</span>':''}</div>
+  ${ph?`<div style="font-size:15px;margin:12px 0 0">${esc(ph)}</div><div class="g2" style="margin-top:8px"><a class="btn" style="text-decoration:none;margin-top:0" href="tel:${esc(ph)}">Chiama</a><a class="btn ghost" style="text-decoration:none;margin-top:0" target="_blank" rel="noopener" href="https://wa.me/${ph.replace(/\D/g,'')}">WhatsApp</a></div>`:'<p style="margin-top:12px">Nessun telefono registrato.</p>'}
+  ${nxt.length?`<h2 style="font-size:15px;margin:16px 0 0">Prossime attività</h2>${nxt.map(a=>`<div class="row"><div class="lbl">${esc(a.title)}<small>${fmtD(a.starts_at)} · ${fmtT(a.starts_at)}</small></div></div>`).join('')}`:''}
+  ${m?`<button class="btn ghost" onclick="openMember('${p.user_id}')">Livello e accesso nell'app</button>`:''}`);
+}
+
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 if(new URLSearchParams(location.search).has('demo'))startDemo();else init();
 </script>
