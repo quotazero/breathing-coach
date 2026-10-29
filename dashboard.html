@@ -58,6 +58,18 @@ h1,h2,h3{margin:0;font-weight:600}
 .kpi span{color:var(--ink2);font-size:13px}
 .panel{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:18px}
 .panel h2{font-size:16px;margin-bottom:12px}
+ @media (min-width:1000px){
+ .main:has(.fit){height:100vh;overflow:hidden;padding:14px 24px 12px;max-width:none}
+ .fit{display:flex;flex-direction:column;height:calc(100vh - 26px);gap:10px;min-height:0}
+ .fit .top{margin:0}.fit .top p{display:none}.fit h1{font-size:22px}
+ .fit .panel{margin:0;padding:10px 14px;border-radius:14px}.fit .panel h2{font-size:14px;margin-bottom:6px}
+ .fit .r1{display:grid;grid-template-columns:1fr 330px;gap:10px;flex:0 0 auto}.fit .r1a{max-height:30vh;overflow:auto;border-radius:14px}
+ .fit .kpis{grid-template-columns:1fr 1fr;gap:8px;margin:0}.fit .kpi{padding:8px 14px}.fit .kpi b{font-size:24px}
+ .fit .wx{padding:7px 10px;font-size:12px;gap:2px}.fit .wxi{font-size:18px}.fit .wxg{gap:8px}
+ .fit .r3{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1 1 0;min-height:0}.fit .r3 .panel{overflow:auto;min-height:0}
+ .fit .item small{font-size:11.5px}
+ }
+ @media (min-width:1000px) and (max-height:900px){.fit .wxnote,.fit .r3 .note,.fit .item small{display:none}}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .note{color:var(--ink2);font-size:13px;line-height:1.5}
 .banner{border:1px dashed rgba(242,200,121,.5);color:var(--warn);background:rgba(242,200,121,.07);border-radius:12px;padding:10px 14px;font-size:13px;margin-bottom:16px}
@@ -339,7 +351,7 @@ function wxCard(){if(!S.wx){loadWx();return `<div class="panel"><h2>Meteo e mare
     <div>🌊 <b>${wh==null?'—':wh.toFixed(1)}</b> m <span class="muted">${m&&m.wave_period_max[i]?m.wave_period_max[i].toFixed(0)+' s · '+dirL(m.wave_direction_dominant[i]):''}</span></div>
     <span class="chip ${sc}" style="align-self:flex-start">${sl}</span></div>`}).join('');
   return `<div class="panel"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Meteo e mare · Stazzo</h2><span class="muted" style="font-size:12px">Open-Meteo · onde massime del giorno</span></div><div class="wxg">${days}</div>
-  <div class="note" style="margin-top:10px">Clic su un giorno per il dettaglio orario. Rosso = non si esce (temporale, pioggia forte, vento o mare oltre soglia). Arancione = giornata difficile. Soglie indicative, da tarare. Previsione indicativa da modello: il mare sotto costa può essere diverso. Prima di un\'uscita controlla il bollettino ufficiale e decidi sul posto.</div></div>`}
+  <div class="note wxnote" style="margin-top:10px">Clic su un giorno per il dettaglio orario. Rosso = non si esce (temporale, pioggia forte, vento o mare oltre soglia). Arancione = giornata difficile. Soglie indicative, da tarare. Previsione indicativa da modello: il mare sotto costa può essere diverso. Prima di un\'uscita controlla il bollettino ufficiale e decidi sul posto.</div></div>`}
 function todoPanel(){const ad=isAdmin(),t0=addDays(0),t1=addDays(1);
   const live=S.acts.filter(a=>a.status==='scheduled');const sea=live.filter(isSea),todayAll=live.filter(a=>dkey(a.starts_at)===t0).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   const tm=x=>new Date(x).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
@@ -363,18 +375,18 @@ function homeView(){
   const rows=oppRows(),pool=rows.filter(r=>r.pool>0&&r.eligible.length+r.iv.length>0);
   const noCert=S.people.filter(p=>!S.certs.some(c=>c.person_id===p.id)).length;
   const up=S.acts.filter(a=>new Date(a.starts_at)>=new Date()&&a.status!=='cancelled').length;
-  return `<div class="top"><div><h1>Panoramica</h1><p>Stato del centro e opportunità di programmazione.</p></div></div>
-  ${todoPanel()}
+  return `<div class="fit"><div class="top"><div><h1>Panoramica</h1><p>Stato del centro e opportunità di programmazione.</p></div></div>
+  <div class="r1"><div class="r1a">${todoPanel()}</div>
   <div class="kpis"><div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${ath}</b><span>Atleti in anagrafica</span></div><div class="kpi click" onclick="S.pfilter='instructor';go('people')"><b>${ins}</b><span>Istruttori</span></div>
-  <div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${S.certs.length}</b><span>Brevetti registrati</span></div><div class="kpi click" onclick="go('cal')"><b>${up}</b><span>Attività in programma</span></div></div>
+  <div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${S.certs.length}</b><span>Brevetti registrati</span></div><div class="kpi click" onclick="go('cal')"><b>${up}</b><span>Attività in programma</span></div></div></div>
   ${wxCard()}
-  <div class="grid2"><div class="panel"><h2>Bacino potenziale per corso</h2>
+  <div class="r3"><div class="panel"><h2>Bacino potenziale per corso</h2>
    ${pool.length?`<table><tbody>${pool.slice(0,5).map(r=>`<tr class="click" onclick="go('opp')"><td>${esc(r.c.name)}</td><td style="width:36%"><div class="bar"><i style="width:${Math.min(100,r.pool/Math.max(1,pool[0].pool)*100)}%"></i></div></td><td class="num">${r.pool}</td><td><span class="chip ${r.cl}">${r.st}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nessun dato sufficiente.</div>'}
    <p class="note" style="margin:10px 0 0">Persone con il livello precedente, non ancora al livello del corso. Idoneità da verificare sui requisiti reali.</p></div>
   <div class="panel"><h2>Da completare</h2>
    <div class="item" style="cursor:pointer" onclick="go('out')">${S.people.filter(p=>p.outreach==='to_contact').length} persone del gruppo WhatsApp non hanno ancora risposto<small>Apri "Da sollecitare" per contattarle una per una. Servono i brevetti per calcolare chi è idoneo al livello successivo.</small></div>
    <div class="item">Prezzi e costi dei corsi${S.courses.some(c=>c.price_cents)?' (parziali)':' non ancora inseriti'}<small>Servono per il simulatore di margine.</small></div>
-   <div class="item">Interesse dichiarato per i corsi<small>Arriverà dall'app: l'atleta indica a quali corsi è interessato anche senza una data.</small></div></div></div>`
+   <div class="item">Interesse dichiarato per i corsi<small>Arriverà dall'app: l'atleta indica a quali corsi è interessato anche senza una data.</small></div></div></div></div>`
 }
 
 function actFor(p){if(!p.instr_active)return '';const ids=new Set(S.links.filter(l=>l.person_id===p.id).map(l=>l.type_id));return S.types.filter(t=>ids.has(t.id)).map(t=>t.name).sort().join(', ')}
