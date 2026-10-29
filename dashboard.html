@@ -51,6 +51,8 @@ h1,h2,h3{margin:0;font-weight:600}
 .ev{display:block;background:rgba(143,224,210,.16);color:var(--accent);border-radius:7px;padding:2px 6px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .ev.c{background:rgba(196,166,234,.18);color:var(--violet)}.ev.d{background:rgba(127,180,240,.18);color:var(--blue)}.ev.x{text-decoration:line-through;opacity:.5}
 @media(max-width:700px){.cd{min-height:60px;padding:4px}.ev{font-size:10px;padding:1px 3px}}
+.wxg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.wx{background:rgba(6,26,43,.45);border:1px solid var(--line);border-radius:14px;padding:12px;font-size:13px;display:flex;flex-direction:column;gap:5px}.wxi{font-size:22px}.wxi span{font-size:18px;font-weight:600}
+@media(max-width:700px){.wxg{grid-template-columns:1fr 1fr}}
 .kpi.click{cursor:pointer;transition:border-color .15s,transform .15s}.kpi.click:hover{border-color:var(--acc,#8fe3d3);transform:translateY(-2px)}.kpi b{display:block;font-size:32px;font-weight:600;line-height:1.1}
 .kpi span{color:var(--ink2);font-size:13px}
 .panel{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:18px}
@@ -227,6 +229,27 @@ function shell(inner){
 }
 function go(v){S.view=v;S.open=null;render()}
 
+/* ---------- meteo (Open-Meteo, nessuna chiave) ---------- */
+const WX_LAT=37.6205,WX_LON=15.1925;
+async function loadWx(){if(S.wxBusy||(S.wx&&Date.now()-S.wx.t<18e5))return;S.wxBusy=true;
+  try{const q=`latitude=${WX_LAT}&longitude=${WX_LON}&timezone=Europe%2FRome&forecast_days=4`;
+    const [a,m]=await Promise.all([fetch(`https://api.open-meteo.com/v1/forecast?${q}&wind_speed_unit=kn&daily=weather_code,temperature_2m_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant`).then(r=>r.json()),
+      fetch(`https://marine-api.open-meteo.com/v1/marine?${q}&daily=wave_height_max,wave_period_max,wave_direction_dominant`).then(r=>r.json())]);
+    if(!a.daily)throw 0;S.wx={t:Date.now(),a:a.daily,m:m.daily||null};S.wxErr=false}catch(e){S.wxErr=true}
+  S.wxBusy=false;if(S.view==='home'&&S.stage==='app')render()}
+const WXI=c=>c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=57?'🌦️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌧️':c<=86?'🌨️':'⛈️';
+const DIRS=['N','NE','E','SE','S','SO','O','NO'];const dirL=d=>d==null?'':DIRS[Math.round(d/45)%8];
+function seaState(h){return h==null?['—','']:h<0.5?['Calmo','a']:h<1?['Poco mosso','a']:h<1.5?['Mosso','w']:h<2.5?['Molto mosso','d']:['Agitato','d']}
+function wxCard(){if(!S.wx){loadWx();return `<div class="panel"><h2>Meteo e mare · Stazzo</h2><div class="muted" style="font-size:14px">${S.wxErr?'Meteo non disponibile in questo momento.':'Caricamento…'}</div></div>`}
+  const a=S.wx.a,m=S.wx.m;const days=a.time.map((t,i)=>{const d=new Date(t+'T12:00');const lab=i===0?'Oggi':i===1?'Domani':d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric'});
+    const wh=m?m.wave_height_max[i]:null,[sl,sc]=seaState(wh);
+    return `<div class="wx"><b style="text-transform:capitalize">${lab}</b><div class="wxi">${WXI(a.weather_code[i])} <span>${Math.round(a.temperature_2m_max[i])}°</span></div>
+    <div>🌧 <b>${a.precipitation_sum[i]}</b> mm <span class="muted">· ${a.precipitation_probability_max[i]??'—'}%</span></div>
+    <div>💨 <b>${Math.round(a.wind_speed_10m_max[i])}</b> nodi <span class="muted">${dirL(a.wind_direction_10m_dominant[i])} · raff. ${Math.round(a.wind_gusts_10m_max[i])}</span></div>
+    <div>🌊 <b>${wh==null?'—':wh.toFixed(1)}</b> m <span class="muted">${m&&m.wave_period_max[i]?m.wave_period_max[i].toFixed(0)+' s · '+dirL(m.wave_direction_dominant[i]):''}</span></div>
+    <span class="chip ${sc}" style="align-self:flex-start">${sl}</span></div>`}).join('');
+  return `<div class="panel"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Meteo e mare · Stazzo</h2><span class="muted" style="font-size:12px">Open-Meteo · onde massime del giorno</span></div><div class="wxg">${days}</div>
+  <div class="note" style="margin-top:10px">Previsione indicativa da modello: il mare sotto costa può essere diverso. Prima di un\'uscita controlla il bollettino ufficiale e decidi sul posto.</div></div>`}
 function homeView(){
   const ath=S.people.filter(p=>p.role==='athlete').length,ins=nInstr();
   const rows=oppRows(),pool=rows.filter(r=>r.pool>0&&r.eligible.length+r.iv.length>0);
@@ -235,6 +258,7 @@ function homeView(){
   return `<div class="top"><div><h1>Panoramica</h1><p>Stato del centro e opportunità di programmazione.</p></div></div>
   <div class="kpis"><div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${ath}</b><span>Atleti in anagrafica</span></div><div class="kpi click" onclick="S.pfilter='instructor';go('people')"><b>${ins}</b><span>Istruttori</span></div>
   <div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${S.certs.length}</b><span>Brevetti registrati</span></div><div class="kpi click" onclick="go('cal')"><b>${up}</b><span>Attività in programma</span></div></div>
+  ${wxCard()}
   <div class="grid2"><div class="panel"><h2>Bacino potenziale per corso</h2>
    ${pool.length?`<table><tbody>${pool.slice(0,5).map(r=>`<tr class="click" onclick="go('opp')"><td>${esc(r.c.name)}</td><td style="width:36%"><div class="bar"><i style="width:${Math.min(100,r.pool/Math.max(1,pool[0].pool)*100)}%"></i></div></td><td class="num">${r.pool}</td><td><span class="chip ${r.cl}">${r.st}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nessun dato sufficiente.</div>'}
    <p class="note" style="margin:10px 0 0">Persone con il livello precedente, non ancora al livello del corso. Idoneità da verificare sui requisiti reali.</p></div>
