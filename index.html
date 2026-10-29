@@ -103,7 +103,10 @@ p.lead{color:var(--ink);font-size:16px}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
 .chips button{padding:10px 14px;border-radius:12px;border:1px solid var(--line);font-size:15px}
 .chips button.sel{border-color:var(--accent);background:rgba(143,224,210,.12);color:var(--accent)}
-input.txt,select.txt{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);font-size:17px;color:var(--ink)}
+input[type=date].txt,input[type=time].txt{-webkit-appearance:none;appearance:none;display:block;text-align:left;height:52px;line-height:24px}
+input[type=date].txt::-webkit-date-and-time-value,input[type=time].txt::-webkit-date-and-time-value{text-align:left;margin:0;min-width:0}
+.rqbox label{display:block;margin:12px 0 4px}.rqbox .txt{margin:0}.rqbox input.txt+input.txt{margin-top:10px}
+input.txt,select.txt{box-sizing:border-box;min-width:0;max-width:100%;width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);font-size:17px;color:var(--ink)}
 input.code{letter-spacing:8px;text-align:center;font-size:28px;font-weight:600}
 .err{color:var(--danger);font-size:14px;min-height:20px;margin:8px 0}
 .ok{color:var(--accent)}
@@ -569,7 +572,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.9';
+const VERSION='0.9.10';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1524,12 +1527,12 @@ function renderRequests(){
     return `<div class="note" style="margin-top:8px"><b>${esc(r.type_name)}</b> · ${esc(rqWhen(r))}<br>${stl(r)}${r.interest?` · <span style="color:var(--ink2)">${r.interest} ${L2('interessati','interested')}</span>`:''}${r.note?`<br><span style="color:var(--ink2);font-size:13px">${esc(r.note)}</span>`:''}${x}</div>`}).join('');
   const othH=others.map(r=>`<div class="note" style="margin-top:8px"><b>${esc(r.type_name)}</b> · ${esc(rqWhen(r))}<br><span style="color:var(--ink2);font-size:13px">${r.interest+1} ${L2('persone lo vorrebbero','people would like it')}</span><br><button class="btn${r.my_interest?'':' ghost'}" style="padding:8px 14px;font-size:14px;margin-top:6px" onclick="rqInterest('${r.id}',${r.my_interest?'false':'true'})">${r.my_interest?'✓ '+L2('Ti interessa · togli','You are interested · remove'):L2('Mi interessa anche a me','I am interested too')}</button></div>`).join('');
   const today=dkeyA(new Date());
-  const form=rqForm?`<div class="note" style="margin-top:8px">
+  const form=rqForm?`<div class="note rqbox" style="margin-top:8px">
     <label style="font-size:13px;color:var(--ink2)">${L2('Attività','Activity')}</label><select id="rq-t" class="txt">${rqTypes.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select>
     <label style="font-size:13px;color:var(--ink2)">${L2('Giorno','Day')}</label><input id="rq-d" type="date" class="txt" min="${today}" value="${today}">
     <label style="font-size:13px;color:var(--ink2)">${L2('Quando','When')}</label><select id="rq-s" class="txt" onchange="$('rq-tm').style.display=this.value==='exact'?'block':'none'">${Object.keys(SLOT).map(k=>`<option value="${k}"${k==='evening'?' selected':''}>${SLOT[k][lang==='en'?1:0]}</option>`).join('')}</select>
-    <input id="rq-tm" type="time" class="txt" value="19:00" style="display:none">
-    <input id="rq-n" class="txt" placeholder="${L2('Nota (facoltativa)','Note (optional)')}" maxlength="200">
+    <input id="rq-tm" type="time" class="txt" value="19:00" style="display:none;margin-top:10px">
+    <label style="font-size:13px;color:var(--ink2)">${L2('Nota','Note')}</label><input id="rq-n" class="txt" placeholder="${L2('Nota (facoltativa)','Note (optional)')}" maxlength="200">
     <div class="row" style="gap:8px;margin-top:8px"><button class="btn" id="rq-go" onclick="rqSend()">${L2('Invia al centro','Send to the center')}</button><button class="btn ghost" onclick="rqForm=false;renderRequests()">${L2('Annulla','Cancel')}</button></div></div>`:'';
   box.innerHTML=`<h2>${L2('Non trovi l’orario giusto?','Can’t find the right time?')}</h2>
     ${rqForm?'':openMine>=3?`<p style="color:var(--ink2);font-size:13px">${L2('Hai già 3 richieste aperte: aspetta una risposta o annullane una.','You already have 3 open requests: wait for an answer or cancel one.')}</p>`:`<button class="btn ghost" onclick="rqForm=true;renderRequests()">＋ ${L2('Proponi un allenamento','Propose a training')}</button>`}${form}
