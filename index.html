@@ -167,6 +167,11 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
 .cd.sel .dr{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--accent)}
 .cd .st{position:absolute;top:-3px;right:calc(50% - 25px);color:var(--ph-inhale);font-size:11px;line-height:1}
 .cd .st svg{width:12px;height:12px;fill:currentColor}
+.cd .bk{position:absolute;top:-3px;right:calc(50% - 25px);width:15px;height:15px;border-radius:50%;background:var(--accent);color:#06222B;font-size:10px;font-weight:800;line-height:15px;text-align:center}
+.note.bkd{border:1.5px solid var(--accent)}
+.tdy{display:block;width:100%;text-align:left;margin:12px 0 0;padding:12px 14px;border:1.5px solid var(--accent);border-radius:16px;background:var(--bg2);color:var(--ink);font:inherit;cursor:pointer}
+.tdy small{display:block;color:var(--ink2);font-size:13px;margin-top:2px}
+.tdy .k{color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 .cd.today .dr.e{border-color:var(--ink2)}.dr.wt{opacity:.5}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin:14px 0 4px}.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
 .dayrow{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ink2)}.dayrow b{color:var(--ink)}.dayrow i{width:10px;height:10px;border-radius:50%;flex-shrink:0}
@@ -231,6 +236,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   </div>
   <div style="margin:10px 0 0"><button class="pill acc" id="b-account3" style="width:100%;text-align:left;display:none"></button></div>
   <button class="wk" id="wk"><div class="wkg" id="wk-grid"></div><div class="wkl" id="wk-line"></div></button>
+  <div id="wl-today"></div>
   <h2 data-i18n="wl_q"></h2>
   <button class="card" id="wl-breath" style="--c:var(--ph-hold_full)"><span class="ic" data-ic="lungs"></span><span><b data-i18n="wl_breath"></b><small id="wl-breath-sub"></small></span><span class="chev">›</span></button>
   <button class="card" id="wl-static" style="--c:var(--ph-static)"><span class="ic" data-ic="timer"></span><span><b data-i18n="wl_static"></b><small id="wl-static-sub"></small></span><span class="chev">›</span></button>
@@ -1411,6 +1417,7 @@ async function renderCenter(){
   renderHub(cs);
 }
 let ctOrg=null,ctAdd=false;
+function openCenterAt(org,k){ctAdd=false;ctOrg=org;ctSel=k||null;ctExp=false;renderTabs('s-center');show('s-center');renderCenter()}
 function openCenterHome(){const cs=lsJ('bc.centers.v1',[]);ctAdd=false;ctOrg=cs.length===1?cs[0].org_id:null;renderTabs('s-center');show('s-center');renderCenter()}
 function ctLogo(c,h){return c.logo_url?`<img src="${esc(c.logo_url)}" alt="" style="height:${h}px;width:auto;max-width:${h*2.2}px;object-fit:contain" onerror="this.style.display='none'">`:`<div style="width:${h}px;height:${h}px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(h/2.6)}px;color:var(--accent)">${esc((c.name||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase())}</div>`}
 async function renderHub(cs){
@@ -1472,7 +1479,7 @@ function actCard(a){
     else if(!a.allowed)act=`<p style="color:var(--ink2);font-size:13px;margin:8px 0 0">${L2('Livello non sufficiente per questa attività.','Your level is not enough for this activity.')}</p>`;
     else act=`<button class="btn" style="padding:10px;font-size:15px" onclick="bookAct('${a.id}')">${left>0?L2('Prenota','Book'):L2('Lista d’attesa','Join waitlist')}</button>`;
   }
-  return `<div class="note" style="margin-top:8px;${cancelled||past?'opacity:.6':''}"><b>${esc(a.title)}</b> ${chip}<br><span style="color:var(--ink2);font-size:13px">${fmt(a.starts_at)}${a.place?' · '+esc(a.place):''}${a.instructor_name?' · '+esc(a.instructor_name):''}<br>${cancelled?esc(a.cancel_reason||''):(left>0?L2('Posti liberi: ','Spots left: ')+left:L2('Completa','Full'))}${a.my_status==='booked'?' · <b>'+L2('Sei iscritto','You are booked')+'</b>':''}</span>${act}</div>`}
+  return `<div class="note${a.my_status==='booked'&&!cancelled?' bkd':''}" style="margin-top:8px;${cancelled||past?'opacity:.6':''}"><b>${esc(a.title)}</b> ${a.my_status==='booked'&&!cancelled?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:chip}<br><span style="color:var(--ink2);font-size:13px">${fmt(a.starts_at)}${a.place?' · '+esc(a.place):''}${a.instructor_name?' · '+esc(a.instructor_name):''}<br>${cancelled?esc(a.cancel_reason||''):(left>0?L2('Posti liberi: ','Spots left: ')+left:L2('Completa','Full'))}${a.my_status==='booked'?' · <b>'+L2('Sei iscritto','You are booked')+'</b>':''}</span>${act}</div>`}
 async function loadCenterActs(cs){
   const box=$('ct-acts');if(!box||!sb||!cs.length)return;const c=cs[0];
   try{const nr=await sb.from('notifications').select('id,message,created_at,read_at').eq('org_id',c.org_id).order('created_at',{ascending:false}).limit(5);ctNotes=nr.data||[]}catch(e){ctNotes=[]}
@@ -1497,7 +1504,7 @@ function renderCtCal(){
   const cell=d=>{const k=dkeyA(d),out=ctExp&&d.getMonth()!==sel.getMonth(),as=by[k]||[];
     const ty=[...new Set(as.map(a=>a.status==='cancelled'?'ak_cancelled':'ak_'+a.kind))];
     const tent=as.length&&as.every(a=>a.status==='scheduled'&&a.location_type==='sea'&&a.kind!=='dry'&&a.weather_status!=='confirmed');
-    return `<button class="cd${k===ctSel?' sel':''}${k===today?' today':''}" onclick="ctPick('${k}')" style="${out?'opacity:.35':''}">${ringHTML(ty,d.getDate(),tent?'wt':'')}</button>`};
+    return `<button class="cd${k===ctSel?' sel':''}${k===today?' today':''}" onclick="ctPick('${k}')" style="${out?'opacity:.35':''}">${ringHTML(ty,d.getDate(),tent?'wt':'')}${as.some(a=>a.my_status==='booked'&&a.status==='scheduled')?'<span class="bk">✓</span>':''}</button>`};
   const list=(by[ctSel]||[]).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   const notes=ctNotes.length?`<h2>${L2('Avvisi dal centro','Messages from the center')}</h2>`+ctNotes.map(n=>`<div class="note" style="margin-top:8px;${n.read_at?'opacity:.7':'border-left:3px solid var(--accent)'}">${esc(n.message)}<br><span style="color:var(--ink2);font-size:12px">${new Date(n.created_at).toLocaleString(loc,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join(''):'';
   box.innerHTML=`${notes}
@@ -1505,7 +1512,7 @@ function renderCtCal(){
       <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 6px 8px"><button class="pill" onclick="ctMove(-1)" aria-label="‹">‹</button><button onclick="ctToggle()" style="font-weight:600;font-size:16px;text-transform:capitalize">${esc(label)} <span style="color:var(--ink2)">${ctExp?'▴':'▾'}</span></button><button class="pill" onclick="ctMove(1)" aria-label="›">›</button></div>
       <div class="calg">${wd.map(x=>`<span class="wd">${esc(x)}</span>`).join('')}${days.map(cell).join('')}</div>
       <div class="legend"><span><i style="background:var(--ph-inhale)"></i>${L2('Allenamento','Training')}</span><span><i style="background:var(--ph-hold_empty)"></i>${L2('Corso','Course')}</span><span><i style="background:var(--ph-exhale)"></i>${L2('Apnea a secco','Dry')}</span></div>
-      <p style="color:var(--ink2);font-size:12px;margin:4px 0 0">${L2('Colore tenue: mare, meteo da confermare.','Faded: sea, weather to be confirmed.')}</p>
+      <p style="color:var(--ink2);font-size:12px;margin:4px 0 0"><span class="bk" style="position:static;display:inline-block;vertical-align:middle">✓</span> ${L2('prenotata da te','booked by you')} · ${L2('colore tenue: mare, meteo da confermare.','faded: sea, weather to be confirmed.')}</p>
       ${ctExp?'':`<p style="text-align:center;color:var(--ink2);font-size:12px;margin:8px 0 0">${L2('Tocca il mese per vederlo intero','Tap the month to see it all')}</p>`}
     </div>
     <h2 style="text-transform:capitalize">${esc(sel.toLocaleDateString(loc,{weekday:'long',day:'numeric',month:'long'}))}</h2>
@@ -1539,11 +1546,29 @@ async function showMyQR(){
     tick();qrTimer=setInterval(tick,1000);
   }catch(e){box.innerHTML='<p>'+(/function|schema cache|not find/i.test((e&&e.message)||'')?L2('Funzione non ancora attiva: riprova tra poco.','Not active yet: try again soon.'):L2('Serve connessione per generare il QR.','You need a connection to generate the QR.'))+'</p>'}
 }
+async function loadHomeAgenda(cs){
+  const box=$('wl-today');if(!box||!sb||!cs.length)return;
+  const now=new Date(),t0=new Date(now.getFullYear(),now.getMonth(),now.getDate()),all=[];
+  await Promise.all(cs.map(async c=>{try{const r=await sb.rpc('list_activities',{p_org:c.org_id,p_from:t0.toISOString(),p_days:8});(Array.isArray(r.data)?r.data:[]).forEach(a=>all.push({...a,_c:c}))}catch(e){}}));
+  const loc=lang==='en'?'en-GB':'it-IT',tm=x=>new Date(x).toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'}),today=dkeyA(now);
+  const mine=all.filter(a=>a.my_status==='booked'&&a.status==='scheduled'&&new Date(a.starts_at)>=new Date(now-36e5*3)).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
+  const cancelledMine=all.filter(a=>a.my_status&&a.status==='cancelled'&&dkeyA(a.starts_at)>=today);
+  const row=(a,k)=>`<button class="tdy" onclick="openCenterAt('${a._c.org_id}','${dkeyA(a.starts_at)}')"><span class="k">${k}</span><br><b>${esc(a.title)}</b> · ${tm(a.starts_at)}<small>${esc(a._c.name)}${a.place?' · '+esc(a.place):''}${a.location_type==='sea'&&a.kind!=='dry'?(a.weather_status==='confirmed'?' · '+L2('confermata','confirmed'):' · '+L2('meteo da confermare','weather to be confirmed')):''}</small></button>`;
+  const td=mine.filter(a=>dkeyA(a.starts_at)===today),nx=mine.filter(a=>dkeyA(a.starts_at)!==today).slice(0,2);
+  box.innerHTML=cancelledMine.map(a=>`<button class="tdy" style="border-color:var(--danger)" onclick="openCenterAt('${a._c.org_id}','${dkeyA(a.starts_at)}')"><span class="k" style="color:var(--danger)">${L2('Annullata','Cancelled')}</span><br><b>${esc(a.title)}</b> · ${new Date(a.starts_at).toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short'})}<small>${esc(a._c.name)}</small></button>`).join('')+
+    td.map(a=>row(a,L2('Oggi · prenotata','Today · booked'))).join('')+
+    nx.map(a=>row(a,new Date(a.starts_at).toLocaleDateString(loc,{weekday:'long',day:'numeric',month:'short'})+' · '+L2('prenotata','booked'))).join('');
+  const open=all.filter(a=>a.status==='scheduled'&&new Date(a.starts_at)>=now&&a.my_status!=='booked'&&a.allowed!==false).length;
+  const bookedN=mine.length,parts=[];
+  if(open)parts.push(open+' '+(open===1?L2('attività da prenotare','activity to book'):L2('attività da prenotare','activities to book')));
+  if(bookedN)parts.push(bookedN+' '+(bookedN===1?L2('prenotata','booked'):L2('prenotate','booked')));
+  const sub=$('wl-center-sub');if(sub&&parts.length)sub.innerHTML=esc(cs.map(x=>x.name).join(', '))+'<br><span style="color:var(--accent)">'+parts.join(' · ')+' · '+L2('prossimi 7 giorni','next 7 days')+'</span>';
+}
 async function renderCenterCard(){
   $('wl-center-t').textContent=L2('Il mio centro','My center');
   const cs=lsJ('bc.centers.v1',[]);
   $('wl-center-sub').textContent=localStorage.getItem('bc.join.pending')?L2('Codice in attesa: crea l’account','Code pending: create your account'):cs.length?cs.map(c=>c.name).join(', '):L2('Collegati al tuo diving center','Connect to your dive center');
-  if(!isGuest()&&sb)myCenters().then(c=>{if(c.length)$('wl-center-sub').textContent=c.map(x=>x.name).join(', ')});
+  if(!isGuest()&&sb)myCenters().then(c=>{if(c.length){$('wl-center-sub').textContent=c.map(x=>x.name).join(', ');loadHomeAgenda(c)}});
 }
 $('wl-center').onclick=openCenterHome;
 $('b-ct-back').onclick=()=>goTab('s-welcome');
