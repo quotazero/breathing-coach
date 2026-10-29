@@ -569,7 +569,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.8';
+const VERSION='0.9.9';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1486,8 +1486,8 @@ function renderCenterDetail(c){
   const B=$('ct-body');
   B.innerHTML=`<div style="display:flex;justify-content:center;margin:14px 0 6px">${ctLogo(c,84)}</div>
     <p style="text-align:center;color:var(--ink2);font-size:14px;margin:0 0 6px">${c.role==='athlete'?(c.level_name?L2('Livello','Level')+': <b>'+esc(c.level_name)+'</b>':L2('Livello non ancora assegnato','Level not assigned yet')):L2('Istruttore / staff','Instructor / staff')}</p>
-    <div id="ct-acts"><p>…</p></div>${c.role==='athlete'?'<div id="ct-req"></div>':''}`;
-  loadCenterActs([c]);if(c.role==='athlete')loadRequests(c);
+    <div id="ct-acts"><p>…</p></div><div id="ct-req"></div>`;
+  loadCenterActs([c]);loadRequests(c);
 }
 let ctActs=[],ctSel=null,ctExp=false,ctMonth=null,ctNotes=[];
 const dkeyA=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
