@@ -567,7 +567,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.4';
+const VERSION='0.9.5';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1196,8 +1196,9 @@ function sayRemaining(s){
 if(synth){try{synth.getVoices()}catch(e){}}
 
 /* --- traccia audio riscaldamento (tono ogni 30 s, tick ultimi 10 s, "via" allo zero) --- */
-function renderWarmTrack(W){
+function renderWarmTrack(W,voice){
   return renderCues(W+2,tr=>{
+    if(voice)return; // con la voce attiva niente bip: o voce o bip, mai insieme
     for(let s=30;s<W;s+=30)tone(tr,W-s,659,659,.15,.35);
     for(let s=10;s>=4;s--)tone(tr,W-s,880,880,.06,.3);
     for(let s=3;s>=1;s--){tone(tr,W-s,1175,1175,.07,.4);tone(tr,W-s+.14,1175,1175,.07,.4)}
@@ -1232,7 +1233,7 @@ async function startStatic(){
   show('s-static-run');stUI();
   $('st-hint').textContent='';$('b-st-stop').style.display='block';
   if(srun.W>0){
-    srun.url=renderWarmTrack(srun.W);audio.src=srun.url;audio.loop=false;
+    srun.url=renderWarmTrack(srun.W,stCfg.voice&&!!synth);audio.src=srun.url;audio.loop=false;
     try{await withTimeout(audio.play(),5000,'play');srun.wallStart=Date.now();log('audio:started')}catch(e){log('audio:play-failed',e.message);return stAbort('play-error')}
     audio.onended=()=>{if(srun&&srun.phase==='warm')stHold()};
     srun.lastS=srun.W;srun.spoken.add(srun.W);
