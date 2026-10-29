@@ -451,7 +451,29 @@ async function loadOrg2(){
     safe(()=>sb.from('activity_options').select('id,field,label').eq('org_id',id).eq('field','place').order('label')),
     safe(()=>sb.from('activity_notices').select('*').eq('org_id',id).is('done_at',null).order('created_at'))]);
   S.people=pp;S.types=ty;S.links=lk;S.opts={place:op};S.notices=nt;
+  try{const r=await sb.rpc('list_requests',{p_org:id});S.reqs=Array.isArray(r.data)?r.data:[]}catch(e){S.reqs=[]}
+  try{const o=await sb.from('organizations').select('settings').eq('id',id).maybeSingle();S.reqMin=+(((o.data&&o.data.settings)||{}).request_min||0)}catch(e){S.reqMin=0}
 }
+const SLOTL={morning:'mattina',afternoon:'pomeriggio',evening:'sera',exact:''};
+function reqWhen(r){const d=new Date(r.req_date+'T12:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});return d+' · '+(r.slot==='exact'&&r.req_time?String(r.req_time).slice(0,5):SLOTL[r.slot])}
+function reqDefStart(r){const t={morning:'10:00',afternoon:'16:00',evening:'20:00'}[r.slot]||String(r.req_time||'18:00').slice(0,5);return r.req_date+'T'+t}
+function reqAge(r){const h=(Date.now()-new Date(r.created_at))/36e5;return h<1?'meno di un\'ora':h<24?Math.floor(h)+' h':Math.floor(h/24)+' giorni'}
+function reqBlock(){const R=S.reqs||[],open=R.filter(r=>r.status==='open'&&!r.expired),alt=R.filter(r=>r.status==='alternative'&&!r.expired),exp=R.filter(r=>r.expired),min=S.reqMin||0;
+  let h='';
+  if(open.length)h+=`<div class="urg" style="border-color:rgba(143,226,207,.6);background:rgba(143,226,207,.07)"><b style="color:var(--accent)">RICHIESTE DI ALLENAMENTO (${open.length})</b>${open.map(r=>{const late=(Date.now()-new Date(r.created_at))/36e5>24,n=r.interest+1;return `<div class="tdo" style="border-color:${late?'var(--danger)':'var(--accent)'}"><div><b>${esc(r.type_name)}</b><small>${esc(reqWhen(r))} · ${esc(r.requester_name||'Atleta')}${r.interest?' + '+r.interest+' interessati':''}</small><small>Richiesta ${reqAge(r)} fa${r.note?' · “'+esc(r.note)+'”':''}</small>${late?'<small style="color:var(--danger)">Senza risposta da più di 24 ore</small>':''}${min>0?`<small style="color:${n>=min?'var(--accent)':'#F2C879'}">${n}/${min} persone</small>`:''}</div><div class="tbt"><button class="btn sm" onclick="reqModal('${r.id}','activate')">Attiva</button><button class="btn sm ghost" onclick="reqModal('${r.id}','alternative')">Altro orario</button><button class="btn sm ghost" onclick="reqModal('${r.id}','decline')">Non si può</button></div></div>`}).join('')}</div>`;
+  if(alt.length)h+=`<h3 class="th">Altro orario proposto: attendono l'atleta</h3>${alt.map(r=>`<div class="tdo"><div><b>${esc(r.type_name)}</b><small>${esc(r.requester_name||'Atleta')} · ${fmtDT(r.alt_starts_at)}</small></div></div>`).join('')}`;
+  if(exp.length)h+=`<h3 class="th">Scadute senza risposta</h3>${exp.map(r=>`<div class="tdo" style="opacity:.75"><div><b>${esc(r.type_name)}</b><small>${esc(reqWhen(r))} · ${esc(r.requester_name||'Atleta')}</small></div><div class="tbt"><button class="btn sm ghost" onclick="reqSend('${r.id}','decline',null,'Data passata senza risposta')">Chiudi</button></div></div>`).join('')}`;
+  return h}
+function reqModal(id,act){const r=(S.reqs||[]).find(x=>x.id===id);if(!r)return;const n=r.interest+1;
+  const head=`<div class="top"><h3>${act==='activate'?'Attiva l\'allenamento':act==='alternative'?'Proponi un altro orario':'Non si può fare'}</h3><button class="rbtn" onclick="closeModal()">✕</button></div><p style="font-size:13.5px">${esc(r.type_name)} · ${esc(reqWhen(r))}<br>${esc(r.requester_name||'Atleta')}${r.interest?' + '+r.interest+' interessati':''}</p>`;
+  const body=act==='activate'?`${head}<p class="note2">Verranno iscritti ${n} ${n===1?'atleta':'atleti'} e riceveranno l'avviso.${(S.reqMin||0)>n?` <b style="color:#F2C879">Sotto la soglia minima (${n}/${S.reqMin}).</b>`:''}</p><label class="f">Data e ora di inizio</label><input id="rq-st" type="datetime-local" class="txt" value="${reqDefStart(r)}"><button class="btn" onclick="reqSend('${id}','activate',$('#rq-st').value)">Attiva e iscrivi</button>`
+  :act==='alternative'?`${head}<label class="f">Data e ora proposte</label><input id="rq-st" type="datetime-local" class="txt" value="${reqDefStart(r)}"><label class="f">Messaggio (facoltativo)</label><input id="rq-tx" class="txt" placeholder="es. martedì la piscina è chiusa"><button class="btn" onclick="reqSend('${id}','alternative',$('#rq-st').value,$('#rq-tx').value)">Invia proposta</button>`
+  :`${head}<label class="f">Motivo (breve)</label><input id="rq-tx" class="txt" placeholder="es. piscina non disponibile"><button class="btn" onclick="reqSend('${id}','decline',null,$('#rq-tx').value)">Invia risposta</button>`;
+  modal(body)}
+async function reqSend(id,act,st,tx){if((act==='activate'||act==='alternative')&&!st)return toast('Scegli data e ora');
+  const {error}=await sb.rpc('respond_request',{p_req:id,p_action:act,p_starts:st?new Date(st).toISOString():null,p_text:tx||null});
+  if(error)return toast('Non riuscito: '+error.message);closeModal();toast(act==='activate'?'Attivato, atleti avvisati':act==='alternative'?'Proposta inviata':'Risposta inviata');
+  await loadOrg();render()}
 /* --- Da fare --- */
 function todoView(){
   const ad=isAdm(),t0=addDays(0),t1=addDays(1);
@@ -463,7 +485,7 @@ function todoView(){
   const day=a=>new Date(a.starts_at).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
   const arow=(a,lab,col)=>{const w=wxFor(dkey(a.starts_at));return `<div class="tdo" style="border-color:${col}"><div onclick="openAct('${a.id}')"><b>${fmtT(a.starts_at)} · ${esc(a.title)}</b><small>${esc(day(a))}${a.place?' · '+esc(a.place):''} · ${a.booked||0} iscritti${a.waitlist?' (+'+a.waitlist+')':''}</small><small style="color:${col}">${lab}</small><small>${wxLine(w)}</small></div>${ad?`<div class="tbt"><button class="btn sm" onclick="confirmAct('${a.id}')">Conferma</button><button class="btn sm ghost" style="color:var(--danger)" onclick="cancelAct('${a.id}')">Annulla</button></div>`:''}</div>`};
   const nrow=n=>{const a=S.acts.find(x=>x.id===n.activity_id);return a?`<div class="tdo" style="border-color:var(--danger)"><div><b>Avvisa gli iscritti · ${n.kind==='cancelled'?'annullata':'spostata'}</b><small>${esc(a.title)} · ${esc(day(a))} · ${a.booked||0} iscritti</small></div>${ad?`<div class="tbt"><button class="btn sm" onclick="noticeModal('${n.id}')">Prepara avviso</button></div>`:''}</div>`:''};
-  const h=[];
+  const h=[];{const rb=reqBlock();if(rb)h.push(rb)}
   if(urgent.length||nUrg.length)h.push(`<div class="urg"><b style="color:var(--danger)">URGENTE</b>${urgent.map(a=>arow(a,'Doveva essere decisa ieri: conferma o annulla ora','var(--danger)')).join('')}${nUrg.map(nrow).join('')}</div>`);
   if(tomorrow.length)h.push(`<h3 class="th">Da decidere oggi: domani</h3>${tomorrow.map(a=>arow(a,'Conferma in base alla previsione','var(--ph-hold_full)')).join('')}`);
   if(later.length)h.push(`<h3 class="th">Nei prossimi giorni (osservazione meteo)</h3>${later.map(a=>arow(a,'In osservazione','var(--ink2)')).join('')}`);

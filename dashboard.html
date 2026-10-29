@@ -63,7 +63,7 @@ h1,h2,h3{margin:0;font-weight:600}
  .fit{display:flex;flex-direction:column;height:calc(100vh - 26px);gap:10px;min-height:0}
  .fit .top{margin:0}.fit .top p{display:none}.fit h1{font-size:22px}
  .fit .panel{margin:0;padding:10px 14px;border-radius:14px}.fit .panel h2{font-size:14px;margin-bottom:6px}
- .fit .r1{display:grid;grid-template-columns:minmax(300px,1fr) 2.4fr;gap:10px;flex:0 0 auto;align-items:stretch}.fit .r1a{max-height:34vh;overflow:auto;border-radius:14px}.fit .r1a .panel,.fit .r1>.panel{height:100%;box-sizing:border-box}.fit .wxg{grid-template-columns:repeat(4,1fr)}.fit .wxflag{font-size:11px;padding:2px 6px}
+ .fit .r1{display:grid;grid-template-columns:minmax(300px,1fr) 2.4fr;gap:10px;flex:0 0 auto;align-items:stretch}.fit .r1a{max-height:42vh;overflow:auto;border-radius:14px}.fit .r1a .panel,.fit .r1>.panel{height:100%;box-sizing:border-box}.fit .wxg{grid-template-columns:repeat(4,1fr)}.fit .wxflag{font-size:11px;padding:2px 6px}
  .fit .kpis{grid-template-columns:repeat(4,1fr);gap:8px;margin:0;flex:0 0 auto}.fit .kpi{padding:6px 14px;display:flex;align-items:center;gap:10px}.fit .kpi b{font-size:22px}
  .fit .wx{padding:7px 10px;font-size:12px;gap:2px}.fit .wxi{font-size:18px}.fit .wxg{gap:8px}
  .fit .r3{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:10px;flex:1 1 0;min-height:0}.fit .r3 .panel{overflow:auto;min-height:0}
@@ -253,6 +253,7 @@ function centerView(){const o=S.org,ad=isAdmin(),miss=centerMissing(o),ok=!miss.
     <div style="flex:1;min-width:260px">
       <label>Nome del centro *</label><input id="cn" value="${esc(o.name||'')}" ${ad?'':'disabled'}>
       <label>Telefono / WhatsApp del centro * <span class="muted">(con prefisso, es. +39…)</span></label><input id="cph" value="${esc(o.phone||'')}" placeholder="+39…" ${ad?'':'disabled'}>
+      <label>Richieste di allenamento: soglia minima di persone <span class="muted">(0 = nessuna soglia)</span></label><input id="crm" type="number" min="0" max="20" value="${S.reqMin||0}" ${ad?'':'disabled'} style="max-width:120px">
       <label>Sede principale * <span class="muted">(cerca la località: serve per meteo e mare)</span></label>
       <div class="row" style="flex-wrap:nowrap;gap:8px"><input id="cpl" value="${esc(o.place_name||'')}" placeholder="es. Aci Trezza" ${ad?'':'disabled'}><button class="btn ghost" onclick="geoFind()" ${ad?'':'disabled'}>Cerca</button></div>
       <div id="geo" class="note" style="margin-top:6px">${o.lat!=null?'Posizione salvata: '+o.lat.toFixed(3)+', '+o.lon.toFixed(3):'Nessuna posizione scelta.'}</div>
@@ -291,6 +292,7 @@ async function saveCenter(){const o=S.org;const rec={name:$('#cn').value.trim(),
   if(f){try{const blob=await resizeLogo(f);const path=o.org_id+'/logo-'+Date.now()+'.png';const up=await sb.storage.from('center-logos').upload(path,blob,{contentType:'image/png',upsert:true});if(up.error)throw up.error;rec.logo_url=sb.storage.from('center-logos').getPublicUrl(path).data.publicUrl}catch(e){return toast('Logo non caricato: '+(e.message||e))}}
   const fi=$('#cif').files[0];
   if(fi){try{const blob=await resizeLogo(fi);const path=o.org_id+'/icon-'+Date.now()+'.png';const up=await sb.storage.from('center-logos').upload(path,blob,{contentType:'image/png',upsert:true});if(up.error)throw up.error;rec.icon_url=sb.storage.from('center-logos').getPublicUrl(path).data.publicUrl}catch(e){return toast('Simbolo non caricato: '+(e.message||e))}}
+  {const m=Math.max(0,Math.min(20,parseInt($('#crm').value)||0));rec.settings=Object.assign({},S.orgSet||{},{request_min:m});S.orgSet=rec.settings;S.reqMin=m}
   const {error}=await sb.from('organizations').update(rec).eq('id',o.org_id);if(error)return toast('Non riuscito: '+error.message);
   Object.assign(o,rec);GEO=null;S.wx=null;render();toast('Dati del centro salvati')}
 function shareApp(){const t=`Ciao! Ecco l'app di ${S.org.name}. Aprila da Safari (iPhone) o Chrome (Android), accedi con la tua email e poi tocca Condividi → "Aggiungi a Home": l'icona è già quella del centro.\n${centerLink()}`;window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank','noopener')}
@@ -365,7 +367,7 @@ function todoPanel(){const ad=isAdmin(),t0=addDays(0),t1=addDays(1);
     <div class="note" style="margin-top:4px">${lab?`<b>${lab}</b> · `:''}${wxLine(w)}</div></div>`};
   const day=a=>new Date(a.starts_at).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
   const nrow=n=>{const a=S.acts.find(x=>x.id===n.activity_id);return a?`<div class="item" style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><span><b>${n.kind==='cancelled'?'Avvisa gli iscritti: annullata':'Avvisa gli iscritti: spostata'}</b> · ${esc(a.title)} · ${esc(day(a))} · ${a.booked} iscritti</span>${ad?`<button class="btn" style="padding:4px 12px" onclick="noticeModal('${n.id}')">Prepara avviso</button>`:''}</div>`:''};
-  const blocks=[];
+  const blocks=[];{const rp=reqPanel();if(rp)blocks.push(rp)}
   if(urgent.length||nUrg.length)blocks.push(`<div style="border:1px solid rgba(240,138,122,.6);background:rgba(240,138,122,.08);border-radius:14px;padding:8px 14px;margin-bottom:12px"><div style="color:var(--danger);font-weight:600;margin:4px 0">URGENTE</div>${urgent.map(a=>row(a,'Doveva essere decisa ieri: conferma o annulla ora')).join('')}${nUrg.map(nrow).join('')}</div>`);
   if(tomorrow.length)blocks.push(`<div class="note" style="margin:8px 0 2px"><b>Da decidere oggi: domani</b></div>${tomorrow.map(a=>row(a,'Conferma in base alla previsione')).join('')}`);
   if(later.length)blocks.push(`<div class="note" style="margin:12px 0 2px"><b>Nei prossimi giorni (osservazione meteo)</b></div>${later.map(a=>row(a,day(a))).join('')}`);
@@ -505,10 +507,36 @@ function wxWhy(w){if(!w)return '';const r=[],wv=w.wave||0,c=w.code||0;if(c>=95)r
 function wxLine(w){if(!w)return '<span class="muted">Previsione non ancora disponibile (copre oggi e 3 giorni).</span>';const sl=seaState(w.wave);return `${WXI(w.code)} 🌧 <b>${w.rain}</b> mm (${w.prob??'—'}%) · 💨 <b>${w.wind}</b> nodi ${dirL(w.wdir)}, raff. ${w.gust} · 🌊 <b>${w.wave==null?'—':w.wave.toFixed(1)}</b> m <span class="chip ${sl[1]}" style="margin:0 0 0 4px">${sl[0]}</span>`}
 function stChip(a){if(a.status==='cancelled')return '<span class="chip d">Annullata</span>';if(a.status==='completed')return '<span class="chip">Svolta</span>';if(isSea(a))return a.weather_status==='confirmed'?'<span class="chip a">Confermata</span>':'<span class="chip w">Osservazione meteo</span>';return ''}
 function dl(d){const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,16)}
-S.types=[];S.links=[];S.notices=[];S.members=[];S.opts={place:[],title:[],kind:[],env:[],specialty:[]};
+S.types=[];S.links=[];S.notices=[];S.reqs=[];S.members=[];S.opts={place:[],title:[],kind:[],env:[],specialty:[]};
 async function loadOpts(){const r=await sb.from('activity_options').select('id,field,label,base').eq('org_id',S.org.org_id).order('label');S.opts={place:[],title:[],kind:[],env:[],specialty:[]};(r.data||[]).forEach(x=>S.opts[x.field]&&S.opts[x.field].push(x));
   const [t,l]=await Promise.all([sb.from('activity_types').select('*').eq('org_id',S.org.org_id).order('name'),sb.from('instructor_activity_types').select('*')]);S.types=t.data||[];S.links=l.data||[];await loadNotices();try{const mm=await sb.rpc('center_members',{p_org:S.org.org_id});S.members=Array.isArray(mm.data)?mm.data:[]}catch(e){S.members=[]}}
-async function loadNotices(){const r=await sb.from('activity_notices').select('*').eq('org_id',S.org.org_id).is('done_at',null).order('created_at');S.notices=r.data||[]}
+async function loadReqs(){try{const r=await sb.rpc('list_requests',{p_org:S.org.org_id});S.reqs=Array.isArray(r.data)?r.data:[]}catch(e){S.reqs=[]}
+  try{const o=await sb.from('organizations').select('settings').eq('id',S.org.org_id).maybeSingle();S.orgSet=(o.data&&o.data.settings)||{}}catch(e){S.orgSet=S.orgSet||{}}S.reqMin=+(S.orgSet.request_min||0)}
+const SLOTL={morning:'mattina',afternoon:'pomeriggio',evening:'sera',exact:''};
+function reqWhen(r){const d=new Date(r.req_date+'T12:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});return d+' · '+(r.slot==='exact'&&r.req_time?String(r.req_time).slice(0,5):SLOTL[r.slot])}
+function reqDefStart(r){const t={morning:'10:00',afternoon:'16:00',evening:'20:00'}[r.slot]||String(r.req_time||'18:00').slice(0,5);return r.req_date+'T'+t}
+function reqAge(r){const h=(Date.now()-new Date(r.created_at))/36e5;return h<1?'meno di un\'ora':h<24?Math.floor(h)+' h':Math.floor(h/24)+' giorni'}
+function reqPanel(){const R=S.reqs||[];const open=R.filter(r=>r.status==='open'&&!r.expired),alt=R.filter(r=>r.status==='alternative'&&!r.expired),exp=R.filter(r=>r.expired);
+  if(!open.length&&!alt.length&&!exp.length)return '';
+  const min=S.reqMin||0;
+  const row=r=>{const late=(Date.now()-new Date(r.created_at))/36e5>24,n=r.interest+1,who=esc(r.requester_name||'Atleta');
+    return `<div class="item"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><span><b>${esc(r.type_name)}</b> · ${esc(reqWhen(r))}<br><span class="muted">${who}${r.interest?' + '+r.interest+' interessati ('+esc((r.interested||[]).filter(Boolean).join(', '))+')':''} · richiesta ${reqAge(r)} fa${r.note?' · “'+esc(r.note)+'”':''}</span>${late?' <span class="chip d">Senza risposta da più di 24 ore</span>':''}${min>0?` <span class="chip ${n>=min?'a':'w'}">${n}/${min} persone</span>`:''}</span>
+    <span style="white-space:nowrap"><button class="btn" style="padding:4px 12px" onclick="reqModal('${r.id}','activate')">Attiva</button> <button class="btn ghost" style="padding:4px 12px" onclick="reqModal('${r.id}','alternative')">Altro orario</button> <button class="btn ghost" style="padding:4px 12px;color:#ff8a8a" onclick="reqModal('${r.id}','decline')">Non si può</button></span></div></div>`};
+  let h='';
+  if(open.length)h+=`<div style="border:1px solid rgba(143,226,207,.6);background:rgba(143,226,207,.06);border-radius:14px;padding:8px 14px;margin-bottom:12px"><div style="font-weight:600;margin:4px 0">Richieste di allenamento da gestire (${open.length})</div>${open.map(row).join('')}</div>`;
+  if(alt.length)h+=`<div class="note" style="margin:8px 0 2px"><b>Altro orario proposto: attendono la risposta dell'atleta</b></div>${alt.map(r=>`<div class="item"><b>${esc(r.type_name)}</b> · ${esc(r.requester_name||'Atleta')} · ${new Date(r.alt_starts_at).toLocaleString('it-IT',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>`).join('')}`;
+  if(exp.length)h+=`<div class="note" style="margin:8px 0 2px"><b>Scadute senza risposta</b></div>${exp.map(r=>`<div class="item" style="opacity:.75;display:flex;justify-content:space-between;gap:12px;align-items:center"><span>${esc(r.type_name)} · ${esc(reqWhen(r))} · ${esc(r.requester_name||'Atleta')}</span><button class="btn ghost" style="padding:4px 12px" onclick="reqSend('${r.id}','decline',null,'Data passata senza risposta')">Chiudi</button></div>`).join('')}`;
+  return h}
+function reqModal(id,act){const r=S.reqs.find(x=>x.id===id);if(!r)return;const n=r.interest+1;
+  const body=act==='activate'?`<h3>Attiva l'allenamento</h3><p class="note">${esc(r.type_name)} · ${esc(reqWhen(r))}. Verranno iscritti ${n} ${n===1?'atleta':'atleti'} e riceveranno l'avviso.${(S.reqMin||0)>n?` <b style="color:var(--warn)">Sotto la soglia minima (${n}/${S.reqMin}).</b>`:''}</p><label>Data e ora di inizio</label><input id="rq-st" type="datetime-local" value="${reqDefStart(r)}"><div class="row" style="margin-top:16px"><button class="btn" onclick="reqSend('${id}','activate',$('#rq-st').value)">Attiva e iscrivi</button><button class="btn ghost" onclick="closeModal()">Annulla</button></div>`
+  :act==='alternative'?`<h3>Proponi un altro orario</h3><p class="note">${esc(r.requester_name||'L\'atleta')} riceverà la proposta e potrà accettarla o rifiutarla.</p><label>Data e ora proposte</label><input id="rq-st" type="datetime-local" value="${reqDefStart(r)}"><label>Messaggio <span class="muted">(facoltativo)</span></label><input id="rq-tx" placeholder="es. martedì la piscina è chiusa"><div class="row" style="margin-top:16px"><button class="btn" onclick="reqSend('${id}','alternative',$('#rq-st').value,$('#rq-tx').value)">Invia proposta</button><button class="btn ghost" onclick="closeModal()">Annulla</button></div>`
+  :`<h3>Non si può fare</h3><p class="note">Tutti gli interessati (${n}) riceveranno l'avviso.</p><label>Motivo <span class="muted">(breve)</span></label><input id="rq-tx" placeholder="es. piscina non disponibile"><div class="row" style="margin-top:16px"><button class="btn" onclick="reqSend('${id}','decline',null,$('#rq-tx').value)">Invia risposta</button><button class="btn ghost" onclick="closeModal()">Annulla</button></div>`;
+  modal(body)}
+async function reqSend(id,act,st,tx){if((act==='activate'||act==='alternative')&&!st)return toast('Scegli data e ora');
+  const {error}=await sb.rpc('respond_request',{p_req:id,p_action:act,p_starts:st?new Date(st).toISOString():null,p_text:tx||null});
+  if(error)return toast('Non riuscito: '+error.message);closeModal();toast(act==='activate'?'Allenamento attivato, atleti avvisati':act==='alternative'?'Proposta inviata':'Risposta inviata');
+  if(act==='activate'){await reloadActs()}else{await loadReqs();render()}}
+async function loadNotices(){await loadReqs();const r=await sb.from('activity_notices').select('*').eq('org_id',S.org.org_id).is('done_at',null).order('created_at');S.notices=r.data||[]}
 const BASES={kind:[['training','Allenamento'],['course','Corso'],['dry','Apnea a secco']],env:[['sea','Mare'],['pool','Piscina'],['dry','A secco']]};
 function baseLabel(f,b){return(BASES[f].find(x=>x[0]===b)||[0,b])[1]}
 function instrOptions(sel,typeId){return S.people.filter(p=>p.role==='instructor'&&((p.instr_active&&S.links.some(l=>l.person_id===p.id&&l.type_id===typeId))||p.id===sel)).map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${esc(p.full_name)}${p.instr_active?'':' (non attivo)'}</option>`).join('')}

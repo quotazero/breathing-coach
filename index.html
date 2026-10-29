@@ -103,7 +103,7 @@ p.lead{color:var(--ink);font-size:16px}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
 .chips button{padding:10px 14px;border-radius:12px;border:1px solid var(--line);font-size:15px}
 .chips button.sel{border-color:var(--accent);background:rgba(143,224,210,.12);color:var(--accent)}
-input.txt{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);font-size:17px}
+input.txt,select.txt{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);font-size:17px;color:var(--ink)}
 input.code{letter-spacing:8px;text-align:center;font-size:28px;font-weight:600}
 .err{color:var(--danger);font-size:14px;min-height:20px;margin:8px 0}
 .ok{color:var(--accent)}
@@ -569,7 +569,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.7';
+const VERSION='0.9.8';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1486,8 +1486,8 @@ function renderCenterDetail(c){
   const B=$('ct-body');
   B.innerHTML=`<div style="display:flex;justify-content:center;margin:14px 0 6px">${ctLogo(c,84)}</div>
     <p style="text-align:center;color:var(--ink2);font-size:14px;margin:0 0 6px">${c.role==='athlete'?(c.level_name?L2('Livello','Level')+': <b>'+esc(c.level_name)+'</b>':L2('Livello non ancora assegnato','Level not assigned yet')):L2('Istruttore / staff','Instructor / staff')}</p>
-    <div id="ct-acts"><p>…</p></div>`;
-  loadCenterActs([c]);
+    <div id="ct-acts"><p>…</p></div>${c.role==='athlete'?'<div id="ct-req"></div>':''}`;
+  loadCenterActs([c]);if(c.role==='athlete')loadRequests(c);
 }
 let ctActs=[],ctSel=null,ctExp=false,ctMonth=null,ctNotes=[];
 const dkeyA=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
@@ -1503,6 +1503,46 @@ function actCard(a){
     else act=`<button class="btn" style="padding:10px;font-size:15px" onclick="bookAct('${a.id}')">${left>0?L2('Prenota','Book'):L2('Lista d’attesa','Join waitlist')}</button>`;
   }
   return `<div class="note${a.my_status==='booked'&&!cancelled?' bkd':''}" style="margin-top:8px;${cancelled||past?'opacity:.6':''}"><b>${esc(a.title)}</b> ${a.my_status==='booked'&&!cancelled?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:chip}<br><span style="color:var(--ink2);font-size:13px">${fmt(a.starts_at)}${a.place?' · '+esc(a.place):''}${a.instructor_name?' · '+esc(a.instructor_name):''}<br>${cancelled?esc(a.cancel_reason||''):(left>0?L2('Posti liberi: ','Spots left: ')+left:L2('Completa','Full'))}${a.my_status==='booked'?' · <b>'+L2('Sei iscritto','You are booked')+'</b>':''}</span>${act}</div>`}
+
+/* --- richieste di allenamento --- */
+let rqList=[],rqTypes=[],rqForm=false,rqOrg=null;
+const SLOT={morning:['Mattina','Morning'],afternoon:['Pomeriggio','Afternoon'],evening:['Sera','Evening'],exact:['Orario preciso','Exact time']};
+async function loadRequests(c){
+  rqOrg=c;
+  try{const [a,b]=await Promise.all([sb.rpc('list_requests',{p_org:c.org_id}),sb.rpc('list_request_types',{p_org:c.org_id})]);rqList=Array.isArray(a.data)?a.data:[];rqTypes=Array.isArray(b.data)?b.data:[]}catch(e){rqList=[];rqTypes=[]}
+  renderRequests()}
+function rqWhen(r){const loc=lang==='en'?'en-GB':'it-IT',d=new Date(r.req_date+'T12:00').toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short'});return d+' · '+(r.slot==='exact'&&r.req_time?String(r.req_time).slice(0,5):SLOT[r.slot][lang==='en'?1:0].toLowerCase())}
+function renderRequests(){
+  const box=$('ct-req');if(!box)return;const loc=lang==='en'?'en-GB':'it-IT';
+  const mine=rqList.filter(r=>r.mine),others=rqList.filter(r=>!r.mine&&r.status==='open'&&!r.expired);
+  const openMine=mine.filter(r=>(r.status==='open'||r.status==='alternative')&&!r.expired).length;
+  const stl=r=>r.expired?`<span style="color:var(--ink2)">${L2('Scaduta senza risposta','Expired, no answer')}</span>`:r.status==='open'?`<span style="color:#F2C879">${L2('In attesa del centro','Waiting for the center')}</span>`:r.status==='alternative'?`<span style="color:var(--accent)">${L2('Il centro propone un altro orario','The center proposes another time')}</span>`:r.status==='activated'?`<span style="color:var(--accent)">✓ ${L2('Attivata','Activated')}</span>`:r.status==='declined'?`<span style="color:#F08A7A">${L2('Non fattibile','Not possible')}</span>`:`<span style="color:var(--ink2)">${L2('Annullata','Cancelled')}</span>`;
+  const mineH=mine.map(r=>{let x='';
+    if(r.status==='alternative'&&!r.expired)x=`<div style="margin-top:6px;font-size:14px"><b>${new Date(r.alt_starts_at).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</b>${r.alt_note?' · '+esc(r.alt_note):''}</div><div class="row" style="gap:8px;margin-top:8px"><button class="btn" style="padding:10px;font-size:15px" onclick="rqAnswer('${r.id}',true)">${L2('Accetta','Accept')}</button><button class="btn ghost" style="padding:10px;font-size:15px" onclick="rqAnswer('${r.id}',false)">${L2('Rifiuta','Decline')}</button></div>`;
+    else if(r.status==='declined'&&r.decline_reason)x=`<div style="color:var(--ink2);font-size:13px;margin-top:4px">${esc(r.decline_reason)}</div>`;
+    if((r.status==='open'||r.status==='alternative')&&!r.expired)x+=`<button class="link" style="margin-top:8px;display:block" onclick="rqCancel('${r.id}')">${L2('Annulla richiesta','Cancel request')}</button>`;
+    return `<div class="note" style="margin-top:8px"><b>${esc(r.type_name)}</b> · ${esc(rqWhen(r))}<br>${stl(r)}${r.interest?` · <span style="color:var(--ink2)">${r.interest} ${L2('interessati','interested')}</span>`:''}${r.note?`<br><span style="color:var(--ink2);font-size:13px">${esc(r.note)}</span>`:''}${x}</div>`}).join('');
+  const othH=others.map(r=>`<div class="note" style="margin-top:8px"><b>${esc(r.type_name)}</b> · ${esc(rqWhen(r))}<br><span style="color:var(--ink2);font-size:13px">${r.interest+1} ${L2('persone lo vorrebbero','people would like it')}</span><br><button class="btn${r.my_interest?'':' ghost'}" style="padding:8px 14px;font-size:14px;margin-top:6px" onclick="rqInterest('${r.id}',${r.my_interest?'false':'true'})">${r.my_interest?'✓ '+L2('Ti interessa · togli','You are interested · remove'):L2('Mi interessa anche a me','I am interested too')}</button></div>`).join('');
+  const today=dkeyA(new Date());
+  const form=rqForm?`<div class="note" style="margin-top:8px">
+    <label style="font-size:13px;color:var(--ink2)">${L2('Attività','Activity')}</label><select id="rq-t" class="txt">${rqTypes.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select>
+    <label style="font-size:13px;color:var(--ink2)">${L2('Giorno','Day')}</label><input id="rq-d" type="date" class="txt" min="${today}" value="${today}">
+    <label style="font-size:13px;color:var(--ink2)">${L2('Quando','When')}</label><select id="rq-s" class="txt" onchange="$('rq-tm').style.display=this.value==='exact'?'block':'none'">${Object.keys(SLOT).map(k=>`<option value="${k}"${k==='evening'?' selected':''}>${SLOT[k][lang==='en'?1:0]}</option>`).join('')}</select>
+    <input id="rq-tm" type="time" class="txt" value="19:00" style="display:none">
+    <input id="rq-n" class="txt" placeholder="${L2('Nota (facoltativa)','Note (optional)')}" maxlength="200">
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn" id="rq-go" onclick="rqSend()">${L2('Invia al centro','Send to the center')}</button><button class="btn ghost" onclick="rqForm=false;renderRequests()">${L2('Annulla','Cancel')}</button></div></div>`:'';
+  box.innerHTML=`<h2>${L2('Non trovi l’orario giusto?','Can’t find the right time?')}</h2>
+    ${rqForm?'':openMine>=3?`<p style="color:var(--ink2);font-size:13px">${L2('Hai già 3 richieste aperte: aspetta una risposta o annullane una.','You already have 3 open requests: wait for an answer or cancel one.')}</p>`:`<button class="btn ghost" onclick="rqForm=true;renderRequests()">＋ ${L2('Proponi un allenamento','Propose a training')}</button>`}${form}
+    ${mine.length?`<h2>${L2('Le mie richieste','My requests')}</h2>${mineH}`:''}
+    ${others.length?`<h2>${L2('Proposte di altri atleti','Proposed by other athletes')}</h2>${othH}`:''}`}
+async function rqSend(){
+  const b=$('rq-go');if(b)b.disabled=true;const slot=$('rq-s').value;
+  try{const {error}=await sb.rpc('request_activity',{p_org:rqOrg.org_id,p_type:$('rq-t').value,p_date:$('rq-d').value,p_slot:slot,p_time:slot==='exact'?$('rq-tm').value:null,p_note:$('rq-n').value});
+    if(error)throw error;toast(L2('Richiesta inviata al centro','Request sent to the center'));track('request_send');rqForm=false;await loadRequests(rqOrg)}
+  catch(e){if(b)b.disabled=false;const m=String(e.message||'');toast(/too many/i.test(m)?L2('Hai già 3 richieste aperte','You already have 3 open requests'):/past/i.test(m)?L2('Scegli un giorno futuro','Pick a future day'):L2('Non riuscito. Riprova.','Failed. Try again.'))}}
+async function rqInterest(id,on){try{const {error}=await sb.rpc('interest_request',{p_req:id,p_on:on});if(error)throw error;toast(on?L2('Segnalato al centro','Noted'):L2('Tolto','Removed'))}catch(e){toast(L2('Non riuscito. Riprova.','Failed. Try again.'))}await loadRequests(rqOrg)}
+async function rqCancel(id){try{const {error}=await sb.rpc('cancel_request',{p_req:id});if(error)throw error}catch(e){toast(L2('Non riuscito. Riprova.','Failed. Try again.'))}await loadRequests(rqOrg)}
+async function rqAnswer(id,ok){try{const {error}=await sb.rpc('answer_alternative',{p_req:id,p_accept:ok});if(error)throw error;toast(ok?L2('Attività creata: sei prenotato','Activity created: you are booked'):L2('Rifiutato','Declined'));if(ok){await loadCenterActs([rqOrg])}}catch(e){toast(L2('Non riuscito. Riprova.','Failed. Try again.'))}await loadRequests(rqOrg)}
 async function loadCenterActs(cs){
   const box=$('ct-acts');if(!box||!sb||!cs.length)return;const c=cs[0];
   try{const nr=await sb.from('notifications').select('id,message,created_at,read_at').eq('org_id',c.org_id).order('created_at',{ascending:false}).limit(5);ctNotes=nr.data||[]}catch(e){ctNotes=[]}
