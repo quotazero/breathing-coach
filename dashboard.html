@@ -41,7 +41,7 @@ h1,h2,h3{margin:0;font-weight:600}
 .btn.sm{padding:6px 12px;font-size:13px;border-radius:10px}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
 .kpi{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
-.kpi b{display:block;font-size:32px;font-weight:600;line-height:1.1}
+.kpi.click{cursor:pointer;transition:border-color .15s,transform .15s}.kpi.click:hover{border-color:var(--acc,#8fe3d3);transform:translateY(-2px)}.kpi b{display:block;font-size:32px;font-weight:600;line-height:1.1}
 .kpi span{color:var(--ink2);font-size:13px}
 .panel{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:18px}
 .panel h2{font-size:16px;margin-bottom:12px}
@@ -222,8 +222,8 @@ function homeView(){
   const noCert=S.people.filter(p=>!S.certs.some(c=>c.person_id===p.id)).length;
   const up=S.acts.filter(a=>new Date(a.starts_at)>=new Date()&&a.status!=='cancelled').length;
   return `<div class="top"><div><h1>Panoramica</h1><p>Stato del centro e opportunità di programmazione.</p></div></div>
-  <div class="kpis"><div class="kpi"><b>${ath}</b><span>Atleti in anagrafica</span></div><div class="kpi"><b>${ins}</b><span>Istruttori</span></div>
-  <div class="kpi"><b>${S.certs.length}</b><span>Brevetti registrati</span></div><div class="kpi"><b>${up}</b><span>Attività in programma</span></div></div>
+  <div class="kpis"><div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${ath}</b><span>Atleti in anagrafica</span></div><div class="kpi click" onclick="S.pfilter='instructor';go('people')"><b>${ins}</b><span>Istruttori</span></div>
+  <div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${S.certs.length}</b><span>Brevetti registrati</span></div><div class="kpi click" onclick="go('cal')"><b>${up}</b><span>Attività in programma</span></div></div>
   <div class="grid2"><div class="panel"><h2>Bacino potenziale per corso</h2>
    ${pool.length?`<table><tbody>${pool.slice(0,5).map(r=>`<tr class="click" onclick="go('opp')"><td>${esc(r.c.name)}</td><td style="width:36%"><div class="bar"><i style="width:${Math.min(100,r.pool/Math.max(1,pool[0].pool)*100)}%"></i></div></td><td class="num">${r.pool}</td><td><span class="chip ${r.cl}">${r.st}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nessun dato sufficiente.</div>'}
    <p class="note" style="margin:10px 0 0">Persone con il livello precedente, non ancora al livello del corso. Idoneità da verificare sui requisiti reali.</p></div>
@@ -310,7 +310,7 @@ function outView(){
   const list=all.filter(p=>p.outreach===S.ofilter).sort((a,b)=>a.full_name.localeCompare(b.full_name));
   const seg=k=>`<button class="${S.ofilter===k?'sel':''}" onclick="S.ofilter='${k}';render()">${OUT_LAB[k]} · ${c(k)}</button>`;
   return `<div class="top"><div><h1>Da sollecitare</h1><p>Chi è nel gruppo WhatsApp e non ha ancora indicato il brevetto. Si contatta una persona alla volta.</p></div></div>
-  <div class="kpis"><div class="kpi"><b>${all.length}</b><span>Persone nel gruppo</span></div><div class="kpi"><b>${c('answered')}</b><span>Hanno risposto</span></div><div class="kpi"><b>${c('to_contact')}</b><span>Da contattare</span></div><div class="kpi"><b>${c('contacted')}</b><span>Contattati, in attesa</span></div></div>
+  <div class="kpis"><div class="kpi"><b>${all.length}</b><span>Persone nel gruppo</span></div><div class="kpi click" onclick="S.ofilter='answered';render()"><b>${c('answered')}</b><span>Hanno risposto</span></div><div class="kpi click" onclick="S.ofilter='to_contact';render()"><b>${c('to_contact')}</b><span>Da contattare</span></div><div class="kpi click" onclick="S.ofilter='contacted';render()"><b>${c('contacted')}</b><span>Contattati, in attesa</span></div></div>
   <div class="panel"><h2>Messaggio</h2><textarea id="msg" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:10px 12px;font:inherit" oninput="S.msg=this.value">${esc(S.msg)}</textarea>
   <p class="note" style="margin:8px 0 0">«{nome}» viene sostituito con il nome. Il pulsante apre WhatsApp con il messaggio già scritto: l'invio lo confermi tu.</p></div>
   <div style="margin-bottom:12px" class="seg">${['to_contact','contacted','answered','skip'].map(seg).join('')}</div>
