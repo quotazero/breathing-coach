@@ -221,6 +221,13 @@ async function loadCenters(){
   try{const p=await sb.from('profiles').select('display_name').eq('user_id',S.user.id).maybeSingle();if(p.data?.display_name)S.name=p.data.display_name}catch(e){}
   applyBrand(S.org);await loadOrg();S.stage='app'
 }
+
+/* --- aggiornamento automatico --- */
+function _busy(){const a=document.activeElement;return !!document.querySelector('.mdl')||(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))}
+async function softRefresh(){if(document.hidden||S.stage!=='app'||!S.org||S._rf)return;S._rf=true;
+  try{const sig=()=>JSON.stringify([S.acts,S.reqs,S.notices]);const before=S._sig||sig();await loadOrg();
+    const after=sig();if(after!==before){if(_busy()){S._sig=before}else{S._sig=after;render()}}else S._sig=after}catch(e){}finally{S._rf=false}}
+setInterval(softRefresh,45000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)softRefresh()});window.addEventListener('focus',softRefresh);
 async function loadOrg(){
   const id=S.org.org_id;
   const from=new Date(Date.now()-400*864e5).toISOString();

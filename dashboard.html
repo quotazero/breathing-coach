@@ -500,6 +500,14 @@ async function setOut(id,v){
 const cycleOut=id=>setOut(id,OUT_NEXT[S.people.find(x=>x.id===id).outreach]);
 function markContacted(id){const p=S.people.find(x=>x.id===id);if(p&&p.outreach==='to_contact')setTimeout(()=>setOut(id,'contacted'),600)}
 
+
+/* --- aggiornamento automatico --- */
+function _busy(){const a=document.activeElement;return !!document.getElementById('mdl')||(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))}
+async function softRefresh(){if(document.hidden||S.stage!=='app'||!S.org||S._rf)return;S._rf=true;
+  try{const sig=()=>JSON.stringify([S.acts,S.reqs,S.notices]);const before=S._sig||sig();
+    const r=await sb.rpc('list_activities',{p_org:S.org.org_id,p_from:new Date(Date.now()-30*864e5).toISOString(),p_days:150});if(Array.isArray(r.data))S.acts=r.data;await loadNotices();
+    const after=sig();if(after!==before){if(_busy()){S._sig=before}else{S._sig=after;render()}}else S._sig=after}catch(e){}finally{S._rf=false}}
+setInterval(softRefresh,45000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)softRefresh()});window.addEventListener('focus',softRefresh);
 async function reloadActs(){const r=await sb.rpc('list_activities',{p_org:S.org.org_id,p_from:new Date(Date.now()-30*864e5).toISOString(),p_days:150});S.acts=Array.isArray(r.data)?r.data:[];await loadNotices();render()}
 const isSea=a=>a.location_type==='sea'&&a.kind!=='dry';
 const dkey=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
