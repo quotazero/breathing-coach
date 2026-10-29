@@ -73,6 +73,18 @@ p.lead{color:var(--ink);font-size:16px}
 .card:active{transform:scale(.985)}
 .mute svg{width:22px;height:22px}
 .tab svg{width:22px;height:22px;stroke:currentColor}
+/* home compatta: tutto in una schermata */
+#s-welcome{padding-top:max(12px,env(safe-area-inset-top,0px));padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+#s-welcome h1{margin:2px 0}#s-welcome h2{margin:14px 0 6px;font-size:16px}
+#s-welcome .top .rbtn{width:36px!important;height:36px!important}
+#s-welcome .wk{padding:8px 6px 8px;margin:8px 0 2px}
+#s-welcome .wkd{gap:3px}#s-welcome .wk .dr{width:30px;height:30px}#s-welcome .wkl{margin-top:6px;font-size:12.5px}
+#s-welcome .tdy{margin:8px 0 0;padding:8px 12px}
+#s-welcome .card{padding:9px 12px;margin-top:7px;gap:12px;border-radius:14px}
+#s-welcome .card .ic,#s-welcome .card .ic svg{width:30px;height:30px}
+#s-welcome .card b{font-size:16px}#s-welcome .card small{font-size:12.5px;margin-top:1px}
+#s-welcome .card .chev{font-size:22px}
+@media (max-height:760px){#s-welcome .wk .dr{width:26px;height:26px}#s-welcome .card{padding:6px 12px;margin-top:5px}#s-welcome .card .ic,#s-welcome .card .ic svg{width:26px;height:26px}#s-welcome .tdy{padding:6px 12px}#s-welcome h2{margin:10px 0 4px}}
 #s-welcome,#s-home,#s-static,#s-pb{padding-bottom:calc(104px + env(safe-area-inset-bottom,0px))}
 .tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:rgba(6,26,43,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:6px 10px calc(8px + env(safe-area-inset-bottom,0px));z-index:5}
 .mdl{position:fixed;inset:0;background:rgba(3,12,20,.72);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
@@ -572,7 +584,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.10';
+const VERSION='0.9.11';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
