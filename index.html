@@ -167,6 +167,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
 .cd.sel .dr{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--accent)}
 .cd .st{position:absolute;top:-3px;right:calc(50% - 25px);color:var(--ph-inhale);font-size:11px;line-height:1}
 .cd .st svg{width:12px;height:12px;fill:currentColor}
+.cd.today .dr.e{border-color:var(--ink2)}.dr.wt{opacity:.5}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink2);margin:14px 0 4px}.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
 .dayrow{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--ink2)}.dayrow b{color:var(--ink)}.dayrow i{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .hist.tap{cursor:pointer}
@@ -1491,18 +1492,20 @@ function renderCtCal(){
   let days=[];
   if(ctExp){const f=new Date(sel.getFullYear(),sel.getMonth(),1),off=(f.getDay()+6)%7;for(let i=0;i<42;i++){const d=new Date(f.getFullYear(),f.getMonth(),1-off+i);if(i>=35&&d.getMonth()!==f.getMonth())break;days.push(d)}}
   else{const off=(sel.getDay()+6)%7;for(let i=0;i<7;i++)days.push(new Date(sel.getFullYear(),sel.getMonth(),sel.getDate()-off+i))}
-  const dot=a=>{const sea=a.location_type==='sea'&&a.kind!=='dry';const col=a.status==='cancelled'?'#F08A7A':sea&&a.weather_status!=='confirmed'?'#F2C879':a.kind==='course'?'#C4A6EA':a.kind==='dry'?'#7FB4F0':'var(--accent)';return `<i style="width:6px;height:6px;border-radius:50%;background:${col};display:block"></i>`};
   const wd=[...Array(7).keys()].map(i=>new Date(2024,0,1+i).toLocaleDateString(loc,{weekday:'narrow'}));
   const label=ctExp?sel.toLocaleDateString(loc,{month:'long',year:'numeric'}):(days[0].toLocaleDateString(loc,{day:'numeric',month:'short'})+' – '+days[6].toLocaleDateString(loc,{day:'numeric',month:'short'}));
-  const cell=d=>{const k=dkeyA(d),isSel=k===ctSel,out=ctExp&&d.getMonth()!==sel.getMonth(),dots=(by[k]||[]).slice(0,3).map(dot).join('');
-    return `<button onclick="ctPick('${k}')" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;${isSel?'background:var(--accent);color:#04131D;':''}${k===today&&!isSel?'border:1px solid var(--accent);':'border:1px solid transparent;'}${out?'opacity:.35;':''}"><span style="font-size:15px;font-weight:600">${d.getDate()}</span><span style="display:flex;gap:3px;height:6px">${isSel?'':dots}</span></button>`};
+  const cell=d=>{const k=dkeyA(d),out=ctExp&&d.getMonth()!==sel.getMonth(),as=by[k]||[];
+    const ty=[...new Set(as.map(a=>a.status==='cancelled'?'ak_cancelled':'ak_'+a.kind))];
+    const tent=as.length&&as.every(a=>a.status==='scheduled'&&a.location_type==='sea'&&a.kind!=='dry'&&a.weather_status!=='confirmed');
+    return `<button class="cd${k===ctSel?' sel':''}${k===today?' today':''}" onclick="ctPick('${k}')" style="${out?'opacity:.35':''}">${ringHTML(ty,d.getDate(),tent?'wt':'')}</button>`};
   const list=(by[ctSel]||[]).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   const notes=ctNotes.length?`<h2>${L2('Avvisi dal centro','Messages from the center')}</h2>`+ctNotes.map(n=>`<div class="note" style="margin-top:8px;${n.read_at?'opacity:.7':'border-left:3px solid var(--accent)'}">${esc(n.message)}<br><span style="color:var(--ink2);font-size:12px">${new Date(n.created_at).toLocaleString(loc,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join(''):'';
   box.innerHTML=`${notes}
     <div id="ct-calw" style="margin-top:14px;background:var(--bg2);border-radius:16px;padding:10px 8px">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 6px 8px"><button class="pill" onclick="ctMove(-1)" aria-label="‹">‹</button><button onclick="ctToggle()" style="font-weight:600;font-size:16px;text-transform:capitalize">${esc(label)} <span style="color:var(--ink2)">${ctExp?'▴':'▾'}</span></button><button class="pill" onclick="ctMove(1)" aria-label="›">›</button></div>
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:11px;color:var(--ink2);margin-bottom:4px">${wd.map(x=>`<span>${esc(x)}</span>`).join('')}</div>
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${days.map(cell).join('')}</div>
+      <div class="calg">${wd.map(x=>`<span class="wd">${esc(x)}</span>`).join('')}${days.map(cell).join('')}</div>
+      <div class="legend"><span><i style="background:var(--ph-inhale)"></i>${L2('Allenamento','Training')}</span><span><i style="background:var(--ph-hold_empty)"></i>${L2('Corso','Course')}</span><span><i style="background:var(--ph-exhale)"></i>${L2('Apnea a secco','Dry')}</span></div>
+      <p style="color:var(--ink2);font-size:12px;margin:4px 0 0">${L2('Colore tenue: mare, meteo da confermare.','Faded: sea, weather to be confirmed.')}</p>
       ${ctExp?'':`<p style="text-align:center;color:var(--ink2);font-size:12px;margin:8px 0 0">${L2('Tocca il mese per vederlo intero','Tap the month to see it all')}</p>`}
     </div>
     <h2 style="text-transform:capitalize">${esc(sel.toLocaleDateString(loc,{weekday:'long',day:'numeric',month:'long'}))}</h2>
@@ -1888,6 +1891,7 @@ Object.assign(T.en,{D_DRY:'Dry static apnea',
 });
 function toast(msg){const d=document.createElement('div');d.className='toast';d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
 const COL={breath:'var(--ph-hold_full)',static:'var(--ph-static)',pb:'var(--ph-inhale)'};
+Object.assign(COL,{ak_training:'var(--ph-inhale)',ak_course:'var(--ph-hold_empty)',ak_dry:'var(--ph-exhale)',ak_cancelled:'var(--danger)'});
 Object.assign(T.it,{dy_out:'Com’è andata?',out_good:'Bene',out_ok:'Così così',out_bad:'Male',dy_focus_ph:'Su cosa lavorare (facoltativo)',dy_notes_ph:'Note: luogo, condizioni, sensazioni…',cal_add:'+ Aggiungi allenamento',dy_focus:'Da lavorare',cal_leg_pb:'Risultati'});
 Object.assign(T.en,{dy_out:'How did it go?',out_good:'Good',out_ok:'So-so',out_bad:'Bad',dy_focus_ph:'What to work on (optional)',dy_notes_ph:'Notes: place, conditions, how it felt…',cal_add:'+ Add training',dy_focus:'To work on',cal_leg_pb:'Results'});
 const OUT={good:['out_good','var(--ph-inhale)'],ok:['out_ok','var(--ph-hold_full)'],bad:['out_bad','var(--danger)']};
