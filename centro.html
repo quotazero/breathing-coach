@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Centro · Orbita by Quota Zero</title>
+<title>Centro</title>
 <meta name="theme-color" content="#061A2B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Centro">
@@ -61,7 +61,7 @@ p{line-height:1.55;margin:0 0 12px;color:var(--ink2);font-size:15px}
 .tg.w{color:var(--ph-hold_full);border-color:rgba(242,200,121,.5)}.tg.d{color:var(--danger);border-color:var(--danger)}.tg.g{color:var(--accent);border-color:rgba(143,224,210,.5)}
 .wk{display:block;width:100%;background:var(--bg2);border-radius:16px;padding:14px 8px 12px;margin:12px 0 4px;text-align:center}
 .wkh{display:flex;align-items:center;justify-content:space-between;padding:0 6px 10px;font-size:13px;color:var(--ink2)}
-.wkh button{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);font-size:18px;line-height:1}
+.wkh button:not(.wkm){width:32px;height:32px;border-radius:50%;border:1px solid var(--line);font-size:18px;line-height:1}
 .wkg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
 .wkd{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--ink2);cursor:pointer}
 .wkd.today{color:var(--ink);font-weight:700}
@@ -176,7 +176,20 @@ function demoData(){
 const ROSTER_DEMO=[{booking_id:'b1',user_id:'u1',name:'Michela R.',status:'booked',level_name:'Avanzato',n_certs:3},{booking_id:'b2',user_id:'u2',name:'Luca B.',status:'booked',level_name:'Intermedio',n_certs:2},{booking_id:'b3',user_id:'u3',name:'Sara M.',status:'booked',level_name:'Base',n_certs:1},{booking_id:'b4',user_id:'u4',name:'Giovanni P.',status:'booked',level_name:null,n_certs:0},{booking_id:'b5',user_id:'u7',name:'Elena T.',status:'waitlist',level_name:'Base',n_certs:1}];
 
 /* ---------- accesso ---------- */
+function brandIcon(url,cb){const im=new Image();im.onload=()=>{try{const mk=n=>{const c=document.createElement('canvas');c.width=c.height=n;const x=c.getContext('2d');x.fillStyle='#061A2B';x.fillRect(0,0,n,n);const w=n*.8,h=w*im.naturalHeight/im.naturalWidth,hh=Math.min(h,n*.8),ww=hh*im.naturalWidth/im.naturalHeight;x.drawImage(im,(n-ww)/2,(n-hh)/2,ww,hh);return c.toDataURL('image/png')};cb(mk(512),mk(192),mk(180))}catch(e){}};im.src=url}
+function applyBrand(c){
+  if(!c)return;const name=c.name||'Centro';ls('cn.brand',{name,logo_url:c.logo_url||''});document.title=name;
+  const t=document.querySelector('meta[name=apple-mobile-web-app-title]');if(t)t.content=name;
+  if(!c.logo_url)return;
+  brandIcon(c.logo_url,(i512,i192,i180)=>{
+    const set=(rel,href,sz)=>{document.querySelectorAll('link[rel="'+rel+'"]').forEach(l=>l.remove());const l=document.createElement('link');l.rel=rel;l.href=href;if(sz)l.sizes=sz;document.head.appendChild(l)};
+    set('apple-touch-icon',i180,'180x180');set('icon',i192,'192x192');
+    try{const base=new URL('./',location.href).href;const m={name,short_name:name.slice(0,12),start_url:base+'centro.html',scope:base,display:'standalone',background_color:'#061A2B',theme_color:'#061A2B',lang:'it',icons:[{src:i192,sizes:'192x192',type:'image/png'},{src:i512,sizes:'512x512',type:'image/png'}]};
+      set('manifest',URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'})))}catch(e){}
+  });
+}
 async function init(){
+  try{applyBrand(ls('cn.brand'))}catch(e){}
   if(!sb){S.err='Serve connessione per il primo accesso.';return render()}
   const {data}=await sb.auth.getSession();S.user=data.session?.user||null;
   if(S.user&&!S.user.is_anonymous)await loadCenters();
@@ -199,7 +212,7 @@ async function loadCenters(){
   if(!S.centers.length){S.stage='nostaff';return}
   S.org=S.centers[0];S.name=(S.user?.email||'').split('@')[0];
   try{const p=await sb.from('profiles').select('display_name').eq('user_id',S.user.id).maybeSingle();if(p.data?.display_name)S.name=p.data.display_name}catch(e){}
-  await loadOrg();S.stage='app'
+  applyBrand(S.org);await loadOrg();S.stage='app'
 }
 async function loadOrg(){
   const id=S.org.org_id;
@@ -226,7 +239,8 @@ function render(){
 const go=t=>{S.tab=t;S.cal=false;render();scrollTo(0,0)};
 function loginView(){
   if(S.stage==='nostaff')return `<div class="top"><h1>Accesso non abilitato</h1></div><p>L'account ${esc(S.user?.email||'')} non è istruttore né amministratore di un centro. Chiedi all'amministratore di aggiungerti.</p><button class="btn ghost" onclick="logout()">Esci</button>`;
-  return `<div style="padding-top:8vh"><h1 style="font-size:30px;font-weight:300;margin:0">Centro</h1><h1 style="font-size:30px;margin:0 0 14px">Orbita</h1>
+  const br=ls('cn.brand');
+  return `<div style="padding-top:8vh;text-align:center">${br&&br.logo_url?`<img src="${esc(br.logo_url)}" alt="" style="height:90px;width:auto;max-width:80%;object-fit:contain;margin-bottom:10px">`:''}<h1 style="font-size:28px;margin:0 0 14px">${esc(br&&br.name||'Centro')}</h1></div><div>
   <p>Gestisci attività, atleti e presenze del tuo centro.</p>
   ${S.stage==='code'?`<label class="f">Codice ricevuto per email (${esc(S.email)})</label><input id="cd" class="txt code" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••"><button class="btn" onclick="verify()">Entra</button>`:`<label class="f">La tua email</label><input id="em" class="txt" type="email" autocomplete="email" placeholder="nome@email.it"><button class="btn" onclick="sendCode()">Invia codice</button>`}
   <div class="err">${esc(S.err)}</div>
@@ -262,7 +276,7 @@ function homeView(){
   <div class="sum" style="font-size:14px;color:var(--ink2);margin:2px 0 0">${esc(S.org.name)}${S.cachedAt&&!S.demo?' · aggiornato alle '+fmtT(S.cachedAt):''}</div>
   ${S.demo?'':wxStrip()+todoView()}
   <h2 style="margin-top:22px">Calendario</h2>
-  <div class="wk"><div class="wkh"><button onclick="S.wk--;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="prec">‹</button><button onclick="openCal()" style="font-size:13px;color:var(--ink2)">${lab}</button><button onclick="S.wk++;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="succ">›</button></div><div class="wkg">${g}</div><button class="wkl" style="display:block;width:100%" onclick="openCal()">${n} attività · ${iscr} prenotazioni · <span style="color:var(--accent)">Apri calendario ›</span></button></div>
+  <div class="wk"><div class="wkh"><button onclick="S.wk--;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="prec">‹</button><button class="wkm" onclick="openCal()" style="font-size:13px;color:var(--ink2);white-space:nowrap;padding:6px 10px">${lab}</button><button onclick="S.wk++;S.selDay=dayKey(weekStart(S.wk));render()" aria-label="succ">›</button></div><div class="wkg">${g}</div><button class="wkl" style="display:block;width:100%" onclick="openCal()">${n} attività · ${iscr} prenotazioni · <span style="color:var(--accent)">Apri calendario ›</span></button></div>
   <h2>${sdl}</h2>${sel.map(a=>actCard(a)).join('')||'<div class="empty">Nessuna attività in questo giorno.</div>'}
   <button class="card" style="--c:var(--accent)" onclick="editAct(null,'${S.selDay}')"><span class="ic">${ICON.plus.replace('width="15" height="15"','')}</span><span class="sp"><b>Nuova attività</b><small>Allenamento, corso o sessione a secco</small></span><span class="chev">›</span></button>
   ${toProm?`<button class="card" style="--c:var(--ph-hold_full)" onclick="S.pt='ath';go('mem')"><span class="ic">${ICON.users}</span><span class="sp"><b>Atleti senza livello</b><small>${toProm} da valutare</small></span><span class="chev">›</span></button>`:''}`;
