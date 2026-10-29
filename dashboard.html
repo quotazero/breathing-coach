@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Dashboard · Blue World Freediving</title>
-<link rel="icon" href="icons/blueworld-logo.png">
+<link rel="icon" href="icons/blueworld-fav.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 :root{
@@ -22,10 +22,10 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0}
 h1,h2,h3{margin:0;font-weight:600}
 .app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
 .side{background:var(--bg2);border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
-.brand{display:flex;align-items:center;gap:12px;font-weight:700;font-size:16px;line-height:1.2;padding:4px 8px 2px}
-.brand img{width:46px;height:46px;border-radius:50%;flex:none}
+.brand{display:flex;flex-direction:column;gap:6px;padding:2px 6px}
+.brand img{width:100%;max-width:176px;height:auto;border-radius:12px;display:block}
 .brand small{display:block;font-weight:400;color:var(--ink2);font-size:12px;margin-top:3px}
-.login .lg{display:block;width:72px;height:72px;border-radius:50%;margin:0 auto 14px}
+.login .lg{display:block;width:180px;height:auto;border-radius:12px;margin:0 auto 18px}
 .nav{margin-top:22px;display:flex;flex-direction:column;gap:3px}
 .nav button{text-align:left;padding:11px 12px;border-radius:12px;color:var(--ink2);font-weight:500}
 .nav button:hover{background:rgba(255,255,255,.05)}
@@ -184,7 +184,7 @@ const nInstr=()=>S.people.filter(p=>p.role==='instructor').length;
 /* ---------- viste ---------- */
 function loginView(){
   const code=S.stage==='code';
-  return `<div class="login"><img class="lg" src="icons/blueworld-logo.png" alt=""><h1>Blue World Freediving</h1><p>Accesso riservato a gestori e istruttori.</p>
+  return `<div class="login"><img class="lg" src="icons/blueworld-logo.png" alt="Blue World Freediving"><h1>Dashboard</h1><p>Accesso riservato a gestori e istruttori.</p>
   ${code?`<label>Codice ricevuto per email</label><input id="cd" inputmode="numeric" autocomplete="one-time-code" autofocus><button class="btn" onclick="verify()">Entra</button><button class="btn ghost" style="margin-top:8px" onclick="S.stage='login';render()">Cambia email</button>`
         :`<label>Email</label><input id="em" type="email" autocomplete="email" autofocus value="${esc(S.email)}"><button class="btn" onclick="sendCode()">Invia codice</button>`}
   <div class="err">${esc(S.err)}</div></div>`
@@ -193,7 +193,7 @@ function nostaffView(){return `<div class="login"><h1>Accesso non abilitato</h1>
 
 const VIEWS=[['home','Panoramica'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['cal','Calendario'],['map','Mappa funzioni']];
 function shell(inner){
-  return `<div class="app"><aside class="side"><div class="brand"><img src="icons/blueworld-logo.png" alt=""><div>${esc(S.org.name||'Blue World Freediving')}<small>Dashboard</small></div></div>
+  return `<div class="app"><aside class="side"><div class="brand"><img src="icons/blueworld-logo.png" alt="Blue World Freediving"><small>Dashboard</small></div>
   <nav class="nav">${VIEWS.filter(v=>isAdmin()||!['sim'].includes(v[0])).map(v=>`<button class="${S.view===v[0]?'sel':''}" onclick="go('${v[0]}')">${v[1]}</button>`).join('')}</nav>
   <div class="sidefoot"><label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" style="width:auto" ${S.hide?'checked':''} onchange="S.hide=this.checked;render()">Nascondi cognomi</label>
   <span>${esc(isAdmin()?'Gestore':'Istruttore')}</span><button onclick="logout()">Esci</button></div></aside>
