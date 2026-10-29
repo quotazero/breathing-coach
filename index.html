@@ -569,7 +569,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.6';
+const VERSION='0.9.7';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1573,6 +1573,7 @@ async function loadHomeAgenda(cs){
   const box=$('wl-today');if(!box||!sb||!cs.length)return;
   const now=new Date(),t0=new Date(now.getFullYear(),now.getMonth(),now.getDate()),all=[];
   await Promise.all(cs.map(async c=>{try{const r=await sb.rpc('list_activities',{p_org:c.org_id,p_from:t0.toISOString(),p_days:8});(Array.isArray(r.data)?r.data:[]).forEach(a=>all.push({...a,_c:c}))}catch(e){}}));
+  homeCt=all;try{renderWeek()}catch(e){}
   const loc=lang==='en'?'en-GB':'it-IT',tm=x=>new Date(x).toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'}),today=dkeyA(now);
   const mine=all.filter(a=>a.my_status==='booked'&&a.status==='scheduled'&&new Date(a.starts_at)>=new Date(now-36e5*3)).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   const cancelledMine=all.filter(a=>a.my_status&&a.status==='cancelled'&&dkeyA(a.starts_at)>=today);
@@ -2068,13 +2069,15 @@ function relDay(ts){const d=new Date(ts),a=new Date(d);a.setHours(0,0,0,0);const
   if(diff===0)return lang==='it'?'oggi':'today';if(diff===1)return lang==='it'?'ieri':'yesterday';return d.toLocaleDateString(lang)}
 function waterWeekCount(){const ws=weekStart().getTime();return waterRecs().filter(r=>new Date(r.startedAt).getTime()>=ws).length}
 function weekStart(d0){const d=new Date(d0||Date.now());d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d}
+let homeCt=[];
 function renderWeek(){
   const days=actsByDay(),ws=weekStart(),today=dayKey(new Date());let n=0,html='';
   for(let i=0;i<7;i++){
     const d=new Date(ws);d.setDate(ws.getDate()+i);const k=dayKey(d),a=days[k]||[],ty=a.map(x=>x.ty);n+=a.length;
     const fut=d>new Date()&&k!==today;
     const inner=ty.length===1?`<span style="color:${COL[ty[0]]};display:flex">${ICON[ty[0]==='breath'?'lungs':ty[0]==='water'?'sea':ty[0]==='pb'?'trophy':'timer']}</span>`:ty.length>1?String(ty.length):'';
-    html+=`<div class="wkd${k===today?' today':''}"><span>${T[lang].wd[i]}</span>${ringHTML(ty,inner,fut?'fut':'')}</div>`;
+    const ca=homeCt.filter(x=>x.status==='scheduled'&&dayKey(x.starts_at)===k),mine=ca.some(x=>x.my_status==='booked');
+    html+=`<div class="wkd${k===today?' today':''}"><span>${T[lang].wd[i]}</span>${ringHTML(ty,inner,fut?'fut':'')}<span class="ctd${mine?' m':''}" style="display:block;margin:4px auto 0;${ca.length?'':'visibility:hidden'}"></span></div>`;
   }
   $('wk-grid').innerHTML=html;$('wk-line').textContent=T[lang].wk_line(streakDays(),n);
 }
@@ -2141,7 +2144,7 @@ function renderCal(){
   const cl=(cby[sel]||[]).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   if(cl.length){const tm=x=>new Date(x).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'});
     $('cal-day').innerHTML+=`<h2 style="margin-top:14px">${L2('Dal tuo centro','From your center')}</h2>`+cl.map(a=>{const b=a.my_status==='booked'&&a.status==='scheduled',c=a.status==='cancelled';
-      return `<button class="note ctr${b?' bkd':''}" style="display:block;width:100%;text-align:left;margin-top:8px;${c?'opacity:.6':''}" onclick="openCenterAt('${a._c.org_id}','${dayKey(a.starts_at)}')"><b>${esc(a.title)}</b> · ${tm(a.starts_at)} ${c?`<span style="color:var(--danger)">${L2('Annullata','Cancelled')}</span>`:b?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:`<span style="color:var(--ink2)">${L2('Organizzata dal centro · tocca per prenotare','Organized by the center · tap to book')}</span>`}<br><span style="color:var(--ink2);font-size:13px">${esc(a._c.name)}${a.place?' · '+esc(a.place):''}</span></button>`}).join('')}
+      return `<button class="note ctr${b?' bkd':''}" style="display:block;width:100%;text-align:left;margin-top:8px;${c?'opacity:.6':''}" onclick="openCenterAt('${a._c.org_id}','${dkeyA(a.starts_at)}')"><b>${esc(a.title)}</b> · ${tm(a.starts_at)} ${c?`<span style="color:var(--danger)">${L2('Annullata','Cancelled')}</span>`:b?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:`<span style="color:var(--ink2)">${L2('Organizzata dal centro · tocca per prenotare','Organized by the center · tap to book')}</span>`}<br><span style="color:var(--ink2);font-size:13px">${esc(a._c.name)}${a.place?' · '+esc(a.place):''}</span></button>`}).join('')}
   if(!renderCal._ld||renderCal._ld!==calM.getTime()){renderCal._ld=calM.getTime();loadCalCenter()}
   $('cal-day').querySelectorAll('.ed').forEach(b=>b.onclick=()=>{const r=lsJ(KEY.sess,[]).find(x=>x.id===b.dataset.id);if(r)openWaterAdd(r,null,'cal')});
   $('b-cal-add').textContent=t('cal_add');
