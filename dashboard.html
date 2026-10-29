@@ -327,11 +327,26 @@ async function setOut(id,v){
 const cycleOut=id=>setOut(id,OUT_NEXT[S.people.find(x=>x.id===id).outreach]);
 function markContacted(id){const p=S.people.find(x=>x.id===id);if(p&&p.outreach==='to_contact')setTimeout(()=>setOut(id,'contacted'),600)}
 
+async function reloadActs(){const r=await sb.rpc('list_activities',{p_org:S.org.org_id,p_from:new Date(Date.now()-30*864e5).toISOString(),p_days:150});S.acts=Array.isArray(r.data)?r.data:[];render()}
+function dl(d){const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,16)}
+function actModal(id){const a=id?S.acts.find(x=>x.id===id):null;const st=a?new Date(a.starts_at):new Date(Date.now()+864e5);if(!a){st.setHours(9,0,0,0)}const en=a?new Date(a.ends_at):new Date(st.getTime()+2*36e5);
+  modal(`<h3>${a?'Modifica attività':'Nuova attività'}</h3><label>Tipo</label><select id="ak"><option value="training"${a&&a.kind==='training'?' selected':''}>Allenamento</option><option value="course"${a&&a.kind==='course'?' selected':''}>Corso</option><option value="dry"${a&&a.kind==='dry'?' selected':''}>Apnea a secco</option></select>
+  <label>Titolo</label><input id="at" value="${esc(a?a.title:'')}" placeholder="es. Profondità da barca"><label>Luogo</label><input id="ap" value="${esc(a?a.place||'':'')}" placeholder="es. Aci Trezza">
+  <label>Ambiente</label><select id="al"><option value="sea"${a&&a.location_type==='sea'?' selected':''}>Mare</option><option value="pool"${a&&a.location_type==='pool'?' selected':''}>Piscina</option><option value="dry"${a&&a.location_type==='dry'?' selected':''}>A secco</option></select>
+  <div class="row" style="flex-wrap:nowrap"><div style="flex:1"><label>Inizio</label><input id="as" type="datetime-local" value="${dl(st)}"></div><div style="flex:1"><label>Fine</label><input id="ae2" type="datetime-local" value="${dl(en)}"></div></div>
+  <label>Posti</label><input id="ac" type="number" min="1" value="${a?a.capacity:6}">
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveActD('${id||''}')">Salva</button><button class="btn ghost" onclick="closeModal()">Annulla</button>${a?`<button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="cancelActD('${id}')">Annulla attività</button>`:''}</div>`)}
+async function saveActD(id){const t=$('#at').value.trim();if(!t)return toast('Scrivi un titolo');const s=new Date($('#as').value),e=new Date($('#ae2').value);if(isNaN(s)||isNaN(e)||e<=s)return toast('Controlla data e orari');
+  const rec={kind:$('#ak').value,title:t,place:$('#ap').value.trim(),location_type:$('#al').value,starts_at:s.toISOString(),ends_at:e.toISOString(),capacity:+$('#ac').value||1};
+  const q=id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert({...rec,org_id:S.org.org_id,min_rank:0});
+  const {error}=await q;if(error)return toast('Non riuscito: '+error.message);closeModal();await reloadActs();toast('Attività salvata')}
+async function cancelActD(id){const why=prompt("Motivo dell'annullamento (visibile ai partecipanti):",'Condizioni meteo');if(why===null)return;
+  const {error}=await sb.from('activities').update({status:'cancelled',cancel_reason:why}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);closeModal();await reloadActs();toast('Attività annullata')}
 function calView(){
   const days={};S.acts.filter(a=>a.status!=='cancelled').forEach(a=>{const k=new Date(a.starts_at).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});(days[k]=days[k]||[]).push(a)});
   const keys=Object.keys(days);
-  return `<div class="top"><div><h1>Calendario</h1><p>Attività del centro. Sono le stesse che gli atleti vedono nell'app.</p></div><a class="btn" href="centro.html" style="text-decoration:none">Crea o modifica nell'app Centro</a></div>
-  ${keys.length?keys.map(k=>`<div class="panel"><h2 style="text-transform:capitalize">${esc(k)}</h2><table><tbody>${days[k].map(a=>`<tr><td style="width:110px">${new Date(a.starts_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}–${new Date(a.ends_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</td><td><b>${esc(a.title)}</b><div class="muted" style="font-size:13px">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):''}</div></td><td class="num">${a.booked}/${a.capacity}${a.waitlist?` · +${a.waitlist} in attesa`:''}</td></tr>`).join('')}</tbody></table></div>`).join(''):`<div class="panel"><div class="empty">Nessuna attività in calendario.<br><span style="font-size:13px">Le attività si creano dall'app Centro e compaiono qui e nell'app degli atleti.</span></div></div>`}`
+  return `<div class="top"><div><h1>Calendario</h1><p>Attività del centro: sono le stesse che gli atleti vedono nell'app.</p></div>${isAdmin()?`<button class="btn" onclick="actModal()">Nuova attività</button>`:''}</div>
+  ${keys.length?keys.map(k=>`<div class="panel"><h2 style="text-transform:capitalize">${esc(k)}</h2><table><tbody>${days[k].map(a=>`<tr ${isAdmin()?`style="cursor:pointer" onclick="actModal('${a.id}')"`:''}><td style="width:110px">${new Date(a.starts_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}–${new Date(a.ends_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</td><td><b>${esc(a.title)}</b><div class="muted" style="font-size:13px">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):''}</div></td><td class="num">${a.booked}/${a.capacity}${a.waitlist?` · +${a.waitlist} in attesa`:''}</td></tr>`).join('')}</tbody></table></div>`).join(''):`<div class="panel"><div class="empty">Nessuna attività in calendario.<br><span style="font-size:13px">Con \"Nuova attività\" compaiono qui e nell'app degli atleti.</span></div></div>`}`
 }
 
 function mapView(){
