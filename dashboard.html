@@ -220,7 +220,7 @@ function loginView(){
 }
 function nostaffView(){return `<div class="login"><h1>Accesso non abilitato</h1><p>Questo account non ha un ruolo di gestore o istruttore in un centro.</p><button class="btn ghost" onclick="logout()">Esci</button></div>`}
 
-const VIEWS=[['home','Panoramica'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['types','Attività'],['cal','Calendario'],['map','Mappa funzioni']];
+const VIEWS=[['home','Panoramica'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['types','Attività'],['center','Il centro'],['cal','Calendario'],['map','Mappa funzioni']];
 function shell(inner){
   return `<div class="app"><aside class="side"><div class="brand"><img src="icons/blueworld-logo.png?v=2" alt="Blue World Freediving"><small>Dashboard</small></div>
   <nav class="nav">${VIEWS.filter(v=>isAdmin()||!['sim'].includes(v[0])).map(v=>`<button class="${S.view===v[0]?'sel':''}" onclick="go('${v[0]}')">${v[1]}</button>`).join('')}</nav>
@@ -228,12 +228,61 @@ function shell(inner){
   <span>${esc(isAdmin()?'Gestore':'Istruttore')}</span><button onclick="setPwModal()">Imposta password</button><button onclick="logout()">Esci</button></div></aside>
   <main class="main">${S.loadErr?`<div class="banner">Alcuni dati non sono stati caricati: ${esc(S.loadErr)}</div>`:''}${inner}</main></div>`
 }
+
+/* ===== Il centro: profilo obbligatorio + condivisione app ===== */
+const APPURL='https://quotazero.github.io/breathing-coach/centro.html';
+const centerMissing=o=>{const m=[];if(!o.name||!o.name.trim())m.push('Nome');if(!o.logo_url)m.push('Logo');if(o.lat==null||!o.place_name)m.push('Sede (per il meteo)');if(!o.phone)m.push('Telefono del centro');return m};
+function centerLink(){return APPURL+'?c='+encodeURIComponent(S.org.slug)}
+function centerView(){const o=S.org,ad=isAdmin(),miss=centerMissing(o),ok=!miss.length;
+  const chk=(l,v)=>`<div class="item" style="display:flex;gap:10px;align-items:center"><span style="color:${v?'var(--accent)':'var(--warn,#F2C879)'};font-size:18px">${v?'✓':'○'}</span><span>${l}</span></div>`;
+  return `<div class="top"><div><h1>Il centro</h1><p>Compila questi dati una sola volta: servono a generare l'app del centro, con logo e nome già dentro.</p></div></div>
+  <div class="panel"><div class="row" style="align-items:flex-start;gap:24px;flex-wrap:wrap">
+    <div style="flex:1;min-width:260px">
+      <label>Nome del centro *</label><input id="cn" value="${esc(o.name||'')}" ${ad?'':'disabled'}>
+      <label>Telefono / WhatsApp del centro * <span class="muted">(con prefisso, es. +39…)</span></label><input id="cph" value="${esc(o.phone||'')}" placeholder="+39…" ${ad?'':'disabled'}>
+      <label>Sede principale * <span class="muted">(cerca la località: serve per meteo e mare)</span></label>
+      <div class="row" style="flex-wrap:nowrap;gap:8px"><input id="cpl" value="${esc(o.place_name||'')}" placeholder="es. Aci Trezza" ${ad?'':'disabled'}><button class="btn ghost" onclick="geoFind()" ${ad?'':'disabled'}>Cerca</button></div>
+      <div id="geo" class="note" style="margin-top:6px">${o.lat!=null?'Posizione salvata: '+o.lat.toFixed(3)+', '+o.lon.toFixed(3):'Nessuna posizione scelta.'}</div>
+    </div>
+    <div style="width:220px">
+      <label>Logo *</label>
+      <div style="background:#061A2B;border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center;min-height:110px;display:flex;align-items:center;justify-content:center">${o.logo_url?`<img id="clg" src="${esc(o.logo_url)}" style="max-width:100%;max-height:96px">`:'<span class="muted">Nessun logo</span>'}</div>
+      <input id="clf" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="margin-top:8px" ${ad?'':'disabled'}>
+      <div class="muted" style="font-size:12px;margin-top:4px">Meglio PNG con sfondo trasparente.</div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveCenter()" ${ad?'':'disabled'}>Salva</button></div></div>
+  <div class="panel"><h2>App del centro</h2>
+    ${chk('Nome',!miss.includes('Nome'))}${chk('Logo',!miss.includes('Logo'))}${chk('Sede per il meteo',!miss.includes('Sede (per il meteo)'))}${chk('Telefono del centro',!miss.includes('Telefono del centro'))}
+    ${ok?`<p class="note" style="margin:12px 0 8px">Tutto pronto. Chi apre il link vede già logo e nome del centro e può aggiungere l'app alla Home con l'icona giusta, senza altri passaggi.</p>
+    <div class="row"><button class="btn" onclick="shareApp()">Invia su WhatsApp</button><button class="btn ghost" onclick="navigator.clipboard.writeText(centerLink()).then(()=>toast('Link copiato'))">Copia link</button></div>
+    <div class="muted" style="font-size:12.5px;margin-top:8px;word-break:break-all">${esc(centerLink())}</div>`
+    :`<p class="note" style="margin:12px 0 0">Per generare il link manca: <b>${miss.join(', ')}</b>.</p>`}
+  </div>`}
+let GEO=null;
+async function geoFind(){const q=$('#cpl').value.trim();if(!q)return toast('Scrivi una località');
+  try{const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=5&language=it&name='+encodeURIComponent(q)).then(r=>r.json());const L=r.results||[];
+    if(!L.length){$('#geo').textContent='Nessun risultato: prova un altro nome.';return}
+    window._geo=L;$('#geo').innerHTML='Scegli la sede:'+L.map((x,i)=>`<div class="item" style="cursor:pointer" onclick="geoPick(${i})"><b>${esc(x.name)}</b> <span class="muted">${esc([x.admin2,x.admin1,x.country].filter(Boolean).join(', '))} · ${x.latitude.toFixed(2)}, ${x.longitude.toFixed(2)}</span></div>`).join('')}
+  catch(e){$('#geo').textContent='Ricerca non riuscita: serve connessione.'}}
+function geoPick(i){const x=window._geo[i];GEO={name:x.name+(x.admin2?' ('+x.admin2+')':''),lat:x.latitude,lon:x.longitude};$('#cpl').value=GEO.name;$('#geo').textContent='Posizione scelta: '+GEO.lat.toFixed(3)+', '+GEO.lon.toFixed(3)+'. Ricordati di salvare.'}
+function resizeLogo(file){return new Promise((res,rej)=>{const u=URL.createObjectURL(file),im=new Image();im.onload=()=>{const W=Math.min(900,im.naturalWidth||900),sc=W/(im.naturalWidth||W),c=document.createElement('canvas');c.width=W;c.height=Math.max(1,Math.round((im.naturalHeight||W)*sc));c.getContext('2d').drawImage(im,0,0,c.width,c.height);c.toBlob(b=>b?res(b):rej(new Error('logo')),'image/png')};im.onerror=()=>rej(new Error('Immagine non leggibile'));im.src=u})}
+async function saveCenter(){const o=S.org;const rec={name:$('#cn').value.trim(),phone:null};
+  const ph=normPhone($('#cph').value);if(!ph.ok)return toast(ph.msg);rec.phone=ph.v;
+  if(!rec.name)return toast('Scrivi il nome del centro');
+  if(GEO){rec.place_name=GEO.name;rec.lat=GEO.lat;rec.lon=GEO.lon}
+  const f=$('#clf').files[0];
+  if(f){try{const blob=await resizeLogo(f);const path=o.org_id+'/logo-'+Date.now()+'.png';const up=await sb.storage.from('center-logos').upload(path,blob,{contentType:'image/png',upsert:true});if(up.error)throw up.error;rec.logo_url=sb.storage.from('center-logos').getPublicUrl(path).data.publicUrl}catch(e){return toast('Logo non caricato: '+(e.message||e))}}
+  const {error}=await sb.from('organizations').update(rec).eq('id',o.org_id);if(error)return toast('Non riuscito: '+error.message);
+  Object.assign(o,rec);GEO=null;S.wx=null;render();toast('Dati del centro salvati')}
+function shareApp(){const t=`Ciao! Ecco l'app di ${S.org.name}. Aprila da Safari (iPhone) o Chrome (Android), accedi con la tua email e poi tocca Condividi → "Aggiungi a Home": l'icona è già quella del centro.\n${centerLink()}`;window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank','noopener')}
+
 function go(v){S.view=v;S.open=null;render()}
 
 /* ---------- meteo (Open-Meteo, nessuna chiave) ---------- */
-const WX_LAT=37.6205,WX_LON=15.1925;
+const wxLat=()=>(S.org&&S.org.lat)||37.6205,wxLon=()=>(S.org&&S.org.lon)||15.1925;
 async function loadWx(){if(S.wxBusy||(S.wx&&Date.now()-S.wx.t<18e5))return;S.wxBusy=true;
-  try{const q=`latitude=${WX_LAT}&longitude=${WX_LON}&timezone=Europe%2FRome&forecast_days=4`;
+  try{const q=`latitude=${wxLat()}&longitude=${wxLon()}&timezone=Europe%2FRome&forecast_days=4`;
     const [a,m]=await Promise.all([fetch(`https://api.open-meteo.com/v1/forecast?${q}&wind_speed_unit=kn&daily=weather_code,temperature_2m_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant`).then(r=>r.json()),
       fetch(`https://marine-api.open-meteo.com/v1/marine?${q}&daily=wave_height_max,wave_period_max,wave_direction_dominant`).then(r=>r.json())]);
     if(!a.daily)throw 0;S.wx={t:Date.now(),a:a.daily,m:m.daily||null};S.wxErr=false}catch(e){S.wxErr=true}
@@ -615,7 +664,7 @@ function render(){
   if(S.stage==='boot'){r.innerHTML='';return}
   if(S.stage==='login'||S.stage==='code'){r.innerHTML=loginView();return}
   if(S.stage==='nostaff'){r.innerHTML=nostaffView();return}
-  const v={home:homeView,people:peopleView,out:outView,opp:oppView,sim:simView,cal:calView,types:typesView,map:mapView}[S.view]||homeView;
+  const v={home:homeView,people:peopleView,out:outView,opp:oppView,sim:simView,cal:calView,types:typesView,center:centerView,map:mapView}[S.view]||homeView;
   r.innerHTML=shell(v())
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter'){if($('#cd'))verify();else if($('#em'))sendCode()}if(e.key==='Escape')closeModal()});

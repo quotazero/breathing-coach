@@ -176,20 +176,23 @@ function demoData(){
 const ROSTER_DEMO=[{booking_id:'b1',user_id:'u1',name:'Michela R.',status:'booked',level_name:'Avanzato',n_certs:3},{booking_id:'b2',user_id:'u2',name:'Luca B.',status:'booked',level_name:'Intermedio',n_certs:2},{booking_id:'b3',user_id:'u3',name:'Sara M.',status:'booked',level_name:'Base',n_certs:1},{booking_id:'b4',user_id:'u4',name:'Giovanni P.',status:'booked',level_name:null,n_certs:0},{booking_id:'b5',user_id:'u7',name:'Elena T.',status:'waitlist',level_name:'Base',n_certs:1}];
 
 /* ---------- accesso ---------- */
-function brandIcon(url,cb){const im=new Image();im.onload=()=>{try{const mk=n=>{const c=document.createElement('canvas');c.width=c.height=n;const x=c.getContext('2d');x.fillStyle='#061A2B';x.fillRect(0,0,n,n);const w=n*.8,h=w*im.naturalHeight/im.naturalWidth,hh=Math.min(h,n*.8),ww=hh*im.naturalWidth/im.naturalHeight;x.drawImage(im,(n-ww)/2,(n-hh)/2,ww,hh);return c.toDataURL('image/png')};cb(mk(512),mk(192),mk(180))}catch(e){}};im.src=url}
+function brandIcon(url,cb){const im=new Image();im.crossOrigin='anonymous';im.onerror=()=>cb(null);im.onload=()=>{try{const mk=n=>{const c=document.createElement('canvas');c.width=c.height=n;const x=c.getContext('2d');x.fillStyle='#061A2B';x.fillRect(0,0,n,n);const w=n*.8,h=w*im.naturalHeight/im.naturalWidth,hh=Math.min(h,n*.8),ww=hh*im.naturalWidth/im.naturalHeight;x.drawImage(im,(n-ww)/2,(n-hh)/2,ww,hh);return c.toDataURL('image/png')};cb(mk(512),mk(192),mk(180))}catch(e){cb(null)}};im.src=url}
 function applyBrand(c){
-  if(!c)return;const name=c.name||'Centro';ls('cn.brand',{name,logo_url:c.logo_url||''});document.title=name;
+  if(!c)return;const name=c.name||'Centro';ls('cn.brand',{name,logo_url:c.logo_url||'',slug:c.slug||''});document.title=name;
   const t=document.querySelector('meta[name=apple-mobile-web-app-title]');if(t)t.content=name;
   if(!c.logo_url)return;
   brandIcon(c.logo_url,(i512,i192,i180)=>{
+    if(!i512)return;
     const set=(rel,href,sz)=>{document.querySelectorAll('link[rel="'+rel+'"]').forEach(l=>l.remove());const l=document.createElement('link');l.rel=rel;l.href=href;if(sz)l.sizes=sz;document.head.appendChild(l)};
     set('apple-touch-icon',i180,'180x180');set('icon',i192,'192x192');
-    try{const base=new URL('./',location.href).href;const m={name,short_name:name.slice(0,12),start_url:base+'centro.html',scope:base,display:'standalone',background_color:'#061A2B',theme_color:'#061A2B',lang:'it',icons:[{src:i192,sizes:'192x192',type:'image/png'},{src:i512,sizes:'512x512',type:'image/png'}]};
+    try{const base=new URL('./',location.href).href;const m={name,short_name:name.slice(0,12),start_url:base+'centro.html'+(c.slug?'?c='+encodeURIComponent(c.slug):''),scope:base,display:'standalone',background_color:'#061A2B',theme_color:'#061A2B',lang:'it',icons:[{src:i192,sizes:'192x192',type:'image/png'},{src:i512,sizes:'512x512',type:'image/png'}]};
       set('manifest',URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'})))}catch(e){}
   });
 }
 async function init(){
-  try{applyBrand(ls('cn.brand'))}catch(e){}
+  try{const sl=new URLSearchParams(location.search).get('c');let br=ls('cn.brand');
+    if(sl&&sb&&(!br||br.slug!==sl)){const r=await sb.rpc('center_brand',{p_slug:sl});if(r.data&&r.data.name){br={name:r.data.name,logo_url:r.data.logo_url,slug:r.data.slug};ls('cn.brand',br)}}
+    applyBrand(br)}catch(e){}
   if(!sb){S.err='Serve connessione per il primo accesso.';return render()}
   const {data}=await sb.auth.getSession();S.user=data.session?.user||null;
   if(S.user&&!S.user.is_anonymous)await loadCenters();
@@ -241,7 +244,7 @@ function loginView(){
   if(S.stage==='nostaff')return `<div class="top"><h1>Accesso non abilitato</h1></div><p>L'account ${esc(S.user?.email||'')} non è istruttore né amministratore di un centro. Chiedi all'amministratore di aggiungerti.</p><button class="btn ghost" onclick="logout()">Esci</button>`;
   const br=ls('cn.brand');
   return `<div style="padding-top:8vh;text-align:center">${br&&br.logo_url?`<img src="${esc(br.logo_url)}" alt="" style="height:90px;width:auto;max-width:80%;object-fit:contain;margin-bottom:10px">`:''}<h1 style="font-size:28px;margin:0 0 14px">${esc(br&&br.name||'Centro')}</h1></div><div>
-  <p>Gestisci attività, atleti e presenze del tuo centro.</p>
+  <p>Gestisci attività, atleti e presenze del tuo centro.</p>${br&&!matchMedia('(display-mode: standalone)').matches&&!navigator.standalone?'<p style="font-size:13px;border:1px solid var(--line);border-radius:12px;padding:10px 12px">Per avere l\'app con l\'icona del centro: tocca <b>Condividi</b> e poi <b>Aggiungi a Home</b>.</p>':''}
   ${S.stage==='code'?`<label class="f">Codice ricevuto per email (${esc(S.email)})</label><input id="cd" class="txt code" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••"><button class="btn" onclick="verify()">Entra</button>`:`<label class="f">La tua email</label><input id="em" class="txt" type="email" autocomplete="email" placeholder="nome@email.it"><button class="btn" onclick="sendCode()">Invia codice</button>`}
   <div class="err">${esc(S.err)}</div>
   <button class="btn ghost" onclick="startDemo()">Guarda un'anteprima con dati di prova</button></div>`;
@@ -415,7 +418,7 @@ const dl=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.to
 const personOf=uid=>S.people.find(p=>p.user_id===uid);
 const WX_LAT=37.6205,WX_LON=15.1925;
 async function loadWx(){if(S.wxBusy||(S.wx&&Date.now()-S.wx.t<18e5))return;S.wxBusy=true;
-  try{const q=`latitude=${WX_LAT}&longitude=${WX_LON}&timezone=Europe%2FRome&forecast_days=4`;
+  try{const q=`latitude=${S.org&&S.org.lat||WX_LAT}&longitude=${S.org&&S.org.lon||WX_LON}&timezone=Europe%2FRome&forecast_days=4`;
     const [a,m]=await Promise.all([fetch(`https://api.open-meteo.com/v1/forecast?${q}&wind_speed_unit=kn&daily=weather_code,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant`).then(r=>r.json()),
       fetch(`https://marine-api.open-meteo.com/v1/marine?${q}&daily=wave_height_max,wave_period_max`).then(r=>r.json())]);
     if(!a.daily)throw 0;S.wx={t:Date.now(),a:a.daily,m:m.daily||null}}catch(e){S.wxErr=true}
