@@ -232,7 +232,7 @@ function loginView(){
 }
 function nostaffView(){return `<div class="login"><h1>Accesso non abilitato</h1><p>Questo account non ha un ruolo di gestore o istruttore in un centro.</p><button class="btn ghost" onclick="logout()">Esci</button></div>`}
 
-const VIEWS=[['home','Panoramica'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['types','Attività'],['center','Il centro'],['meteo','Meteo'],['cal','Calendario'],['map','Mappa funzioni']];
+const VIEWS=[['home','Panoramica'],['cal','Calendario'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['types','Attività'],['meteo','Meteo'],['center','Il centro'],['map','Mappa funzioni']];
 function shell(inner){
   return `<div class="app"><aside class="side"><div class="brand"><img src="icons/blueworld-logo.png?v=2" alt="Blue World Freediving"><small>Dashboard</small></div>
   <nav class="nav">${VIEWS.filter(v=>isAdmin()||!['sim'].includes(v[0])).map(v=>`<button class="${S.view===v[0]?'sel':''}" onclick="go('${v[0]}')">${v[1]}</button>`).join('')}</nav>
