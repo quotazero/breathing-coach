@@ -167,6 +167,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
 .cd.sel .dr{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--accent)}
 .cd .st{position:absolute;top:-3px;right:calc(50% - 25px);color:var(--ph-inhale);font-size:11px;line-height:1}
 .cd .st svg{width:12px;height:12px;fill:currentColor}
+.cd{padding-bottom:7px}.ctd{width:8px;height:8px;border-radius:50%;border:1.5px solid var(--accent);box-sizing:border-box}.cd .ctd{position:absolute;bottom:-2px;left:50%;margin-left:-4px}.ctd.m{background:var(--accent)}
 .cd .bk{position:absolute;top:-3px;right:calc(50% - 25px);width:15px;height:15px;border-radius:50%;background:var(--accent);color:#06222B;font-size:10px;font-weight:800;line-height:15px;text-align:center}
 .note.bkd{border:1.5px solid var(--accent)}
 .tdy{display:block;width:100%;text-align:left;margin:12px 0 0;padding:12px 14px;border:1.5px solid var(--accent);border-radius:16px;background:var(--bg2);color:var(--ink);font:inherit;cursor:pointer}
@@ -485,6 +486,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <div class="calh"><button id="cal-prev" aria-label="prev">‹</button><b id="cal-month"></b><button id="cal-next" aria-label="next">›</button></div>
   <div class="calg" id="cal-grid"></div>
   <div class="legend"><span><i style="background:var(--ph-hold_full)"></i><span data-i18n="tab_breath"></span></span><span><i style="background:var(--ph-static)"></i><span data-i18n="tab_static"></span></span><span><i style="background:var(--water)"></i><span data-i18n="cal_leg_w"></span></span><span><i style="background:var(--ph-inhale)"></i><span data-i18n="cal_leg_pb"></span></span><span><span style="color:var(--ph-inhale)">★</span> <span data-i18n="cal_star"></span></span></div>
+  <p id="cal-ctleg" style="color:var(--ink2);font-size:12px;margin:6px 0 0"></p>
   <div id="cal-day" style="margin-top:8px"></div>
   <button class="btn ghost sm" id="b-cal-add" style="margin-top:10px"></button>
   <nav class="tabs" data-tabs></nav>
@@ -567,7 +569,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.5';
+const VERSION='0.9.6';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -2106,15 +2108,24 @@ $('b-tip').onclick=()=>{const b=$('tipbox');b.textContent=t('tip_box');b.style.d
 let calM=null,calSel=null;
 function pbDaySet(){const st=new Set();[...DISC.dry,...DISC.pool,...DISC.sea].forEach(c=>{let best=0;allEntries(c).forEach(e=>{if(e.v>best){best=e.v;st.add(dayKey(e.t))}})});return st}
 function openCal(){const d=new Date();calM=new Date(d.getFullYear(),d.getMonth(),1);calSel=dayKey(d);renderCal();renderTabs('s-cal');show('s-cal');track('calendar_open')}
+let calCt={},calCtKey='';
+async function loadCalCenter(){
+  if(isGuest()||!sb)return;const cs=lsJ('bc.centers.v1',[]);if(!cs.length)return;
+  const key=calM.getFullYear()+'-'+calM.getMonth();if(calCtKey===key&&calCt.k===key)return;
+  const f=new Date(calM.getFullYear(),calM.getMonth(),1),from=new Date(f);from.setDate(from.getDate()-7);const out=[];
+  await Promise.all(cs.map(async c=>{try{const r=await sb.rpc('list_activities',{p_org:c.org_id,p_from:from.toISOString(),p_days:46});(Array.isArray(r.data)?r.data:[]).forEach(a=>{if(a.status==='scheduled'||(a.status==='cancelled'&&a.my_status))out.push({...a,_c:c})})}catch(e){}}));
+  calCt={k:key,acts:out};calCtKey=key;if($('s-cal').classList.contains('on'))renderCal()}
+function calCtByDay(){const m={};((calCt&&calCt.acts)||[]).forEach(a=>{const k=dayKey(a.starts_at);(m[k]=m[k]||[]).push(a)});return m}
 function renderCal(){
-  const days=actsByDay(),stars=pbDaySet(),today=dayKey(new Date());
+  const days=actsByDay(),stars=pbDaySet(),today=dayKey(new Date()),cby=calCtByDay();
   $('cal-month').textContent=calM.toLocaleDateString(lang,{month:'long',year:'numeric'});
   const first=new Date(calM),off=(first.getDay()+6)%7,dim=new Date(calM.getFullYear(),calM.getMonth()+1,0).getDate();
   let h=T[lang].wd.map(x=>`<span class="wd">${x}</span>`).join('');
   for(let i=0;i<off;i++)h+='<span></span>';
   for(let d=1;d<=dim;d++){
     const dt=new Date(calM.getFullYear(),calM.getMonth(),d),k=dayKey(dt),ty=(days[k]||[]).map(x=>x.ty),fut=dt>new Date()&&k!==today;
-    h+=`<button class="cd${k===calSel?' sel':''}" data-k="${k}">${stars.has(k)?`<span class="st">${ICON.star}</span>`:''}${ringHTML(ty,d,fut?'fut':'')}</button>`;
+    const ca=(cby[k]||[]).filter(a=>a.status==='scheduled'),mine=ca.some(a=>a.my_status==='booked');
+    h+=`<button class="cd${k===calSel?' sel':''}" data-k="${k}">${mine?'<span class="bk">✓</span>':stars.has(k)?`<span class="st">${ICON.star}</span>`:''}${ringHTML(ty,d,fut?'fut':'')}${ca.length?`<span class="ctd${mine?' m':''}"></span>`:''}</button>`;
   }
   $('cal-grid').innerHTML=h;
   $('cal-grid').querySelectorAll('.cd').forEach(b=>b.onclick=()=>{calSel=b.dataset.k;renderCal()});
@@ -2126,6 +2137,12 @@ function renderCal(){
     else if(r.exerciseId==='pb'&&r.status==='completed')L.push([r,'pb',T[lang].cal_act_p(esc(T[lang]['D_'+a.discipline]||a.discipline),pbFmt(a.discipline,a.value))])});
   L.sort((x,y)=>new Date(x[0].startedAt)-new Date(y[0].startedAt));
   $('cal-day').innerHTML=L.length?L.map(([r,ty,txt])=>ty==='water'?`<div class="hist"><div class="ht"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${(OUT[(r.actualParams||{}).outcome]||[0,COL.pb])[1]}"></i>${txt}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button></div>`:`<div class="dayrow"><i style="background:${COL[ty]}"></i><span><b>${new Date(r.startedAt).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'})}</b> ${txt}</span></div>`).join(''):`<p>${t('cal_none')}</p>`;
+  const hasC=lsJ('bc.centers.v1',[]).length>0;$('cal-ctleg').innerHTML=hasC?`<span class="ctd" style="position:static;display:inline-block;vertical-align:middle"></span> ${L2('attività del centro','center activity')} · <span class="ctd m" style="position:static;display:inline-block;vertical-align:middle"></span><span style="display:inline-block;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#06222B;font-size:10px;font-weight:800;line-height:15px;text-align:center;vertical-align:middle;margin-left:3px">✓</span> ${L2('prenotata da te','booked by you')}`:'';
+  const cl=(cby[sel]||[]).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
+  if(cl.length){const tm=x=>new Date(x).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'});
+    $('cal-day').innerHTML+=`<h2 style="margin-top:14px">${L2('Dal tuo centro','From your center')}</h2>`+cl.map(a=>{const b=a.my_status==='booked'&&a.status==='scheduled',c=a.status==='cancelled';
+      return `<button class="note ctr${b?' bkd':''}" style="display:block;width:100%;text-align:left;margin-top:8px;${c?'opacity:.6':''}" onclick="openCenterAt('${a._c.org_id}','${dayKey(a.starts_at)}')"><b>${esc(a.title)}</b> · ${tm(a.starts_at)} ${c?`<span style="color:var(--danger)">${L2('Annullata','Cancelled')}</span>`:b?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:`<span style="color:var(--ink2)">${L2('Organizzata dal centro · tocca per prenotare','Organized by the center · tap to book')}</span>`}<br><span style="color:var(--ink2);font-size:13px">${esc(a._c.name)}${a.place?' · '+esc(a.place):''}</span></button>`}).join('')}
+  if(!renderCal._ld||renderCal._ld!==calM.getTime()){renderCal._ld=calM.getTime();loadCalCenter()}
   $('cal-day').querySelectorAll('.ed').forEach(b=>b.onclick=()=>{const r=lsJ(KEY.sess,[]).find(x=>x.id===b.dataset.id);if(r)openWaterAdd(r,null,'cal')});
   $('b-cal-add').textContent=t('cal_add');
 }
