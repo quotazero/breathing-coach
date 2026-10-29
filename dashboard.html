@@ -63,10 +63,10 @@ h1,h2,h3{margin:0;font-weight:600}
  .fit{display:flex;flex-direction:column;height:calc(100vh - 26px);gap:10px;min-height:0}
  .fit .top{margin:0}.fit .top p{display:none}.fit h1{font-size:22px}
  .fit .panel{margin:0;padding:10px 14px;border-radius:14px}.fit .panel h2{font-size:14px;margin-bottom:6px}
- .fit .r1{display:grid;grid-template-columns:1fr 330px;gap:10px;flex:0 0 auto}.fit .r1a{max-height:30vh;overflow:auto;border-radius:14px}
- .fit .kpis{grid-template-columns:1fr 1fr;gap:8px;margin:0}.fit .kpi{padding:8px 14px}.fit .kpi b{font-size:24px}
+ .fit .r1{display:grid;grid-template-columns:minmax(300px,1fr) 2.4fr;gap:10px;flex:0 0 auto;align-items:stretch}.fit .r1a{max-height:34vh;overflow:auto;border-radius:14px}.fit .r1a .panel,.fit .r1>.panel{height:100%;box-sizing:border-box}.fit .wxg{grid-template-columns:repeat(4,1fr)}.fit .wxflag{font-size:11px;padding:2px 6px}
+ .fit .kpis{grid-template-columns:repeat(4,1fr);gap:8px;margin:0;flex:0 0 auto}.fit .kpi{padding:6px 14px;display:flex;align-items:center;gap:10px}.fit .kpi b{font-size:22px}
  .fit .wx{padding:7px 10px;font-size:12px;gap:2px}.fit .wxi{font-size:18px}.fit .wxg{gap:8px}
- .fit .r3{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1 1 0;min-height:0}.fit .r3 .panel{overflow:auto;min-height:0}
+ .fit .r3{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:10px;flex:1 1 0;min-height:0}.fit .r3 .panel{overflow:auto;min-height:0}
  .fit .item small{font-size:11.5px}
  }
  @media (min-width:1000px) and (max-height:900px){.fit .wxnote,.fit .r3 .note,.fit .item small{display:none}}
@@ -370,17 +370,19 @@ function todoPanel(){const ad=isAdmin(),t0=addDays(0),t1=addDays(1);
   if(nOth.length)blocks.push(`<div class="note" style="margin:12px 0 2px"><b>Comunicazioni da fare</b></div>${nOth.map(nrow).join('')}`);
   blocks.push(`<div class="note" style="margin:12px 0 2px"><b>Oggi in programma</b></div>${todayAll.length?todayAll.map(a=>`<div class="item" ${ad?`style="cursor:pointer" onclick="actModal('${a.id}')"`:''}><b>${tm(a.starts_at)}–${tm(a.ends_at)} · ${esc(a.title)}</b> <span class="muted">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):' · <span style="color:var(--warn)">istruttore da assegnare</span>'} · ${a.booked}/${a.capacity}</span> ${stChip(a)}</div>`).join(''):'<div class="muted" style="font-size:14px">Nessuna attività oggi.</div>'}`);
   return `<div class="panel"><h2>Da fare oggi</h2>${blocks.join('')}</div>`}
+function upcomingList(){const l=S.acts.filter(a=>new Date(a.starts_at)>=new Date()&&a.status!=='cancelled').sort((x,y)=>new Date(x.starts_at)-new Date(y.starts_at)).slice(0,6);
+  if(!l.length)return '<div class="empty">Nessuna attività in programma.</div>';
+  return l.map(a=>{const d=new Date(a.starts_at);return `<div class="item" style="cursor:pointer" onclick="go('cal')"><b>${d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})}</b> · ${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})} ${esc(a.title)}<small>${esc(a.place||'')}</small></div>`}).join('')}
 function homeView(){
   const ath=S.people.filter(p=>p.role==='athlete').length,ins=nInstr();
   const rows=oppRows(),pool=rows.filter(r=>r.pool>0&&r.eligible.length+r.iv.length>0);
   const noCert=S.people.filter(p=>!S.certs.some(c=>c.person_id===p.id)).length;
   const up=S.acts.filter(a=>new Date(a.starts_at)>=new Date()&&a.status!=='cancelled').length;
   return `<div class="fit"><div class="top"><div><h1>Panoramica</h1><p>Stato del centro e opportunità di programmazione.</p></div></div>
-  <div class="r1"><div class="r1a">${todoPanel()}</div>
   <div class="kpis"><div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${ath}</b><span>Atleti in anagrafica</span></div><div class="kpi click" onclick="S.pfilter='instructor';go('people')"><b>${ins}</b><span>Istruttori</span></div>
-  <div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${S.certs.length}</b><span>Brevetti registrati</span></div><div class="kpi click" onclick="go('cal')"><b>${up}</b><span>Attività in programma</span></div></div></div>
-  ${wxCard()}
-  <div class="r3"><div class="panel"><h2>Bacino potenziale per corso</h2>
+  <div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${S.certs.length}</b><span>Brevetti registrati</span></div><div class="kpi click" onclick="go('cal')"><b>${up}</b><span>Attività in programma</span></div></div>
+  <div class="r1"><div class="r1a">${todoPanel()}</div>${wxCard()}</div>
+  <div class="r3"><div class="panel"><h2>Prossime attività</h2>${upcomingList()}</div><div class="panel"><h2>Bacino potenziale per corso</h2>
    ${pool.length?`<table><tbody>${pool.slice(0,5).map(r=>`<tr class="click" onclick="go('opp')"><td>${esc(r.c.name)}</td><td style="width:36%"><div class="bar"><i style="width:${Math.min(100,r.pool/Math.max(1,pool[0].pool)*100)}%"></i></div></td><td class="num">${r.pool}</td><td><span class="chip ${r.cl}">${r.st}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nessun dato sufficiente.</div>'}
    <p class="note" style="margin:10px 0 0">Persone con il livello precedente, non ancora al livello del corso. Idoneità da verificare sui requisiti reali.</p></div>
   <div class="panel"><h2>Da completare</h2>
