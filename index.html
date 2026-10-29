@@ -1408,6 +1408,7 @@ async function renderCenter(){
   B.innerHTML=`
     <h2 style="margin-top:14px">${L2('I miei centri','My centers')}</h2>
     ${cs.length?cs.map(c=>`<div class="note" style="margin-top:8px"><b>${esc(c.name)}</b><br><span style="color:var(--ink2);font-size:13px">${c.role==='athlete'?(c.level_name?L2('Livello','Level')+': '+esc(c.level_name):L2('Livello non ancora assegnato','Level not assigned yet')):L2('Istruttore / staff','Instructor / staff')}</span></div>`).join(''):`<p>${L2('Non sei ancora collegato a nessun centro.','You are not connected to any center yet.')}</p>`}
+    <div id="ct-acts"></div>
     <h2>${L2('Entra in un centro','Join a center')}</h2>
     <input class="txt" id="ct-code" autocapitalize="characters" autocomplete="off" placeholder="${L2('Codice del centro','Center code')}" style="text-transform:uppercase">
     <div class="err" id="ct-err"></div>
@@ -1420,7 +1421,46 @@ async function renderCenter(){
   $('ct-join').onclick=()=>{const c=parseJoin($('ct-code').value);if(!c){$('ct-err').textContent=L2('Codice non valido.','Invalid code.');return}joinCenter(c)};
   $('ct-scan').onclick=()=>QZ.scan(L2('Inquadra il QR del centro','Scan the center QR'),txt=>{const c=parseJoin(txt);if(!c){toast(L2('QR non riconosciuto','QR not recognized'));return}joinCenter(c)});
   $('ct-myqr').onclick=showMyQR;
+  loadCenterActs(cs);
 }
+async function loadCenterActs(cs){
+  const box=$('ct-acts');if(!box||!sb||!cs.length)return;
+  const loc=lang==='en'?'en-GB':'it-IT';
+  const fmt=x=>new Date(x).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  let html='';
+  try{
+    const nr=await sb.from('notifications').select('id,message,created_at,read_at').order('created_at',{ascending:false}).limit(6);
+    const ns=nr.data||[];
+    if(ns.length){
+      html+=`<h2>${L2('Avvisi dal centro','Messages from the center')}</h2>`+ns.map(n=>`<div class="note" style="margin-top:8px;${n.read_at?'opacity:.7':'border-left:3px solid var(--accent)'}">${esc(n.message)}<br><span style="color:var(--ink2);font-size:12px">${fmt(n.created_at)}</span></div>`).join('');
+      const unread=ns.filter(n=>!n.read_at).map(n=>n.id);
+      if(unread.length)sb.from('notifications').update({read_at:new Date().toISOString()}).in('id',unread).then(()=>{});
+    }
+  }catch(e){}
+  for(const c of cs.filter(c=>c.role==='athlete'||c.role)){
+    try{
+      const r=await sb.rpc('list_activities',{p_org:c.org_id,p_from:new Date().toISOString(),p_days:30});
+      const list=(Array.isArray(r.data)?r.data:[]).filter(a=>a.status==='scheduled'||(a.status==='cancelled'&&a.my_status));
+      html+=`<h2>${L2('Prossime attività','Upcoming activities')} · ${esc(c.name)}</h2>`;
+      if(!list.length){html+=`<p>${L2('Nessuna attività in programma.','No activities scheduled.')}</p>`;continue}
+      html+=list.map(a=>{
+        const cancelled=a.status==='cancelled',sea=a.location_type==='sea'&&a.kind!=='dry';
+        const left=Math.max(0,a.capacity-a.booked);
+        const chip=cancelled?`<span style="color:#F08A7A">${L2('Annullata','Cancelled')}</span>`:sea?(a.weather_status==='confirmed'?`<span style="color:var(--accent)">${L2('Confermata','Confirmed')}</span>`:`<span style="color:#F2C879">${L2('Meteo da confermare','Weather to be confirmed')}</span>`):'';
+        let act='';
+        if(!cancelled){
+          if(a.my_status==='booked')act=`<button class="btn ghost" style="padding:10px;font-size:15px" onclick="cancelBook('${a.id}')">${L2('Annulla prenotazione','Cancel booking')}</button>`;
+          else if(a.my_status==='waitlist')act=`<button class="btn ghost" style="padding:10px;font-size:15px" onclick="cancelBook('${a.id}')">${L2('In lista d’attesa · esci','On waitlist · leave')}</button>`;
+          else if(!a.allowed)act=`<p style="color:var(--ink2);font-size:13px;margin:8px 0 0">${L2('Livello non sufficiente per questa attività.','Your level is not enough for this activity.')}</p>`;
+          else act=`<button class="btn" style="padding:10px;font-size:15px" onclick="bookAct('${a.id}')">${left>0?L2('Prenota','Book'):L2('Lista d’attesa','Join waitlist')}</button>`;
+        }
+        return `<div class="note" style="margin-top:8px;${cancelled?'opacity:.6':''}"><b>${esc(a.title)}</b> ${chip}<br><span style="color:var(--ink2);font-size:13px">${fmt(a.starts_at)}${a.place?' · '+esc(a.place):''}${a.instructor_name?' · '+esc(a.instructor_name):''}<br>${cancelled?esc(a.cancel_reason||''):(left>0?L2('Posti liberi: ','Spots left: ')+left:L2('Completa','Full'))}${a.my_status==='booked'?' · <b>'+L2('Sei iscritto','You are booked')+'</b>':''}</span>${act}</div>`}).join('');
+    }catch(e){}
+  }
+  box.innerHTML=html;
+}
+async function bookAct(id){try{const {data,error}=await sb.rpc('book_activity',{p_act:id});if(error)throw error;toast(data==='waitlist'?L2('Sei in lista d’attesa','You are on the waitlist'):L2('Prenotato','Booked'))}catch(e){const m=String(e.message||'');toast(/level too low/i.test(m)?L2('Livello non sufficiente','Level too low'):/already started/i.test(m)?L2('Attività già iniziata','Already started'):L2('Non riuscito. Riprova.','Failed. Try again.'))}renderCenter()}
+async function cancelBook(id){try{const {error}=await sb.rpc('cancel_booking',{p_act:id});if(error)throw error;toast(L2('Prenotazione annullata','Booking cancelled'))}catch(e){toast(L2('Non riuscito. Riprova.','Failed. Try again.'))}renderCenter()}
 async function joinCenter(code){
   localStorage.removeItem('bc.join.pending');
   if(isGuest()){localStorage.setItem('bc.join.pending',code);renderTabs('s-center');show('s-center');renderCenter();return}
