@@ -41,6 +41,16 @@ h1,h2,h3{margin:0;font-weight:600}
 .btn.sm{padding:6px 12px;font-size:13px;border-radius:10px}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
 .kpi{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.cal{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:18px}
+.calh{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.calh h2{margin:0;font-size:18px;text-transform:capitalize}
+.calh button{background:var(--bg3);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:6px 12px;cursor:pointer;font:inherit}
+.cg{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.cg .dw{font-size:12px;color:var(--ink2);text-align:center;padding:2px 0}
+.cd{min-height:92px;border:1px solid var(--line);border-radius:12px;padding:6px;background:rgba(6,26,43,.45);font-size:12px;overflow:hidden}
+.cd.adm{cursor:pointer}.cd.adm:hover{border-color:var(--accent)}.cd.out{opacity:.35}.cd.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.cd b{display:block;font-size:13px;margin-bottom:4px;font-weight:600}.cd.today b{color:var(--accent)}
+.ev{display:block;background:rgba(143,224,210,.16);color:var(--accent);border-radius:7px;padding:2px 6px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.ev.c{background:rgba(196,166,234,.18);color:var(--violet)}.ev.d{background:rgba(127,180,240,.18);color:var(--blue)}.ev.x{text-decoration:line-through;opacity:.5}
+@media(max-width:700px){.cd{min-height:60px;padding:4px}.ev{font-size:10px;padding:1px 3px}}
 .kpi.click{cursor:pointer;transition:border-color .15s,transform .15s}.kpi.click:hover{border-color:var(--acc,#8fe3d3);transform:translateY(-2px)}.kpi b{display:block;font-size:32px;font-weight:600;line-height:1.1}
 .kpi span{color:var(--ink2);font-size:13px}
 .panel{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:18px}
@@ -329,7 +339,7 @@ function markContacted(id){const p=S.people.find(x=>x.id===id);if(p&&p.outreach=
 
 async function reloadActs(){const r=await sb.rpc('list_activities',{p_org:S.org.org_id,p_from:new Date(Date.now()-30*864e5).toISOString(),p_days:150});S.acts=Array.isArray(r.data)?r.data:[];render()}
 function dl(d){const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,16)}
-function actModal(id){const a=id?S.acts.find(x=>x.id===id):null;const st=a?new Date(a.starts_at):new Date(Date.now()+864e5);if(!a){st.setHours(9,0,0,0)}const en=a?new Date(a.ends_at):new Date(st.getTime()+2*36e5);
+function actModal(id,day){const a=id?S.acts.find(x=>x.id===id):null;const st=a?new Date(a.starts_at):(day?new Date(day+'T09:00'):new Date(Date.now()+864e5));if(!a){st.setHours(9,0,0,0)}const en=a?new Date(a.ends_at):new Date(st.getTime()+2*36e5);
   modal(`<h3>${a?'Modifica attività':'Nuova attività'}</h3><label>Tipo</label><select id="ak"><option value="training"${a&&a.kind==='training'?' selected':''}>Allenamento</option><option value="course"${a&&a.kind==='course'?' selected':''}>Corso</option><option value="dry"${a&&a.kind==='dry'?' selected':''}>Apnea a secco</option></select>
   <label>Titolo</label><input id="at" value="${esc(a?a.title:'')}" placeholder="es. Profondità da barca"><label>Luogo</label><input id="ap" value="${esc(a?a.place||'':'')}" placeholder="es. Aci Trezza">
   <label>Ambiente</label><select id="al"><option value="sea"${a&&a.location_type==='sea'?' selected':''}>Mare</option><option value="pool"${a&&a.location_type==='pool'?' selected':''}>Piscina</option><option value="dry"${a&&a.location_type==='dry'?' selected':''}>A secco</option></select>
@@ -342,11 +352,24 @@ async function saveActD(id){const t=$('#at').value.trim();if(!t)return toast('Sc
   const {error}=await q;if(error)return toast('Non riuscito: '+error.message);closeModal();await reloadActs();toast('Attività salvata')}
 async function cancelActD(id){const why=prompt("Motivo dell'annullamento (visibile ai partecipanti):",'Condizioni meteo');if(why===null)return;
   const {error}=await sb.from('activities').update({status:'cancelled',cancel_reason:why}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);closeModal();await reloadActs();toast('Attività annullata')}
+function calGrid(){
+  const m=S.calM||(S.calM=new Date(new Date().getFullYear(),new Date().getMonth(),1));
+  const first=new Date(m.getFullYear(),m.getMonth(),1),off=(first.getDay()+6)%7,start=new Date(m.getFullYear(),m.getMonth(),1-off);
+  const ad=isAdmin(),today=new Date().toDateString(),by={};
+  S.acts.forEach(a=>{const k=new Date(a.starts_at).toDateString();(by[k]=by[k]||[]).push(a)});
+  let cells='';for(let i=0;i<42;i++){const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);if(i>=35&&d.getMonth()!==m.getMonth())break;
+    const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const ev=(by[d.toDateString()]||[]).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at)).map(a=>`<span class="ev ${a.kind==='course'?'c':a.kind==='dry'?'d':''} ${a.status==='cancelled'?'x':''}" onclick="event.stopPropagation();${ad?`actModal('${a.id}')`:''}" title="${esc(a.title)}">${new Date(a.starts_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})} ${esc(a.title)}</span>`).join('');
+    cells+=`<div class="cd ${d.getMonth()!==m.getMonth()?'out':''} ${d.toDateString()===today?'today':''} ${ad?'adm':''}" ${ad?`onclick="actModal(null,'${iso}')"`:''}><b>${d.getDate()}</b>${ev}</div>`}
+  return `<div class="cal"><div class="calh"><button onclick="S.calM=new Date(S.calM.getFullYear(),S.calM.getMonth()-1,1);render()">←</button><h2>${m.toLocaleDateString('it-IT',{month:'long',year:'numeric'})}</h2><span><button onclick="S.calM=null;render()">Oggi</button> <button onclick="S.calM=new Date(S.calM.getFullYear(),S.calM.getMonth()+1,1);render()">→</button></span></div>
+  <div class="cg">${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(x=>`<div class="dw">${x}</div>`).join('')}${cells}</div>
+  <div class="note" style="margin-top:10px">${ad?'Clicca un giorno per aggiungere un\'attività. ':''}<span style="color:var(--accent)">■</span> allenamento <span style="color:var(--violet)">■</span> corso <span style="color:var(--blue)">■</span> apnea a secco</div></div>`}
 function calView(){
   const days={};S.acts.filter(a=>a.status!=='cancelled').forEach(a=>{const k=new Date(a.starts_at).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});(days[k]=days[k]||[]).push(a)});
   const keys=Object.keys(days);
   return `<div class="top"><div><h1>Calendario</h1><p>Attività del centro: sono le stesse che gli atleti vedono nell'app.</p></div>${isAdmin()?`<button class="btn" onclick="actModal()">Nuova attività</button>`:''}</div>
-  ${keys.length?keys.map(k=>`<div class="panel"><h2 style="text-transform:capitalize">${esc(k)}</h2><table><tbody>${days[k].map(a=>`<tr ${isAdmin()?`style="cursor:pointer" onclick="actModal('${a.id}')"`:''}><td style="width:110px">${new Date(a.starts_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}–${new Date(a.ends_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</td><td><b>${esc(a.title)}</b><div class="muted" style="font-size:13px">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):''}</div></td><td class="num">${a.booked}/${a.capacity}${a.waitlist?` · +${a.waitlist} in attesa`:''}</td></tr>`).join('')}</tbody></table></div>`).join(''):`<div class="panel"><div class="empty">Nessuna attività in calendario.<br><span style="font-size:13px">Con \"Nuova attività\" compaiono qui e nell'app degli atleti.</span></div></div>`}`
+  ${calGrid()}${keys.length?`<h2 style="margin:6px 0 10px;font-size:16px">Elenco attività</h2>`:''}
+  ${keys.length?keys.map(k=>`<div class="panel"><h2 style="text-transform:capitalize">${esc(k)}</h2><table><tbody>${days[k].map(a=>`<tr ${isAdmin()?`style="cursor:pointer" onclick="actModal('${a.id}')"`:''}><td style="width:110px">${new Date(a.starts_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}–${new Date(a.ends_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</td><td><b>${esc(a.title)}</b><div class="muted" style="font-size:13px">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):''}</div></td><td class="num">${a.booked}/${a.capacity}${a.waitlist?` · +${a.waitlist} in attesa`:''}</td></tr>`).join('')}</tbody></table></div>`).join(''):`<div class="note">Nessuna attività in calendario: quelle che crei compaiono qui e nell'app degli atleti.</div>`}`
 }
 
 function mapView(){
