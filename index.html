@@ -1405,23 +1405,58 @@ async function renderCenter(){
   }
   B.innerHTML='<p>…</p>';
   const cs=await myCenters();
-  B.innerHTML=`
-    <h2 style="margin-top:14px">${L2('I miei centri','My centers')}</h2>
-    ${cs.length?cs.map(c=>`<div class="note" style="margin-top:8px"><b>${esc(c.name)}</b><br><span style="color:var(--ink2);font-size:13px">${c.role==='athlete'?(c.level_name?L2('Livello','Level')+': '+esc(c.level_name):L2('Livello non ancora assegnato','Level not assigned yet')):L2('Istruttore / staff','Instructor / staff')}</span></div>`).join(''):`<p>${L2('Non sei ancora collegato a nessun centro.','You are not connected to any center yet.')}</p>`}
-    <div id="ct-acts"></div>
-    <h2>${L2('Entra in un centro','Join a center')}</h2>
-    <input class="txt" id="ct-code" autocapitalize="characters" autocomplete="off" placeholder="${L2('Codice del centro','Center code')}" style="text-transform:uppercase">
-    <div class="err" id="ct-err"></div>
-    <button class="btn" id="ct-join">${L2('Entra','Join')}</button>
-    <button class="btn ghost" id="ct-scan">${L2('Scansiona il QR del centro','Scan the center QR')}</button>
+  if(ctOrg&&!cs.some(c=>c.org_id===ctOrg))ctOrg=null;
+  if(ctOrg){renderCenterDetail(cs.find(c=>c.org_id===ctOrg));return}
+  renderHub(cs);
+}
+let ctOrg=null,ctAdd=false;
+function openCenterHome(){const cs=lsJ('bc.centers.v1',[]);ctAdd=false;ctOrg=cs.length===1?cs[0].org_id:null;renderTabs('s-center');show('s-center');renderCenter()}
+function ctLogo(c,h){return c.logo_url?`<img src="${esc(c.logo_url)}" alt="" style="height:${h}px;width:auto;max-width:${h*2.2}px;object-fit:contain" onerror="this.style.display='none'">`:`<div style="width:${h}px;height:${h}px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(h/2.6)}px;color:var(--accent)">${esc((c.name||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase())}</div>`}
+async function renderHub(cs){
+  $('ct-h').textContent=L2('I miei centri','My centers');$('b-ct-back').textContent=t('back');$('b-ct-back').onclick=()=>goTab('s-welcome');
+  const B=$('ct-body');if(!cs.length)ctAdd=true;
+  B.innerHTML=`${cs.map(c=>`<button class="note" data-org="${c.org_id}" style="display:flex;align-items:center;gap:14px;width:100%;text-align:left;margin-top:12px;padding:14px;cursor:pointer"><span style="flex:0 0 96px;display:flex;justify-content:center">${ctLogo(c,48)}</span><span style="flex:1;min-width:0"><b>${esc(c.name)}</b><br><span style="color:var(--ink2);font-size:13px">${c.role==='athlete'?(c.level_name?L2('Livello','Level')+': '+esc(c.level_name):L2('Livello non ancora assegnato','Level not assigned yet')):L2('Istruttore / staff','Instructor / staff')}</span><br><span class="sm-${c.org_id}" style="color:var(--accent);font-size:13px"></span></span><span style="color:var(--ink2);font-size:22px">›</span></button>`).join('')}
+    ${cs.length?'':`<p class="lead" style="margin-top:14px">${L2('Non sei ancora collegato a nessun centro.','You are not connected to any center yet.')}</p>`}
+    <button class="btn ghost" id="ct-addbtn" style="margin-top:16px;${ctAdd&&cs.length?'display:none':''}">＋ ${L2('Aggiungi centro','Add a center')}</button>
+    <div id="ct-addbox" style="display:${ctAdd?'block':'none'}">
+      <h2>${L2('Aggiungi un centro','Add a center')}</h2>
+      <input class="txt" id="ct-code" autocapitalize="characters" autocomplete="off" placeholder="${L2('Codice del centro','Center code')}" style="text-transform:uppercase">
+      <div class="err" id="ct-err"></div>
+      <button class="btn" id="ct-join">${L2('Entra con il codice','Join with the code')}</button>
+      <button class="btn ghost" id="ct-scan">${L2('Scansiona il QR del centro','Scan the center QR')}</button>
+      ${cs.length?`<button class="link" id="ct-addx" style="margin-top:10px">${L2('Annulla','Cancel')}</button>`:''}
+    </div>
     <h2>${L2('Il mio QR','My QR')}</h2>
     <p>${L2('Mostralo al centro: lo inquadra e ti aggiunge subito, senza scrivere nulla.','Show it to the center: they scan it and add you right away.')}</p>
     <div id="ct-qr" style="text-align:center"></div>
     <button class="btn ghost" id="ct-myqr">${L2('Mostra il mio QR','Show my QR')}</button>`;
+  B.querySelectorAll('[data-org]').forEach(el=>el.onclick=()=>{ctOrg=el.dataset.org;renderCenter()});
+  const ab=$('ct-addbtn');if(ab)ab.onclick=()=>{ctAdd=true;renderCenter()};
+  const ax=$('ct-addx');if(ax)ax.onclick=()=>{ctAdd=false;renderCenter()};
   $('ct-join').onclick=()=>{const c=parseJoin($('ct-code').value);if(!c){$('ct-err').textContent=L2('Codice non valido.','Invalid code.');return}joinCenter(c)};
   $('ct-scan').onclick=()=>QZ.scan(L2('Inquadra il QR del centro','Scan the center QR'),txt=>{const c=parseJoin(txt);if(!c){toast(L2('QR non riconosciuto','QR not recognized'));return}joinCenter(c)});
   $('ct-myqr').onclick=showMyQR;
-  loadCenterActs(cs);
+  centerSummaries(cs);
+}
+async function centerSummaries(cs){
+  try{
+    const u=await sb.from('notifications').select('org_id').is('read_at',null);
+    const un={};(u.data||[]).forEach(n=>un[n.org_id]=(un[n.org_id]||0)+1);
+    await Promise.all(cs.map(async c=>{
+      let n=0;try{const r=await sb.rpc('list_activities',{p_org:c.org_id,p_from:new Date().toISOString(),p_days:7});n=(Array.isArray(r.data)?r.data:[]).filter(a=>a.status==='scheduled').length}catch(e){}
+      const el=document.querySelector('.sm-'+c.org_id);if(!el)return;
+      const parts=[];if(n)parts.push(n+' '+(n===1?L2('attività questa settimana','activity this week'):L2('attività questa settimana','activities this week')));if(un[c.org_id])parts.push(un[c.org_id]+' '+(un[c.org_id]===1?L2('avviso','message'):L2('avvisi','messages')));
+      el.textContent=parts.join(' · ');
+    }));
+  }catch(e){}
+}
+function renderCenterDetail(c){
+  $('ct-h').textContent=c.name;$('b-ct-back').textContent=L2('Centri','Centers');$('b-ct-back').onclick=()=>{ctOrg=null;ctAdd=false;renderCenter()};
+  const B=$('ct-body');
+  B.innerHTML=`<div style="display:flex;justify-content:center;margin:14px 0 6px">${ctLogo(c,84)}</div>
+    <p style="text-align:center;color:var(--ink2);font-size:14px;margin:0 0 6px">${c.role==='athlete'?(c.level_name?L2('Livello','Level')+': <b>'+esc(c.level_name)+'</b>':L2('Livello non ancora assegnato','Level not assigned yet')):L2('Istruttore / staff','Instructor / staff')}</p>
+    <div id="ct-acts"><p>…</p></div>`;
+  loadCenterActs([c]);
 }
 async function loadCenterActs(cs){
   const box=$('ct-acts');if(!box||!sb||!cs.length)return;
@@ -1429,7 +1464,7 @@ async function loadCenterActs(cs){
   const fmt=x=>new Date(x).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   let html='';
   try{
-    const nr=await sb.from('notifications').select('id,message,created_at,read_at').order('created_at',{ascending:false}).limit(6);
+    const nr=await sb.from('notifications').select('id,message,created_at,read_at').in('org_id',cs.map(c=>c.org_id)).order('created_at',{ascending:false}).limit(6);
     const ns=nr.data||[];
     if(ns.length){
       html+=`<h2>${L2('Avvisi dal centro','Messages from the center')}</h2>`+ns.map(n=>`<div class="note" style="margin-top:8px;${n.read_at?'opacity:.7':'border-left:3px solid var(--accent)'}">${esc(n.message)}<br><span style="color:var(--ink2);font-size:12px">${fmt(n.created_at)}</span></div>`).join('');
@@ -1441,7 +1476,7 @@ async function loadCenterActs(cs){
     try{
       const r=await sb.rpc('list_activities',{p_org:c.org_id,p_from:new Date().toISOString(),p_days:30});
       const list=(Array.isArray(r.data)?r.data:[]).filter(a=>a.status==='scheduled'||(a.status==='cancelled'&&a.my_status));
-      html+=`<h2>${L2('Prossime attività','Upcoming activities')} · ${esc(c.name)}</h2>`;
+      html+=`<h2>${L2('Prossime attività','Upcoming activities')}${cs.length>1?' · '+esc(c.name):''}</h2>`;
       if(!list.length){html+=`<p>${L2('Nessuna attività in programma.','No activities scheduled.')}</p>`;continue}
       html+=list.map(a=>{
         const cancelled=a.status==='cancelled',sea=a.location_type==='sea'&&a.kind!=='dry';
@@ -1472,7 +1507,7 @@ async function joinCenter(code){
     const m=/not valid/i.test(e.message||'')?L2('Codice non valido.','Invalid code.'):L2('Non riuscito. Controlla la connessione e riprova.','Failed. Check your connection and try again.');
     if($('ct-err'))$('ct-err').textContent=m;else toast(m);return;
   }
-  renderTabs('s-center');show('s-center');renderCenter();renderCenterCard();
+  ctOrg=null;ctAdd=false;renderTabs('s-center');show('s-center');renderCenter();renderCenterCard();
 }
 let qrTimer=null;
 async function showMyQR(){
@@ -1492,7 +1527,7 @@ async function renderCenterCard(){
   $('wl-center-sub').textContent=localStorage.getItem('bc.join.pending')?L2('Codice in attesa: crea l’account','Code pending: create your account'):cs.length?cs.map(c=>c.name).join(', '):L2('Collegati al tuo diving center','Connect to your dive center');
   if(!isGuest()&&sb)myCenters().then(c=>{if(c.length)$('wl-center-sub').textContent=c.map(x=>x.name).join(', ')});
 }
-$('wl-center').onclick=()=>{renderTabs('s-center');show('s-center');renderCenter()};
+$('wl-center').onclick=openCenterHome;
 $('b-ct-back').onclick=()=>goTab('s-welcome');
 try{const j=new URLSearchParams(location.search).get('join');if(j){localStorage.setItem('bc.join.pending',j.toUpperCase().replace(/[^A-Z0-9-]/g,''));history.replaceState(null,'',location.pathname)}}catch(e){}
 async function handlePendingJoin(){const c=localStorage.getItem('bc.join.pending');if(!c)return;if(isGuest()){renderTabs('s-center');show('s-center');renderCenter();return}await joinCenter(c)}
