@@ -49,6 +49,7 @@ h1,h2,h3{margin:0;font-weight:600}
 .cd.adm{cursor:pointer}.cd.adm:hover{border-color:var(--accent)}.cd.out{opacity:.35}.cd.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .cd b{display:block;font-size:13px;margin-bottom:4px;font-weight:600}.cd.today b{color:var(--accent)}
 .ev{display:block;background:rgba(143,224,210,.16);color:var(--accent);border-radius:7px;padding:2px 6px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.ev.wt{background:transparent;border:1px dashed var(--warn);color:var(--warn)}
 .ev.c{background:rgba(196,166,234,.18);color:var(--violet)}.ev.d{background:rgba(127,180,240,.18);color:var(--blue)}.ev.x{text-decoration:line-through;opacity:.5}
 @media(max-width:700px){.cd{min-height:60px;padding:4px}.ev{font-size:10px;padding:1px 3px}}
 .wxg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.wx{background:rgba(6,26,43,.45);border:1px solid var(--line);border-radius:14px;padding:12px;font-size:13px;display:flex;flex-direction:column;gap:5px}.wxi{font-size:22px}.wxi span{font-size:18px;font-weight:600}
@@ -250,12 +251,31 @@ function wxCard(){if(!S.wx){loadWx();return `<div class="panel"><h2>Meteo e mare
     <span class="chip ${sc}" style="align-self:flex-start">${sl}</span></div>`}).join('');
   return `<div class="panel"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Meteo e mare · Stazzo</h2><span class="muted" style="font-size:12px">Open-Meteo · onde massime del giorno</span></div><div class="wxg">${days}</div>
   <div class="note" style="margin-top:10px">Previsione indicativa da modello: il mare sotto costa può essere diverso. Prima di un\'uscita controlla il bollettino ufficiale e decidi sul posto.</div></div>`}
+function todoPanel(){const ad=isAdmin(),t0=addDays(0),t1=addDays(1);
+  const live=S.acts.filter(a=>a.status==='scheduled');const sea=live.filter(isSea),todayAll=live.filter(a=>dkey(a.starts_at)===t0).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
+  const tm=x=>new Date(x).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+  const need=sea.filter(a=>a.weather_status!=='confirmed');
+  const urgent=need.filter(a=>dkey(a.starts_at)===t0),tomorrow=need.filter(a=>dkey(a.starts_at)===t1),later=need.filter(a=>{const k=dkey(a.starts_at);return k>t1&&k<=addDays(3)});
+  const nUrg=S.notices.filter(n=>{const a=S.acts.find(x=>x.id===n.activity_id);return a&&dkey(a.starts_at)<=t1}),nOth=S.notices.filter(n=>!nUrg.includes(n));
+  const row=(a,lab)=>{const w=wxFor(dkey(a.starts_at));return `<div class="item"><div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><span><b>${tm(a.starts_at)} · ${esc(a.title)}</b> <span class="muted">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):''} · ${a.booked} iscritti${a.waitlist?' (+'+a.waitlist+' in attesa)':''}</span> ${stChip(a)}</span>
+    ${ad?`<span style="white-space:nowrap"><button class="btn" style="padding:4px 12px" onclick="confirmAct('${a.id}')">Conferma</button> <button class="btn ghost" style="padding:4px 12px;color:#ff8a8a" onclick="cancelActD('${a.id}')">Annulla</button> <button class="btn ghost" style="padding:4px 12px" onclick="actModal('${a.id}')">Apri</button></span>`:''}</div>
+    <div class="note" style="margin-top:4px">${lab?`<b>${lab}</b> · `:''}${wxLine(w)}</div></div>`};
+  const day=a=>new Date(a.starts_at).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  const nrow=n=>{const a=S.acts.find(x=>x.id===n.activity_id);return a?`<div class="item" style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><span><b>${n.kind==='cancelled'?'Avvisa gli iscritti: annullata':'Avvisa gli iscritti: spostata'}</b> · ${esc(a.title)} · ${esc(day(a))} · ${a.booked} iscritti</span>${ad?`<button class="btn" style="padding:4px 12px" onclick="noticeModal('${n.id}')">Prepara avviso</button>`:''}</div>`:''};
+  const blocks=[];
+  if(urgent.length||nUrg.length)blocks.push(`<div style="border:1px solid rgba(240,138,122,.6);background:rgba(240,138,122,.08);border-radius:14px;padding:8px 14px;margin-bottom:12px"><div style="color:var(--danger);font-weight:600;margin:4px 0">URGENTE</div>${urgent.map(a=>row(a,'Doveva essere decisa ieri: conferma o annulla ora')).join('')}${nUrg.map(nrow).join('')}</div>`);
+  if(tomorrow.length)blocks.push(`<div class="note" style="margin:8px 0 2px"><b>Da decidere oggi: domani</b></div>${tomorrow.map(a=>row(a,'Conferma in base alla previsione')).join('')}`);
+  if(later.length)blocks.push(`<div class="note" style="margin:12px 0 2px"><b>Nei prossimi giorni (osservazione meteo)</b></div>${later.map(a=>row(a,day(a))).join('')}`);
+  if(nOth.length)blocks.push(`<div class="note" style="margin:12px 0 2px"><b>Comunicazioni da fare</b></div>${nOth.map(nrow).join('')}`);
+  blocks.push(`<div class="note" style="margin:12px 0 2px"><b>Oggi in programma</b></div>${todayAll.length?todayAll.map(a=>`<div class="item" ${ad?`style="cursor:pointer" onclick="actModal('${a.id}')"`:''}><b>${tm(a.starts_at)}–${tm(a.ends_at)} · ${esc(a.title)}</b> <span class="muted">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):' · <span style="color:var(--warn)">istruttore da assegnare</span>'} · ${a.booked}/${a.capacity}</span> ${stChip(a)}</div>`).join(''):'<div class="muted" style="font-size:14px">Nessuna attività oggi.</div>'}`);
+  return `<div class="panel"><h2>Da fare oggi</h2>${blocks.join('')}</div>`}
 function homeView(){
   const ath=S.people.filter(p=>p.role==='athlete').length,ins=nInstr();
   const rows=oppRows(),pool=rows.filter(r=>r.pool>0&&r.eligible.length+r.iv.length>0);
   const noCert=S.people.filter(p=>!S.certs.some(c=>c.person_id===p.id)).length;
   const up=S.acts.filter(a=>new Date(a.starts_at)>=new Date()&&a.status!=='cancelled').length;
   return `<div class="top"><div><h1>Panoramica</h1><p>Stato del centro e opportunità di programmazione.</p></div></div>
+  ${todoPanel()}
   <div class="kpis"><div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${ath}</b><span>Atleti in anagrafica</span></div><div class="kpi click" onclick="S.pfilter='instructor';go('people')"><b>${ins}</b><span>Istruttori</span></div>
   <div class="kpi click" onclick="S.pfilter='athlete';go('people')"><b>${S.certs.length}</b><span>Brevetti registrati</span></div><div class="kpi click" onclick="go('cal')"><b>${up}</b><span>Attività in programma</span></div></div>
   ${wxCard()}
@@ -265,8 +285,7 @@ function homeView(){
   <div class="panel"><h2>Da completare</h2>
    <div class="item" style="cursor:pointer" onclick="go('out')">${S.people.filter(p=>p.outreach==='to_contact').length} persone del gruppo WhatsApp non hanno ancora risposto<small>Apri "Da sollecitare" per contattarle una per una. Servono i brevetti per calcolare chi è idoneo al livello successivo.</small></div>
    <div class="item">Prezzi e costi dei corsi${S.courses.some(c=>c.price_cents)?' (parziali)':' non ancora inseriti'}<small>Servono per il simulatore di margine.</small></div>
-   <div class="item">Interesse dichiarato per i corsi<small>Arriverà dall'app: l'atleta indica a quali corsi è interessato anche senza una data.</small></div>
-   <div class="item">Disponibilità degli istruttori<small>Da definire: oggi si assegna l'istruttore alla singola attività.</small></div></div></div>`
+   <div class="item">Interesse dichiarato per i corsi<small>Arriverà dall'app: l'atleta indica a quali corsi è interessato anche senza una data.</small></div></div></div>`
 }
 
 function actFor(p){if(!p.instr_active)return '';const ids=new Set(S.links.filter(l=>l.person_id===p.id).map(l=>l.type_id));return S.types.filter(t=>ids.has(t.id)).map(t=>t.name).sort().join(', ')}
@@ -368,11 +387,20 @@ async function setOut(id,v){
 const cycleOut=id=>setOut(id,OUT_NEXT[S.people.find(x=>x.id===id).outreach]);
 function markContacted(id){const p=S.people.find(x=>x.id===id);if(p&&p.outreach==='to_contact')setTimeout(()=>setOut(id,'contacted'),600)}
 
-async function reloadActs(){const r=await sb.rpc('list_activities',{p_org:S.org.org_id,p_from:new Date(Date.now()-30*864e5).toISOString(),p_days:150});S.acts=Array.isArray(r.data)?r.data:[];render()}
+async function reloadActs(){const r=await sb.rpc('list_activities',{p_org:S.org.org_id,p_from:new Date(Date.now()-30*864e5).toISOString(),p_days:150});S.acts=Array.isArray(r.data)?r.data:[];await loadNotices();render()}
+const isSea=a=>a.location_type==='sea'&&a.kind!=='dry';
+const dkey=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return dkey(d)};
+const fmtDT=x=>new Date(x).toLocaleString('it-IT',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+function wxFor(key){if(!S.wx)return null;const a=S.wx.a,m=S.wx.m,i=a.time.indexOf(key);if(i<0)return null;return {rain:a.precipitation_sum[i],prob:a.precipitation_probability_max[i],wind:Math.round(a.wind_speed_10m_max[i]),gust:Math.round(a.wind_gusts_10m_max[i]),wdir:a.wind_direction_10m_dominant[i],wave:m?m.wave_height_max[i]:null,per:m?m.wave_period_max[i]:null,code:a.weather_code[i]}}
+function wxRisk(w){if(!w)return '';const wv=w.wave||0;return(wv>=1.5||w.wind>=20||w.rain>=10)?'d':(wv>=1||w.wind>=15||w.rain>=3)?'w':'a'}
+function wxLine(w){if(!w)return '<span class="muted">Previsione non ancora disponibile (copre oggi e 3 giorni).</span>';const sl=seaState(w.wave);return `${WXI(w.code)} 🌧 <b>${w.rain}</b> mm (${w.prob??'—'}%) · 💨 <b>${w.wind}</b> nodi ${dirL(w.wdir)}, raff. ${w.gust} · 🌊 <b>${w.wave==null?'—':w.wave.toFixed(1)}</b> m <span class="chip ${sl[1]}" style="margin:0 0 0 4px">${sl[0]}</span>`}
+function stChip(a){if(a.status==='cancelled')return '<span class="chip d">Annullata</span>';if(a.status==='completed')return '<span class="chip">Svolta</span>';if(isSea(a))return a.weather_status==='confirmed'?'<span class="chip a">Confermata</span>':'<span class="chip w">Osservazione meteo</span>';return ''}
 function dl(d){const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,16)}
-S.types=[];S.links=[];S.opts={place:[],title:[],kind:[],env:[],specialty:[]};
+S.types=[];S.links=[];S.notices=[];S.opts={place:[],title:[],kind:[],env:[],specialty:[]};
 async function loadOpts(){const r=await sb.from('activity_options').select('id,field,label,base').eq('org_id',S.org.org_id).order('label');S.opts={place:[],title:[],kind:[],env:[],specialty:[]};(r.data||[]).forEach(x=>S.opts[x.field]&&S.opts[x.field].push(x));
-  const [t,l]=await Promise.all([sb.from('activity_types').select('*').eq('org_id',S.org.org_id).order('name'),sb.from('instructor_activity_types').select('*')]);S.types=t.data||[];S.links=l.data||[]}
+  const [t,l]=await Promise.all([sb.from('activity_types').select('*').eq('org_id',S.org.org_id).order('name'),sb.from('instructor_activity_types').select('*')]);S.types=t.data||[];S.links=l.data||[];await loadNotices()}
+async function loadNotices(){const r=await sb.from('activity_notices').select('*').eq('org_id',S.org.org_id).is('done_at',null).order('created_at');S.notices=r.data||[]}
 const BASES={kind:[['training','Allenamento'],['course','Corso'],['dry','Apnea a secco']],env:[['sea','Mare'],['pool','Piscina'],['dry','A secco']]};
 function baseLabel(f,b){return(BASES[f].find(x=>x[0]===b)||[0,b])[1]}
 function instrOptions(sel,typeId){return S.people.filter(p=>p.role==='instructor'&&((p.instr_active&&S.links.some(l=>l.person_id===p.id&&l.type_id===typeId))||p.id===sel)).map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${esc(p.full_name)}${p.instr_active?'':' (non attivo)'}</option>`).join('')}
@@ -396,7 +424,8 @@ async function optDel(oid,f,id){const o=S.opts[f].find(x=>x.id===oid);if(!confir
   const {error}=await sb.from('activity_options').delete().eq('id',oid);if(error)return toast('Non riuscito: '+error.message);const cur=$('#'+id).value;await loadOpts();$('#'+id).innerHTML=optSel(f,cur===o.label?'':cur);optList(f,id)}
 function typeFor(a){if(!a)return S.types[0];return S.types.find(t=>t.id===a.type_id)||S.types.find(t=>t.name===a.title)||S.types.find(t=>t.kind===a.kind&&t.env===a.location_type)||S.types[0]}
 function typePick(){const t=S.types.find(x=>x.id===$('#aty').value);if(!t)return;const prev=S.types.find(x=>x.id===S._prevT);const ti=$('#at');if(!ti.value||(prev&&ti.value===prev.name))ti.value=t.name;S._prevT=t.id;
-  $('#ac').value=t.capacity;const st=new Date($('#as').value);if(!isNaN(st))$('#ae2').value=dl(new Date(st.getTime()+t.duration_min*6e4));refreshInstr()}
+  $('#ac').value=t.capacity;const st=new Date($('#as').value);if(!isNaN(st))$('#ae2').value=dl(new Date(st.getTime()+t.duration_min*6e4));updWx();refreshInstr()}
+function updWx(){const t=S.types.find(x=>x.id===$('#aty').value);const box=$('#awbox');if(!t||!box)return;const sea=isSea({location_type:t.env,kind:t.kind});box.style.display=sea?'block':'none';const st=new Date($('#as').value);const l=$('#wxl');if(sea&&l&&!isNaN(st)){if(!S.wx)loadWx();l.innerHTML=wxLine(wxFor(dkey(st)))}}
 function actModal(id,day){const a=id?S.acts.find(x=>x.id===id):null;
   if(!S.types.length){modal(`<h3>Nuova attività</h3><p class="note">Prima crea almeno un tipo di attività.</p><div class="row" style="margin-top:14px"><button class="btn" onclick="typesModal()">Tipi di attività</button><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`);return}
   const ty=typeFor(a);S._prevT=ty.id;
@@ -406,10 +435,11 @@ function actModal(id,day){const a=id?S.acts.find(x=>x.id===id):null;
   <label>Tipo di attività</label><div class="row" style="flex-wrap:nowrap;gap:8px"><select id="aty" onchange="typePick()">${S.types.map(t=>`<option value="${t.id}"${t.id===ty.id?' selected':''}>${esc(t.name)}</option>`).join('')}</select><button class="btn ghost" type="button" style="padding:0 14px" title="Gestisci i tipi di attività" onclick="typesModal()">✎</button></div>
   <label>Titolo</label><input id="at" value="${esc(a?a.title:ty.name)}">
   ${optField('place','ap','Luogo',a?a.place||'':'')}
-  <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-width:0"><label>Inizio</label><input id="as" type="datetime-local" value="${dl(st)}" onchange="${a?'':'typePick()'}"></div><div style="flex:1;min-width:0"><label>Fine</label><input id="ae2" type="datetime-local" value="${dl(en)}"></div></div>
+  <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-width:0"><label>Inizio</label><input id="as" type="datetime-local" value="${dl(st)}" onchange="${a?'updWx()':'typePick()'}"></div><div style="flex:1;min-width:0"><label>Fine</label><input id="ae2" type="datetime-local" value="${dl(en)}"></div></div>
+  <div id="awbox" style="display:${isSea({location_type:ty.env,kind:ty.kind})?'block':'none'}"><label>Stato (attività in mare)</label><select id="aw"><option value="watch"${!a||a.weather_status!=='confirmed'?' selected':''}>Osservazione meteo</option><option value="confirmed"${a&&a.weather_status==='confirmed'?' selected':''}>Confermata</option></select><div id="wxl" class="note" style="margin-top:6px"></div></div>
   <label>Istruttore <span class="muted">(si può assegnare anche dopo)</span></label><select id="ai"><option value="">— Da assegnare —</option>${instrOptions(a?a.instructor_person_id:'',ty.id)}</select><div id="ai_h" class="note" style="margin-top:4px"></div>
   <label>Posti</label><select id="ac">${seats.map(n=>`<option${n===(a?a.capacity:ty.capacity)?' selected':''}>${n}</option>`).join('')}</select>
-  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveActD('${id||''}')">Salva</button><button class="btn ghost" onclick="closeModal()">Annulla</button>${a?`<button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="cancelActD('${id}')">Annulla attività</button>`:''}</div>`);refreshInstr()}
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveActD('${id||''}')">Salva</button><button class="btn ghost" onclick="closeModal()">Annulla</button>${a?`<button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="cancelActD('${id}')">Annulla attività</button>`:''}</div>`);refreshInstr();updWx()}
 function instrOf(t){return S.people.filter(p=>p.role==='instructor'&&S.links.some(l=>l.person_id===p.id&&l.type_id===t.id))}
 const TSORT={name:t=>t.name.toLowerCase(),kind:t=>kindLab(t.kind),env:t=>envLab(t.env),cap:t=>t.capacity,dur:t=>t.duration_min,ins:t=>-instrOf(t).filter(p=>p.instr_active).length};
 function tth(k,l){const on=S.tsort&&S.tsort.k===k;return `<th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="S.tsort=S.tsort&&S.tsort.k==='${k}'?{k:'${k}',d:-S.tsort.d}:{k:'${k}',d:1};render()">${l} <span style="opacity:${on?1:.3}">${on?(S.tsort.d===1?'▲':'▼'):'↕'}</span></th>`}
@@ -437,11 +467,29 @@ async function delType(id){const t=S.types.find(x=>x.id===id);const used=S.acts.
   const {error}=await sb.from('activity_types').delete().eq('id',id);if(error)return toast('Non riuscito: '+error.message);
   S.types=S.types.filter(x=>x.id!==id);S.links=S.links.filter(l=>l.type_id!==id);S.view==='types'?(closeModal(),render()):typesModal();toast('Attività eliminata')}
 async function saveActD(id){const ty=S.types.find(x=>x.id===$('#aty').value);if(!ty)return toast('Scegli il tipo di attività');const t=$('#at').value.trim();if(!t)return toast('Scrivi un titolo');const s=new Date($('#as').value),e=new Date($('#ae2').value);if(isNaN(s)||isNaN(e)||e<=s)return toast('Controlla data e orari');
-  const rec={type_id:ty.id,kind:ty.kind,location_type:ty.env,title:t,place:($('#ap').value==='__new'?'':$('#ap').value.trim()),starts_at:s.toISOString(),ends_at:e.toISOString(),capacity:+$('#ac').value||1,instructor_person_id:$('#ai').value||null};
+  const rec={type_id:ty.id,kind:ty.kind,location_type:ty.env,title:t,place:($('#ap').value==='__new'?'':$('#ap').value.trim()),starts_at:s.toISOString(),ends_at:e.toISOString(),capacity:+$('#ac').value||1,instructor_person_id:$('#ai').value||null,weather_status:isSea({location_type:ty.env,kind:ty.kind})?$('#aw').value:null};
+  const old=id?S.acts.find(x=>x.id===id):null;
+  const moved=old&&old.status==='scheduled'&&(old.booked>0||old.waitlist>0)&&(new Date(old.starts_at).getTime()!==s.getTime()||(old.place||'')!==rec.place);
   const q=id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert({...rec,org_id:S.org.org_id,min_rank:0});
-  const {error}=await q;if(error)return toast('Non riuscito: '+error.message);closeModal();await reloadActs();toast('Attività salvata')}
+  const {error}=await q;if(error)return toast('Non riuscito: '+error.message);if(moved)await sb.from('activity_notices').insert({org_id:S.org.org_id,activity_id:id,kind:'moved',detail:'Prima: '+fmtDT(old.starts_at)+(old.place?' – '+old.place:'')});
+  closeModal();await reloadActs();toast('Attività salvata'+(moved?': ricordati di avvisare gli iscritti':''))}
 async function cancelActD(id){const why=prompt("Motivo dell'annullamento (visibile ai partecipanti):",'Condizioni meteo');if(why===null)return;
-  const {error}=await sb.from('activities').update({status:'cancelled',cancel_reason:why}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);closeModal();await reloadActs();toast('Attività annullata')}
+  const act=S.acts.find(x=>x.id===id);
+  const {error}=await sb.from('activities').update({status:'cancelled',cancel_reason:why}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);
+  const has=act&&(act.booked>0||act.waitlist>0);
+  if(has)await sb.from('activity_notices').insert({org_id:S.org.org_id,activity_id:id,kind:'cancelled',detail:why});
+  closeModal();await reloadActs();toast('Attività annullata'+(has?': ricordati di avvisare gli iscritti':''))}
+async function confirmAct(id){const {error}=await sb.from('activities').update({weather_status:'confirmed'}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);const a=S.acts.find(x=>x.id===id);if(a)a.weather_status='confirmed';render();toast('Attività confermata')}
+async function noticeModal(nid){const n=S.notices.find(x=>x.id===nid),a=n&&S.acts.find(x=>x.id===n.activity_id);if(!n||!a)return toast('Attività non trovata');
+  const r=await sb.rpc('activity_roster',{p_act:a.id});const ro=(r.data||[]).filter(x=>x.status!=='cancelled');
+  const when=fmtDT(a.starts_at);
+  const txt=n.kind==='cancelled'?`Ciao, purtroppo l'attività "${a.title}" di ${when} è stata annullata (${n.detail||'condizioni meteo'}). Ti ricontatteremo per riprogrammarla. — Blue World Freediving`
+    :`Ciao, l'attività "${a.title}" è stata spostata: ora ${when}${a.place?' – '+a.place:''}. Se non riesci a partecipare scrivici. — Blue World Freediving`;
+  modal(`<h3>${n.kind==='cancelled'?'Attività annullata':'Attività spostata'}: da comunicare</h3><p class="note" style="margin:4px 0 10px">${esc(a.title)} · ${esc(fmtDT(a.starts_at))}${n.kind==='moved'&&n.detail?' · '+esc(n.detail):''}<br>L'app ha già inviato la notifica interna a chi la usa. Qui ricordi il messaggio diretto (WhatsApp o telefono).</p>
+  <label>Iscritti da avvisare (${ro.length})</label><div class="panel" style="padding:6px 12px;margin:6px 0">${ro.length?ro.map(x=>`<div class="item" style="padding:5px 0">${esc(x.name)} <span class="muted" style="font-size:12px">${x.status==='waitlist'?'in lista d\'attesa':'iscritto'}</span></div>`).join(''):'<div class="muted" style="font-size:13px">Nessun iscritto.</div>'}</div>
+  <label>Messaggio proposto</label><textarea id="nmsg" rows="5" style="width:100%">${esc(txt)}</textarea>
+  <div class="row" style="margin-top:14px"><button class="btn ghost" onclick="navigator.clipboard.writeText($('#nmsg').value).then(()=>toast('Messaggio copiato'))">Copia messaggio</button><button class="btn" onclick="noticeDone('${nid}')">Segna come comunicato</button><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`)}
+async function noticeDone(nid){const {error}=await sb.from('activity_notices').update({done_at:new Date().toISOString()}).eq('id',nid);if(error)return toast('Non riuscito: '+error.message);S.notices=S.notices.filter(x=>x.id!==nid);closeModal();render();toast('Segnato come comunicato')}
 function calGrid(){
   const m=S.calM||(S.calM=new Date(new Date().getFullYear(),new Date().getMonth(),1));
   const first=new Date(m.getFullYear(),m.getMonth(),1),off=(first.getDay()+6)%7,start=new Date(m.getFullYear(),m.getMonth(),1-off);
@@ -449,16 +497,19 @@ function calGrid(){
   S.acts.forEach(a=>{const k=new Date(a.starts_at).toDateString();(by[k]=by[k]||[]).push(a)});
   let cells='';for(let i=0;i<42;i++){const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);if(i>=35&&d.getMonth()!==m.getMonth())break;
     const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-    const ev=(by[d.toDateString()]||[]).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at)).map(a=>`<span class="ev ${a.kind==='course'?'c':a.kind==='dry'?'d':''} ${a.status==='cancelled'?'x':''}" onclick="event.stopPropagation();${ad?`actModal('${a.id}')`:`dayModal('${iso}')`}" title="${esc(a.title)}">${new Date(a.starts_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})} ${esc(a.title)}${a.instructor_name?' · '+esc(String(a.instructor_name).split(' ')[0]):''}</span>`).join('');
-    cells+=`<div class="cd adm ${d.getMonth()!==m.getMonth()?'out':''} ${d.toDateString()===today?'today':''}" onclick="dayModal('${iso}')"><b>${d.getDate()}</b>${ev}</div>`}
+    const ev=(by[d.toDateString()]||[]).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at)).map(a=>`<span class="ev ${a.kind==='course'?'c':a.kind==='dry'?'d':''} ${a.status==='cancelled'?'x':''} ${isSea(a)&&a.status==='scheduled'&&a.weather_status!=='confirmed'?'wt':''}" onclick="event.stopPropagation();${ad?`actModal('${a.id}')`:`dayModal('${iso}')`}" title="${esc(a.title)}">${new Date(a.starts_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})} ${esc(a.title)}${a.instructor_name?' · '+esc(String(a.instructor_name).split(' ')[0]):''}</span>`).join('');
+    const seaDay=(by[d.toDateString()]||[]).some(a=>isSea(a)&&a.status!=='cancelled');const wf=seaDay?wxFor(dkey(d)):null;
+    const wxm=wf?`<span style="display:block;font-size:11px;margin-top:2px" class="chip ${wxRisk(wf)}" title="Previsione mare e vento">🌊 ${wf.wave==null?'—':wf.wave.toFixed(1)} m · 💨 ${wf.wind}</span>`:'';
+    cells+=`<div class="cd adm ${d.getMonth()!==m.getMonth()?'out':''} ${d.toDateString()===today?'today':''}" onclick="dayModal('${iso}')"><b>${d.getDate()}</b>${ev}${wxm}</div>`}
   return `<div class="cal"><div class="calh"><button onclick="S.calM=new Date(S.calM.getFullYear(),S.calM.getMonth()-1,1);render()">←</button><h2>${m.toLocaleDateString('it-IT',{month:'long',year:'numeric'})}</h2><span><button onclick="S.calM=null;render()">Oggi</button> <button onclick="S.calM=new Date(S.calM.getFullYear(),S.calM.getMonth()+1,1);render()">→</button></span></div>
   <div class="cg">${['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(x=>`<div class="dw">${x}</div>`).join('')}${cells}</div>
   <div class="note" style="margin-top:10px">Clicca un giorno per vedere tutto il giorno, una riga per aprire l\'attività. <span style="color:var(--accent)">■</span> allenamento <span style="color:var(--violet)">■</span> corso <span style="color:var(--blue)">■</span> apnea a secco</div></div>`}
 function dayModal(iso){const d=new Date(iso+'T00:00');const list=S.acts.filter(a=>new Date(a.starts_at).toDateString()===d.toDateString()).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));const tm=x=>new Date(x).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
   modal(`<h3 style="text-transform:capitalize">${esc(d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}))}</h3>
-  ${list.length?list.map(a=>`<div class="item" style="cursor:${isAdmin()?'pointer':'default'};${a.status==='cancelled'?'opacity:.5;text-decoration:line-through;':''}" ${isAdmin()?`onclick="actModal('${a.id}')"`:''}><div style="display:flex;justify-content:space-between;gap:12px"><b>${tm(a.starts_at)}–${tm(a.ends_at)} · ${esc(a.title)}</b><span class="muted">${a.booked}/${a.capacity}${a.waitlist?` · +${a.waitlist} in attesa`:''}</span></div><div class="muted" style="font-size:13px">${esc(a.place||'Luogo da definire')} · ${a.instructor_name?esc(a.instructor_name):'<span style="color:var(--warn)">istruttore da assegnare</span>'}</div></div>`).join(''):'<div class="muted" style="font-size:14px;margin:6px 0">Nessuna attività in questo giorno.</div>'}
+  ${list.some(a=>isSea(a)&&a.status!=='cancelled')?`<div class="note" style="margin:2px 0 8px">Previsione a Stazzo: ${wxLine(wxFor(iso))}</div>`:''}
+  ${list.length?list.map(a=>`<div class="item" style="cursor:${isAdmin()?'pointer':'default'};${a.status==='cancelled'?'opacity:.5;text-decoration:line-through;':''}" ${isAdmin()?`onclick="actModal('${a.id}')"`:''}><div style="display:flex;justify-content:space-between;gap:12px"><b>${tm(a.starts_at)}–${tm(a.ends_at)} · ${esc(a.title)}</b><span class="muted">${a.booked}/${a.capacity}${a.waitlist?` · +${a.waitlist} in attesa`:''}</span></div><div class="muted" style="font-size:13px">${esc(a.place||'Luogo da definire')} · ${a.instructor_name?esc(a.instructor_name):'<span style="color:var(--warn)">istruttore da assegnare</span>'} ${stChip(a)}</div></div>`).join(''):'<div class="muted" style="font-size:14px;margin:6px 0">Nessuna attività in questo giorno.</div>'}
   <div class="row" style="margin-top:16px">${isAdmin()?`<button class="btn" onclick="actModal(null,'${iso}')">Nuova attività</button>`:''}<button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`)}
-function calView(){
+function calView(){if(!S.wx)loadWx();
   const days={};S.acts.filter(a=>a.status!=='cancelled').forEach(a=>{const k=new Date(a.starts_at).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});(days[k]=days[k]||[]).push(a)});
   const keys=Object.keys(days);
   return `<div class="top"><div><h1>Calendario</h1><p>Attività del centro: sono le stesse che gli atleti vedono nell'app.</p></div>${isAdmin()?`<div class="row"><button class="btn ghost" onclick="typesModal()">Tipi di attività</button><button class="btn" onclick="actModal()">Nuova attività</button></div>`:''}</div>
