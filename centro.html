@@ -251,7 +251,7 @@ function loginView(){
   <p>Gestisci attività, atleti e presenze del tuo centro.</p>${br&&!matchMedia('(display-mode: standalone)').matches&&!navigator.standalone?'<p style="font-size:13px;border:1px solid var(--line);border-radius:12px;padding:10px 12px">Per avere l\'app con l\'icona del centro: tocca <b>Condividi</b> e poi <b>Aggiungi a Home</b>.</p>':''}
   ${S.stage==='code'?`<label class="f">Codice ricevuto per email (${esc(S.email)})</label><input id="cd" class="txt code" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••"><button class="btn" onclick="verify()">Entra</button>`:`<label class="f">La tua email</label><input id="em" class="txt" type="email" autocomplete="email" placeholder="nome@email.it"><button class="btn" onclick="sendCode()">Invia codice</button>`}
   <div class="err">${esc(S.err)}</div>
-  <button class="btn ghost" onclick="startDemo()">Guarda un'anteprima con dati di prova</button></div>`;
+</div>`;
 }
 function startDemo(){S.demo=true;demoData();S.stage='app';S.tab='home';render()}
 function actCard(a,showDay){
