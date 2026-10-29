@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Dashboard Centro · Quota Zero</title>
+<link rel="icon" href="icons/icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#061A2B;--bg2:#0B2A40;--bg3:#103750;--ink:#EAF4F7;--ink2:#8FB1C2;--line:rgba(234,244,247,.14);
+  --accent:#8FE0D2;--danger:#F08A7A;--warn:#F2C879;--blue:#7FB4F0;--violet:#C4A6EA;
+  --font:'Sora',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0}
+h1,h2,h3{margin:0;font-weight:600}
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+.side{background:var(--bg2);border-right:1px solid var(--line);padding:22px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.brand{font-weight:700;font-size:17px;letter-spacing:.2px;padding:4px 10px 2px}
+.brand small{display:block;font-weight:400;color:var(--ink2);font-size:12px;margin-top:3px}
+.nav{margin-top:22px;display:flex;flex-direction:column;gap:3px}
+.nav button{text-align:left;padding:11px 12px;border-radius:12px;color:var(--ink2);font-weight:500}
+.nav button:hover{background:rgba(255,255,255,.05)}
+.nav button.sel{background:rgba(143,224,210,.14);color:var(--accent)}
+.sidefoot{margin-top:auto;font-size:12px;color:var(--ink2);padding:8px 10px;display:flex;flex-direction:column;gap:8px}
+.sidefoot button{color:var(--ink2);text-align:left;text-decoration:underline;font-size:12px}
+.main{padding:28px 34px 60px;max-width:1280px}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.top h1{font-size:26px}.top p{margin:4px 0 0;color:var(--ink2)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.btn{background:var(--accent);color:#04131D;border-radius:12px;padding:10px 16px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.sm{padding:6px 12px;font-size:13px;border-radius:10px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.kpi b{display:block;font-size:32px;font-weight:600;line-height:1.1}
+.kpi span{color:var(--ink2);font-size:13px}
+.panel{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:18px}
+.panel h2{font-size:16px;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.note{color:var(--ink2);font-size:13px;line-height:1.5}
+.banner{border:1px dashed rgba(242,200,121,.5);color:var(--warn);background:rgba(242,200,121,.07);border-radius:12px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-weight:500;font-size:12px;color:var(--ink2);padding:8px 10px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.4px}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.click{cursor:pointer}tr.click:hover td{background:rgba(255,255,255,.035)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;padding:3px 10px;border-radius:20px;border:1px solid var(--line);font-size:12px;color:var(--ink2);margin:2px 4px 2px 0;white-space:nowrap}
+.chip.a{color:var(--accent);border-color:rgba(143,224,210,.45)}
+.chip.w{color:var(--warn);border-color:rgba(242,200,121,.5)}
+.chip.b{color:var(--blue);border-color:rgba(127,180,240,.5)}
+.chip.d{color:var(--danger);border-color:rgba(240,138,122,.5)}
+.chip.v{color:var(--violet);border-color:rgba(196,166,234,.5)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{padding:8px 16px;color:var(--ink2)}.seg button.sel{background:var(--accent);color:#04131D;font-weight:600}
+.bar{height:8px;border-radius:6px;background:var(--bg);overflow:hidden;min-width:90px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.muted{color:var(--ink2)}
+.empty{padding:26px;text-align:center;color:var(--ink2)}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.col{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:16px 18px}
+.col h3{font-size:15px;margin-bottom:4px}
+.col .sub{color:var(--ink2);font-size:12px;margin-bottom:12px}
+.col.f{border-top:3px solid var(--accent)}.col.l{border-top:3px solid var(--warn)}.col.x{border-top:3px solid var(--danger)}
+.item{padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.item small{display:block;color:var(--ink2);font-size:12px;margin-top:2px}
+.login{max-width:380px;margin:12vh auto;background:var(--bg2);border:1px solid var(--line);border-radius:22px;padding:30px 26px}
+.login h1{font-size:22px;margin-bottom:6px}.login p{color:var(--ink2);margin:0 0 18px}
+.login .err{color:var(--danger);font-size:13px;min-height:18px;margin-top:8px}
+.login label{display:block;font-size:12px;color:var(--ink2);margin:12px 0 6px}
+.login .btn{width:100%;margin-top:16px;padding:13px}
+.mdl{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+.mdl .box{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:22px;width:100%;max-width:460px;max-height:90vh;overflow:auto}
+.mdl label{display:block;font-size:12px;color:var(--ink2);margin:12px 0 6px}
+.sim{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.sim .f{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.res{display:flex;flex-direction:column;gap:2px}
+.res div{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)}
+.res .tot{font-size:20px;font-weight:600;border-bottom:0;padding-top:14px}
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line);padding:10px 18px;border-radius:14px;opacity:0;transition:.2s;pointer-events:none;z-index:70}
+#toast.on{opacity:1}
+@media(max-width:1000px){
+  .app{grid-template-columns:1fr}.side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center}
+  .nav{margin-top:0;flex-direction:row;flex-wrap:wrap}.sidefoot{margin-top:0}
+  .main{padding:20px 16px 60px}.kpis{grid-template-columns:1fr 1fr}.grid2,.cols3,.sim{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="toast"></div>
+<script>
+const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co',SUPA_KEY='sb_publishable_9YiJUA45r62HfT5KTidEdw_N0QICtoC';
+const sb=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.sessionStorage}}):null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const S={stage:'boot',view:'home',err:'',email:'',org:null,role:null,people:[],certs:[],courses:[],interests:[],acts:[],hide:false,pfilter:'athlete',q:'',open:null};
+const SOURCE_NOTE='Brevetti dichiarati nel sondaggio WhatsApp del 27/10/2026';
+const LADDERS=[['wave1','wave2','wave3'],['aida1','aida2','aida3','aida4'],['aa_open','aa_adv','aa_deep']];
+const STAT_NEXT={interested:'contacted',contacted:'booked',booked:'purchased',purchased:'interested'};
+const STAT_LAB={interested:'Interessato',contacted:'Contattato',booked:'Prenotato',purchased:'Acquistato'};
+const STAT_CLS={interested:'',contacted:'b',booked:'a',purchased:'v'};
+const isAdmin=()=>S.role==='admin';
+
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2400)}
+function nm(p){const n=p.full_name||'';if(!S.hide)return n;const w=n.split(' ');return w.length>1?w[0]+' '+w.slice(1).map(x=>x[0]||'').join('')+'.':n}
+function certRank(c){const l=((c.level_name||'')+' '+(c.didactic||'')).toLowerCase();
+  if(/course director/.test(l))return 95;if(/trainer/.test(l))return 90;if(/master instructor/.test(l))return 80;
+  if(/assistant|aiuto/.test(l))return 55;if(/instructor|istruttore/.test(l))return 70;
+  if(/master/.test(l))return 45;if(/deep/.test(l))return 40;if(/advanced|avanzato/.test(l))return 30;if(/open/.test(l))return 15;
+  if(/safety/.test(l))return 12;const m=l.match(/(\d)/);if(m)return 10*+m[1];if(/intermedi/.test(l))return 20;return 10}
+function topCert(pid){const cs=S.certs.filter(c=>c.person_id===pid);if(!cs.length)return null;return cs.sort((a,b)=>certRank(b)-certRank(a))[0]}
+function certLabel(c){if(!c)return '';const a=c.agency||'',l=c.level_name||'';return esc(l.toLowerCase().startsWith(a.toLowerCase())?l:(a+' '+l).trim())}
+const euro=c=>c==null?'—':new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(c/100);
+const eur0=v=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v);
+
+/* ---------- accesso ---------- */
+async function init(){
+  if(!sb){S.stage='login';S.err='Serve connessione per accedere.';return render()}
+  const {data}=await sb.auth.getSession();
+  if(data.session?.user&&!data.session.user.is_anonymous){await loadCenter()}else S.stage='login';
+  render();
+}
+async function sendCode(){
+  const email=$('#em').value.trim();if(!email)return;S.email=email;S.err='';
+  const {error}=await sb.auth.signInWithOtp({email,options:{shouldCreateUser:true}});
+  if(error)S.err=error.message.includes('not allowed')||error.message.includes('Signups')?'Questo indirizzo non risulta abilitato.':error.message;else S.stage='code';
+  render()
+}
+async function verify(){
+  const token=$('#cd').value.trim();S.err='';
+  const {error}=await sb.auth.verifyOtp({email:S.email,token,type:'email'});
+  if(error){S.err='Codice non valido o scaduto.';return render()}
+  await loadCenter();render()
+}
+async function logout(){await sb.auth.signOut();Object.assign(S,{stage:'login',people:[],certs:[],courses:[],interests:[],acts:[],org:null});render()}
+async function loadCenter(){
+  const {data}=await sb.rpc('my_centers');
+  const cs=(data||[]).filter(c=>c.status!=='left'&&['admin','instructor'].includes(c.role));
+  if(!cs.length){S.stage='nostaff';return}
+  S.org=cs[0];S.role=cs[0].role;S.stage='app';await loadData()
+}
+async function loadData(){
+  const o=S.org.org_id;
+  const [p,c,k,i,a]=await Promise.all([
+    sb.from('people').select('*').eq('org_id',o).order('full_name'),
+    sb.from('person_certs').select('*'),
+    sb.from('course_types').select('*').eq('org_id',o).order('sort'),
+    sb.from('interests').select('*').eq('org_id',o),
+    sb.rpc('list_activities',{p_org:o,p_from:new Date(Date.now()-30*864e5).toISOString(),p_days:150})
+  ]);
+  S.people=p.data||[];S.certs=c.data||[];S.courses=k.data||[];S.interests=(i.data||[]).filter(x=>!String(x.source||'').startsWith('SCARTATO'));S.acts=Array.isArray(a.data)?a.data:[];
+  S.loadErr=[p,c,i].find(r=>r.error)?.error?.message||''
+}
+
+/* ---------- calcoli ---------- */
+function oppRows(){
+  const byId=Object.fromEntries(S.courses.map(c=>[c.id,c]));
+  const held={};S.certs.forEach(c=>{const k=byId[c.course_type_id]?.code;if(k)(held[c.person_id]=held[c.person_id]||new Set()).add(k)});
+  return S.courses.map(c=>{
+    const iv=S.interests.filter(x=>x.course_type_id===c.id);
+    const holders=S.people.filter(p=>held[p.id]?.has(c.code));
+    let eligible=[];const lad=LADDERS.find(l=>l.includes(c.code));
+    if(lad){const idx=lad.indexOf(c.code);if(idx>0){
+      eligible=S.people.filter(p=>{const h=held[p.id];if(!h||h.has(c.code))return false;
+        let top=-1;lad.forEach((k,i)=>{if(h.has(k))top=i});return top===idx-1&&!lad.slice(idx+1).some(k=>h.has(k))})}}
+    const n=iv.length,booked=iv.filter(x=>x.status==='booked'||x.status==='purchased').length,contacted=iv.filter(x=>x.status!=='interested').length;
+    const minP=c.min_participants||4,pool=new Set([...eligible.map(p=>p.id),...iv.map(x=>x.person_id)]).size;
+    let st='—',cl='';
+    if(pool>=minP){st='Bacino sufficiente';cl='a'}else if(pool>=Math.ceil(minP/2)){st='Da promuovere';cl='w'}else if(pool>=1){st='Bacino ridotto';cl=''}
+    return {c,iv,holders,eligible,n,booked,contacted,minP,pool,st,cl}
+  }).sort((a,b)=>b.pool-a.pool||b.holders.length-a.holders.length||a.c.sort-b.c.sort)
+}
+const nInstr=()=>S.people.filter(p=>p.role==='instructor').length;
+
+/* ---------- viste ---------- */
+function loginView(){
+  const code=S.stage==='code';
+  return `<div class="login"><h1>Dashboard Centro</h1><p>Accesso riservato a gestori e istruttori.</p>
+  ${code?`<label>Codice ricevuto per email</label><input id="cd" inputmode="numeric" autocomplete="one-time-code" autofocus><button class="btn" onclick="verify()">Entra</button><button class="btn ghost" style="margin-top:8px" onclick="S.stage='login';render()">Cambia email</button>`
+        :`<label>Email</label><input id="em" type="email" autocomplete="email" autofocus value="${esc(S.email)}"><button class="btn" onclick="sendCode()">Invia codice</button>`}
+  <div class="err">${esc(S.err)}</div></div>`
+}
+function nostaffView(){return `<div class="login"><h1>Accesso non abilitato</h1><p>Questo account non ha un ruolo di gestore o istruttore in un centro.</p><button class="btn ghost" onclick="logout()">Esci</button></div>`}
+
+const VIEWS=[['home','Panoramica'],['people','Persone'],['opp','Opportunità'],['sim','Simulatore corso'],['cal','Calendario'],['map','Mappa funzioni']];
+function shell(inner){
+  return `<div class="app"><aside class="side"><div class="brand">${esc(S.org.name||'Centro')}<small>Dashboard · Quota Zero</small></div>
+  <nav class="nav">${VIEWS.filter(v=>isAdmin()||!['sim'].includes(v[0])).map(v=>`<button class="${S.view===v[0]?'sel':''}" onclick="go('${v[0]}')">${v[1]}</button>`).join('')}</nav>
+  <div class="sidefoot"><label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" style="width:auto" ${S.hide?'checked':''} onchange="S.hide=this.checked;render()">Nascondi cognomi</label>
+  <span>${esc(isAdmin()?'Gestore':'Istruttore')}</span><button onclick="logout()">Esci</button></div></aside>
+  <main class="main">${S.loadErr?`<div class="banner">Alcuni dati non sono stati caricati: ${esc(S.loadErr)}</div>`:''}${inner}</main></div>`
+}
+function go(v){S.view=v;S.open=null;render()}
+
+function homeView(){
+  const ath=S.people.filter(p=>p.role==='athlete').length,ins=nInstr();
+  const rows=oppRows(),pool=rows.filter(r=>r.pool>0&&r.eligible.length+r.iv.length>0);
+  const noCert=S.people.filter(p=>!S.certs.some(c=>c.person_id===p.id)).length;
+  const up=S.acts.filter(a=>new Date(a.starts_at)>=new Date()&&a.status!=='cancelled').length;
+  return `<div class="top"><div><h1>Panoramica</h1><p>Stato del centro e opportunità di programmazione.</p></div></div>
+  <div class="kpis"><div class="kpi"><b>${ath}</b><span>Atleti in anagrafica</span></div><div class="kpi"><b>${ins}</b><span>Istruttori</span></div>
+  <div class="kpi"><b>${S.certs.length}</b><span>Brevetti registrati</span></div><div class="kpi"><b>${up}</b><span>Attività in programma</span></div></div>
+  <div class="grid2"><div class="panel"><h2>Bacino potenziale per corso</h2>
+   ${pool.length?`<table><tbody>${pool.slice(0,5).map(r=>`<tr class="click" onclick="go('opp')"><td>${esc(r.c.name)}</td><td style="width:36%"><div class="bar"><i style="width:${Math.min(100,r.pool/Math.max(1,pool[0].pool)*100)}%"></i></div></td><td class="num">${r.pool}</td><td><span class="chip ${r.cl}">${r.st}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nessun dato sufficiente.</div>'}
+   <p class="note" style="margin:10px 0 0">Persone con il livello precedente, non ancora al livello del corso. Idoneità da verificare sui requisiti reali.</p></div>
+  <div class="panel"><h2>Da completare</h2>
+   <div class="item">${noCert} persone senza brevetto registrato<small>Servono per calcolare chi è idoneo al livello successivo.</small></div>
+   <div class="item">Prezzi e costi dei corsi${S.courses.some(c=>c.price_cents)?' (parziali)':' non ancora inseriti'}<small>Servono per il simulatore di margine.</small></div>
+   <div class="item">Interesse dichiarato per i corsi<small>Arriverà dall'app: l'atleta indica a quali corsi è interessato anche senza una data.</small></div>
+   <div class="item">Disponibilità degli istruttori<small>Da definire: oggi si assegna l'istruttore alla singola attività.</small></div></div></div>`
+}
+
+function peopleView(){
+  const list=S.people.filter(p=>p.role===S.pfilter&&(!S.q||p.full_name.toLowerCase().includes(S.q.toLowerCase())));
+  const cnt=r=>S.people.filter(p=>p.role===r).length;
+  return `<div class="top"><div><h1>Persone</h1><p>Anagrafica del centro con il brevetto più alto e i corsi richiesti.</p></div>
+  <div class="row"><div class="seg"><button class="${S.pfilter==='athlete'?'sel':''}" onclick="S.pfilter='athlete';render()">Atleti · ${cnt('athlete')}</button><button class="${S.pfilter==='instructor'?'sel':''}" onclick="S.pfilter='instructor';render()">Istruttori · ${cnt('instructor')}</button></div>
+  ${isAdmin()?'<button class="btn" onclick="addPerson()">Aggiungi persona</button>':''}</div></div>
+  <input id="q" placeholder="Cerca per nome" value="${esc(S.q)}" oninput="S.q=this.value;renderKeep()" style="max-width:320px;margin-bottom:14px">
+  <div class="panel" style="padding:6px 10px">${list.length?`<table><thead><tr><th>Nome</th><th>Brevetto più alto</th><th>Altri brevetti</th><th>Note</th></tr></thead><tbody>
+  ${list.map(p=>{const t=topCert(p.id),iv=S.interests.filter(i=>i.person_id===p.id);
+   return `<tr class="click" onclick="openPerson('${p.id}')"><td><b>${esc(nm(p))}</b></td><td>${t?`<span class="chip a">${certLabel(t)}</span>`:'<span class="muted">non registrato</span>'}</td>
+   <td>${S.certs.filter(c=>c.person_id===p.id&&c!==t).sort((a,b)=>certRank(b)-certRank(a)).map(c=>`<span class="chip">${certLabel(c)}</span>`).join('')||'<span class="muted">—</span>'}${iv.map(i=>{const c=S.courses.find(x=>x.id===i.course_type_id);return c?`<span class="chip ${STAT_CLS[i.status]}">Interesse: ${esc(c.name)}</span>`:''}).join('')}</td><td class="muted">${esc(p.note||'')}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Nessuna persona.</div>'}</div>`
+}
+function renderKeep(){const f=$('#q'),pos=f?.selectionStart;render();const g=$('#q');if(g){g.focus();try{g.setSelectionRange(pos,pos)}catch(e){}}}
+
+function oppView(){
+  const rows=oppRows(),ni=nInstr();
+  return `<div class="top"><div><h1>Opportunità di programmazione</h1><p>Dove c'è un bacino per organizzare un corso. La decisione resta all'organizzazione.</p></div></div>
+  <div class="banner">${SOURCE_NOTE}. «Idonei» = persone il cui brevetto più alto della serie è il livello precedente (ipotesi: i requisiti reali vanno verificati). Stato: bacino rispetto al numero minimo di partecipanti (${rows.some(r=>r.c.min_participants)?'dal catalogo':'ipotesi: 4 se non indicato'}).</div>
+  <div class="panel" style="padding:6px 10px"><table><thead><tr><th>Corso</th><th class="num">Hanno il brevetto</th><th class="num">Potenziali idonei</th><th class="num">Interessati</th><th class="num">Prenotati</th><th class="num">Istruttori</th><th>Stato</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr class="click" onclick="S.open=S.open==='${r.c.id}'?null:'${r.c.id}';render()"><td><b>${esc(r.c.name)}</b></td><td class="num">${r.holders.length}</td><td class="num">${r.eligible.length||'—'}</td><td class="num">${r.n}</td><td class="num">${r.booked}</td><td class="num">${ni}</td><td><span class="chip ${r.cl}">${r.st}</span></td></tr>
+  ${S.open===r.c.id?`<tr><td colspan="7" style="background:rgba(255,255,255,.03)">
+   ${r.eligible.length?`<div class="note" style="margin-bottom:4px">Potenzialmente idonei${isAdmin()?' (clic = segna interesse)':''}</div>`+r.eligible.map(p=>`<button class="chip b" ${isAdmin()?`onclick="event.stopPropagation();markInterest('${p.id}','${r.c.id}')"`:''}>${esc(nm(p))}</button>`).join(''):''}
+   ${r.iv.length?`<div class="note" style="margin:10px 0 4px">Interessati${isAdmin()?' (clic = avanza stato)':''}</div>`+r.iv.map(i=>{const p=S.people.find(x=>x.id===i.person_id);return p?`<button class="chip ${STAT_CLS[i.status]}" ${isAdmin()?`onclick="event.stopPropagation();cycle('${i.id}')"`:''}>${esc(nm(p))} · ${STAT_LAB[i.status]}</button>`:''}).join(''):''}
+   ${r.holders.length?`<div class="note" style="margin:10px 0 4px">Hanno già il brevetto</div>`+r.holders.map(p=>`<span class="chip">${esc(nm(p))}</span>`).join(''):''}
+   ${!r.eligible.length&&!r.iv.length&&!r.holders.length?'<span class="muted">Nessun dato per questo corso.</span>':''}</td></tr>`:''}`).join('')}</tbody></table></div>`
+}
+async function markInterest(pid,cid){
+  const {data,error}=await sb.from('interests').insert({org_id:S.org.org_id,person_id:pid,course_type_id:cid,source:'Segnato dal centro'}).select().single();
+  if(error)return toast('Non riuscito: '+error.message);S.interests.push(data);render()
+}
+async function cycle(id){
+  const it=S.interests.find(x=>x.id===id);if(!it)return;const ns=STAT_NEXT[it.status];
+  const {error}=await sb.from('interests').update({status:ns}).eq('id',id);
+  if(error)return toast('Non riuscito: '+error.message);it.status=ns;render()
+}
+
+function simView(){
+  const rows=oppRows();const sel=S.simCourse||rows[0]?.c.id;const r=rows.find(x=>x.c.id===sel)||rows[0];if(!r)return `<div class="empty">Nessun corso nel catalogo.</div>`;
+  const c=r.c;
+  const d=S.sim&&S.sim.id===c.id?S.sim:(S.sim={id:c.id,price:c.price_cents!=null?c.price_cents/100:250,n:Math.max(r.n,c.min_participants||4),days:+(c.duration_days||2),instr:1,cpd:c.instructor_day_cents!=null?c.instructor_day_cents/100:150,other:120,example:c.price_cents==null});
+  const rev=d.price*d.n,ic=d.instr*d.days*d.cpd,tot=ic+ +d.other,mg=rev-tot,inc=rev?ic/rev*100:0,be=d.price>0?Math.ceil(tot/d.price):'—';
+  const f=(k,l,st='1')=>`<div><label class="muted" style="font-size:12px;display:block;margin-bottom:5px">${l}</label><input type="number" step="${st}" min="0" value="${d[k]}" oninput="S.sim.${k}=+this.value;paintSim()"></div>`;
+  return `<div class="top"><div><h1>Simulatore corso</h1><p>Ricavi, costo istruttori e margine previsto per un corso.</p></div>
+  <select style="max-width:300px" onchange="S.simCourse=this.value;S.sim=null;render()">${rows.map(x=>`<option value="${x.c.id}" ${x.c.id===c.id?'selected':''}>${esc(x.c.name)} · ${x.n} voti</option>`).join('')}</select></div>
+  ${d.example?'<div class="banner">Valori di esempio: sostituiscili con i dati reali e salvali nel catalogo.</div>':''}
+  <div class="sim"><div class="panel"><h2>Parametri</h2><div class="f">${f('price','Prezzo per partecipante (€)')}${f('n','Partecipanti')}${f('days','Giornate','0.5')}${f('instr','Istruttori per giornata')}${f('cpd','Compenso istruttore per giornata (€)')}${f('other','Altri costi diretti (€)')}</div>
+   <button class="btn" style="margin-top:16px" onclick="saveSim()">Salva nel catalogo</button><p class="note">Il compenso e gli altri costi sono ipotesi di lavoro, non tariffe ufficiali.</p></div>
+  <div class="panel"><h2>Risultato</h2><div class="res" id="simres">${simRes(rev,ic,tot,mg,inc,be)}</div></div></div>`
+}
+function simRes(rev,ic,tot,mg,inc,be){
+  const band=inc>=25&&inc<=35;
+  return `<div><span>Ricavi previsti</span><b>${eur0(rev)}</b></div><div><span>Costo istruttori</span><b>${eur0(ic)}</b></div><div><span>Altri costi diretti</span><b>${eur0(tot-ic)}</b></div>
+  <div><span>Incidenza istruttori sui ricavi</span><b><span class="chip ${band?'a':'w'}">${inc.toFixed(0)}%</span></b></div><div><span>Partecipanti minimi per pareggio</span><b>${be}</b></div>
+  <div class="tot"><span>Margine di contribuzione</span><b style="color:${mg>=0?'var(--accent)':'var(--danger)'}">${eur0(mg)}</b></div>
+  <p class="note" style="margin:8px 0 0">Fascia di riferimento ipotizzata per gli istruttori: 25–35% dei ricavi.</p>`
+}
+function paintSim(){const d=S.sim,rev=d.price*d.n,ic=d.instr*d.days*d.cpd,tot=ic+ +d.other;$('#simres').innerHTML=simRes(rev,ic,tot,rev-tot,rev?ic/rev*100:0,d.price>0?Math.ceil(tot/d.price):'—')}
+async function saveSim(){
+  const d=S.sim;const {error}=await sb.from('course_types').update({price_cents:Math.round(d.price*100),duration_days:d.days,min_participants:null,instructor_day_cents:Math.round(d.cpd*100)}).eq('id',d.id);
+  if(error)return toast('Non riuscito: '+error.message);const c=S.courses.find(x=>x.id===d.id);Object.assign(c,{price_cents:Math.round(d.price*100),duration_days:d.days,instructor_day_cents:Math.round(d.cpd*100)});d.example=false;toast('Salvato nel catalogo');render()
+}
+
+function calView(){
+  const days={};S.acts.filter(a=>a.status!=='cancelled').forEach(a=>{const k=new Date(a.starts_at).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});(days[k]=days[k]||[]).push(a)});
+  const keys=Object.keys(days);
+  return `<div class="top"><div><h1>Calendario</h1><p>Attività del centro. Sono le stesse che gli atleti vedono nell'app.</p></div><a class="btn" href="centro.html" style="text-decoration:none">Crea o modifica nell'app Centro</a></div>
+  ${keys.length?keys.map(k=>`<div class="panel"><h2 style="text-transform:capitalize">${esc(k)}</h2><table><tbody>${days[k].map(a=>`<tr><td style="width:110px">${new Date(a.starts_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}–${new Date(a.ends_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</td><td><b>${esc(a.title)}</b><div class="muted" style="font-size:13px">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):''}</div></td><td class="num">${a.booked}/${a.capacity}${a.waitlist?` · +${a.waitlist} in attesa`:''}</td></tr>`).join('')}</tbody></table></div>`).join(''):`<div class="panel"><div class="empty">Nessuna attività in calendario.<br><span style="font-size:13px">Le attività si creano dall'app Centro e compaiono qui e nell'app degli atleti.</span></div></div>`}`
+}
+
+function mapView(){
+  const col=(cls,t,sub,items)=>`<div class="col ${cls}"><h3>${t}</h3><div class="sub">${sub}</div>${items.map(i=>`<div class="item">${i[0]}${i[1]?`<small>${i[1]}</small>`:''}</div>`).join('')}</div>`;
+  return `<div class="top"><div><h1>Mappa funzioni</h1><p>Cosa è fondamentale ora, cosa viene dopo e cosa resta fuori dal sistema.</p></div></div>
+  <div class="cols3">
+  ${col('f','Fondamentali','Nella versione attuale o a breve',[
+    ['Atleti e istruttori con brevetti','Anagrafica unica, brevetto più alto in evidenza'],
+    ['Calendario e attività','Un solo calendario, condiviso con l\'app atleta'],
+    ['Prenotazioni, lista d\'attesa, presenze','Già in uso nell\'app'],
+    ['Iscrizione con codice e QR','L\'atleta entra nel centro in pochi secondi'],
+    ['Catalogo corsi con prerequisiti','Livello richiesto e successivo, durata, minimo partecipanti'],
+    ['Domanda per corso','Voti e interessi raccolti dall\'app'],
+    ['Ruoli e accesso con credenziali','Gestore, istruttore, atleta']])}
+  ${col('l','Da sviluppare dopo','Quando i dati base sono affidabili',[
+    ['Idoneità al livello successivo','Calcolata da brevetti e requisiti del corso'],
+    ['Corso su più giornate con istruttori diversi','Sessioni collegate allo stesso corso'],
+    ['Disponibilità degli istruttori','Settimanale e per giornata'],
+    ['Margine per corso e compensi','Dal simulatore ai dati reali'],
+    ['Allievi inattivi e promemoria','Con consenso alle comunicazioni'],
+    ['Percorso verso istruttore','Interesse a insegnare e requisiti mancanti'],
+    ['Pagamenti dall\'app','Impatto fiscale da valutare'],
+    ['Indicatori direzionali','Conversione, occupazione, progressione']])}
+  ${col('x','Da escludere','Meglio altri strumenti',[
+    ['Contabilità, bilancio, budget','Resta al commercialista e al gestionale amministrativo'],
+    ['Separazione economica tra titolare e società','Questione amministrativa, non della dashboard'],
+    ['Magazzino attrezzatura','Fuori dal perimetro'],
+    ['Invio automatico di promozioni senza consenso','Solo con preferenze e consensi registrati']])}
+  </div>`
+}
+
+/* ---------- modali ---------- */
+function modal(h){closeModal();const d=document.createElement('div');d.className='mdl';d.id='mdl';d.innerHTML=`<div class="box">${h}</div>`;d.addEventListener('click',e=>{if(e.target===d)closeModal()});document.body.appendChild(d)}
+function closeModal(){$('#mdl')?.remove()}
+function addPerson(){modal(`<h3>Aggiungi persona</h3><label>Nome e cognome</label><input id="pn"><label>Ruolo</label><select id="pr"><option value="athlete">Atleta</option><option value="instructor">Istruttore</option></select><div class="row" style="margin-top:18px"><button class="btn" onclick="savePerson()">Aggiungi</button><button class="btn ghost" onclick="closeModal()">Annulla</button></div>`)}
+async function savePerson(){const n=$('#pn').value.trim();if(!n)return;const {data,error}=await sb.from('people').insert({org_id:S.org.org_id,full_name:n,role:$('#pr').value}).select().single();if(error)return toast('Non riuscito: '+error.message);S.people.push(data);S.people.sort((a,b)=>a.full_name.localeCompare(b.full_name));closeModal();render()}
+function openPerson(id){
+  const p=S.people.find(x=>x.id===id);if(!p)return;const cs=S.certs.filter(c=>c.person_id===id);
+  modal(`<h3>${esc(nm(p))}</h3><p class="note" style="margin:4px 0 12px">${p.role==='instructor'?'Istruttore':'Atleta'}${p.note?' · '+esc(p.note):''}</p>
+  <div class="note" style="margin-bottom:6px">Brevetti</div>${cs.length?cs.map(c=>`<div class="item">${certLabel(c)}${c.cert_date?`<small>${esc(c.cert_date)}</small>`:''}</div>`).join(''):'<div class="muted" style="font-size:14px">Nessun brevetto registrato.</div>'}
+  ${isAdmin()?`<label>Aggiungi brevetto</label><div class="row" style="flex-wrap:nowrap"><input id="ca" placeholder="Agenzia (es. AIDA, Molchanovs)"><input id="cl" placeholder="Livello (es. Wave 2)"></div>
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveCert('${id}')">Salva brevetto</button><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`:`<div class="row" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`}`)
+}
+async function saveCert(id){const a=$('#ca').value.trim(),l=$('#cl').value.trim();if(!a||!l)return toast('Indica agenzia e livello');
+  const {data,error}=await sb.from('person_certs').insert({person_id:id,agency:a,level_name:l}).select().single();if(error)return toast('Non riuscito: '+error.message);S.certs.push(data);closeModal();render();toast('Brevetto aggiunto')}
+
+/* ---------- render ---------- */
+function render(){
+  const r=$('#root');
+  if(S.stage==='boot'){r.innerHTML='';return}
+  if(S.stage==='login'||S.stage==='code'){r.innerHTML=loginView();return}
+  if(S.stage==='nostaff'){r.innerHTML=nostaffView();return}
+  const v={home:homeView,people:peopleView,opp:oppView,sim:simView,cal:calView,map:mapView}[S.view]||homeView;
+  r.innerHTML=shell(v())
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'){if($('#cd'))verify();else if($('#em'))sendCode()}if(e.key==='Escape')closeModal()});
+init();
+</script>
+</body>
+</html>
