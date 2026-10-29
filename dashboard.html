@@ -373,6 +373,12 @@ function todoPanel(){const ad=isAdmin(),t0=addDays(0),t1=addDays(1);
   if(later.length)blocks.push(`<div class="note" style="margin:12px 0 2px"><b>Nei prossimi giorni (osservazione meteo)</b></div>${later.map(a=>row(a,day(a))).join('')}`);
   if(nOth.length)blocks.push(`<div class="note" style="margin:12px 0 2px"><b>Comunicazioni da fare</b></div>${nOth.map(nrow).join('')}`);
   blocks.push(`<div class="note" style="margin:12px 0 2px"><b>Oggi in programma</b></div>${todayAll.length?todayAll.map(a=>`<div class="item" ${ad?`style="cursor:pointer" onclick="actModal('${a.id}')"`:''}><b>${tm(a.starts_at)}–${tm(a.ends_at)} · ${esc(a.title)}</b> <span class="muted">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):' · <span style="color:var(--warn)">istruttore da assegnare</span>'} · ${a.booked}/${a.capacity}</span> ${stChip(a)}</div>`).join(''):'<div class="muted" style="font-size:14px">Nessuna attività oggi.</div>'}`);
+  {let nx='';for(let i=1;i<=7;i++){const k=addDays(i),L=live.filter(a=>dkey(a.starts_at)===k).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));if(!L.length)continue;
+    let rk='';try{const r=wxRisk(wxFor(k));rk=r==='d'?' 🔴':r==='w'?' 🟠':''}catch(e){}
+    const dt=new Date(k+'T12:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+    nx+=`<div class="note" style="margin:10px 0 2px"><b>${i===1?'Domani · ':''}${esc(dt)}${rk}</b></div>`+L.map(a=>{const miss=[];if(!a.instructor_person_id&&!a.instructor_name)miss.push('istruttore da assegnare');
+      return `<div class="item" ${ad?`style="cursor:pointer" onclick="actModal('${a.id}')"`:''}><b>${tm(a.starts_at)}–${tm(a.ends_at)} · ${esc(a.title)}</b> <span class="muted">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):''} · ${a.booked}/${a.capacity}</span> ${stChip(a)}${miss.length?` <span class="chip w">${miss.join(', ')}</span>`:''}</div>`}).join('')}
+    blocks.push(`<h3 style="margin:18px 0 0;font-size:14px;border-top:1px solid var(--line);padding-top:12px">Prossimi 7 giorni</h3>${nx||'<div class="muted" style="font-size:14px;margin-top:6px">Nessuna attività nei prossimi 7 giorni.</div>'}`)}
   return `<div class="panel"><h2>Da fare oggi</h2>${blocks.join('')}</div>`}
 function upcomingList(){const l=S.acts.filter(a=>new Date(a.starts_at)>=new Date()&&a.status!=='cancelled').sort((x,y)=>new Date(x.starts_at)-new Date(y.starts_at)).slice(0,6);
   if(!l.length)return '<div class="empty">Nessuna attività in programma.</div>';
