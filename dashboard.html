@@ -246,15 +246,16 @@ function homeView(){
 }
 
 function peopleView(){
-  const list=S.people.filter(p=>p.role===S.pfilter&&(!S.q||p.full_name.toLowerCase().includes(S.q.toLowerCase()))).sort((a,b)=>(topCert(b.id)?1:0)-(topCert(a.id)?1:0)||a.full_name.localeCompare(b.full_name));
-  const cnt=r=>S.people.filter(p=>p.role===r).length;
+  const lf=S.lfilter||'all';const list=S.people.filter(p=>p.role===S.pfilter&&(lf==='all'||(lf==='local'&&p.is_local===true)||(lf==='ext'&&p.is_local===false)||(lf==='tbd'&&p.is_local==null))&&(!S.q||p.full_name.toLowerCase().includes(S.q.toLowerCase()))).sort((a,b)=>(topCert(b.id)?1:0)-(topCert(a.id)?1:0)||a.full_name.localeCompare(b.full_name));
+  const cnt=r=>S.people.filter(p=>p.role===r).length;const base=S.people.filter(p=>p.role===S.pfilter);const lc=k=>k==='all'?base.length:base.filter(p=>k==='local'?p.is_local===true:k==='ext'?p.is_local===false:p.is_local==null).length;
   return `<div class="top"><div><h1>Persone</h1><p>Anagrafica del centro con il brevetto più alto e i corsi richiesti.</p></div>
   <div class="row"><div class="seg"><button class="${S.pfilter==='athlete'?'sel':''}" onclick="S.pfilter='athlete';render()">Atleti · ${cnt('athlete')}</button><button class="${S.pfilter==='instructor'?'sel':''}" onclick="S.pfilter='instructor';render()">Istruttori · ${cnt('instructor')}</button></div>
   ${isAdmin()?'<button class="btn" onclick="addPerson()">Aggiungi persona</button>':''}</div></div>
-  <input id="q" placeholder="Cerca per nome" value="${esc(S.q)}" oninput="S.q=this.value;renderKeep()" style="max-width:320px;margin-bottom:14px">
-  <div class="panel" style="padding:6px 10px">${list.length?`<table><thead><tr><th>Nome</th><th>Brevetto più alto</th><th>Altri brevetti</th><th>Note</th></tr></thead><tbody>
+  <div class="row" style="margin-bottom:12px;gap:12px"><div class="seg">${[['all','Tutti'],['local','Locali'],['ext','Non locali'],['tbd','Da indicare']].map(k=>`<button class="${lf===k[0]?'sel':''}" onclick="S.lfilter='${k[0]}';render()">${k[1]} · ${lc(k[0])}</button>`).join('')}</div>
+  <input id="q" placeholder="Cerca per nome" value="${esc(S.q)}" oninput="S.q=this.value;renderKeep()" style="max-width:280px"></div>
+  <div class="panel" style="padding:6px 10px">${list.length?`<table><thead><tr><th>Nome</th><th>Provenienza</th><th>Brevetto più alto</th><th>Altri brevetti</th><th>Note</th></tr></thead><tbody>
   ${list.map(p=>{const t=topCert(p.id),iv=S.interests.filter(i=>i.person_id===p.id);
-   return `<tr class="click" onclick="openPerson('${p.id}')"><td><b>${esc(nm(p))}</b></td><td>${t?`<span class="chip a">${certLabel(t)}</span>`:p.outreach==='to_contact'?'<span class="chip w">non ha risposto</span>':'<span class="muted">non registrato</span>'}</td>
+   return `<tr class="click" onclick="openPerson('${p.id}')"><td><b>${esc(nm(p))}</b></td><td><span class="chip ${p.is_local===true?'a':p.is_local===false?'b':'w'}" ${isAdmin()?`style="cursor:pointer" title="Clic per cambiare" onclick="event.stopPropagation();cycleLoc('${p.id}')"`:''}>${LOC_LAB[p.is_local==null?null:p.is_local]}</span></td><td>${t?`<span class="chip a">${certLabel(t)}</span>`:p.outreach==='to_contact'?'<span class="chip w">non ha risposto</span>':'<span class="muted">non registrato</span>'}</td>
    <td>${S.certs.filter(c=>c.person_id===p.id&&c!==t).sort((a,b)=>certRank(b)-certRank(a)).map(c=>`<span class="chip">${certLabel(c)}</span>`).join('')||'<span class="muted">—</span>'}${iv.map(i=>{const c=S.courses.find(x=>x.id===i.course_type_id);return c?`<span class="chip ${STAT_CLS[i.status]}">Interesse: ${esc(c.name)}</span>`:''}).join('')}</td><td class="muted">${esc(p.note||'')}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Nessuna persona.</div>'}</div>`
 }
 function renderKeep(){const f=$('#q'),pos=f?.selectionStart;render();const g=$('#q');if(g){g.focus();try{g.setSelectionRange(pos,pos)}catch(e){}}}
@@ -427,13 +428,22 @@ function mapView(){
 /* ---------- modali ---------- */
 function modal(h){closeModal();const d=document.createElement('div');d.className='mdl';d.id='mdl';d.innerHTML=`<div class="box">${h}</div>`;d.addEventListener('click',e=>{if(e.target===d)closeModal()});document.body.appendChild(d)}
 function closeModal(){$('#mdl')?.remove()}
-function addPerson(){modal(`<h3>Aggiungi persona</h3><label>Nome e cognome</label><input id="pn"><label>Ruolo</label><select id="pr"><option value="athlete">Atleta</option><option value="instructor">Istruttore</option></select><div class="row" style="margin-top:18px"><button class="btn" onclick="savePerson()">Aggiungi</button><button class="btn ghost" onclick="closeModal()">Annulla</button></div>`)}
-async function savePerson(){const n=$('#pn').value.trim();if(!n)return;const {data,error}=await sb.from('people').insert({org_id:S.org.org_id,full_name:n,role:$('#pr').value}).select().single();if(error)return toast('Non riuscito: '+error.message);S.people.push(data);S.people.sort((a,b)=>a.full_name.localeCompare(b.full_name));closeModal();render()}
+function normPhone(v){let d=String(v||'').trim();if(!d)return {ok:true,v:null};d=d.replace(/[^0-9+]/g,'');if(d.startsWith('00'))d='+'+d.slice(2);
+  if(!d.startsWith('+'))return {ok:false,msg:'Il prefisso internazionale è obbligatorio (es. +39 per l\'Italia)'};
+  if(!/^\+[0-9]{8,15}$/.test(d))return {ok:false,msg:'Numero non valido: controlla le cifre'};return {ok:true,v:d}}
+const LOC_LAB={true:'Locale',false:'Non locale',null:'Da indicare'};
+function locSel(id,cur){return `<select id="${id}"><option value=""${cur==null?' selected':''}>Da indicare</option><option value="1"${cur===true?' selected':''}>Locale (zona Acireale / Catania)</option><option value="0"${cur===false?' selected':''}>Non locale (viene da fuori)</option></select>`}
+function locVal(id){const v=$('#'+id).value;return v===''?null:v==='1'}
+async function cycleLoc(id){const p=S.people.find(x=>x.id===id);const n=p.is_local==null?true:p.is_local===true?false:null;
+  const {error}=await sb.from('people').update({is_local:n}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);p.is_local=n;renderKeep()}
+function addPerson(){modal(`<h3>Aggiungi persona</h3><label>Nome e cognome</label><input id="pn"><label>Ruolo</label><select id="pr"><option value="athlete">Atleta</option><option value="instructor">Istruttore</option></select><label>Provenienza</label>${locSel("pl",null)}<label>Telefono (con prefisso, es. +39 333 1234567)</label><input id="pph" inputmode="tel" placeholder="+39…"><div class="row" style="margin-top:18px"><button class="btn" onclick="savePerson()">Aggiungi</button><button class="btn ghost" onclick="closeModal()">Annulla</button></div>`)}
+async function savePerson(){const n=$('#pn').value.trim();if(!n)return;const ph=normPhone($('#pph').value);if(!ph.ok)return toast(ph.msg);const {data,error}=await sb.from('people').insert({org_id:S.org.org_id,full_name:n,role:$('#pr').value,is_local:locVal('pl'),phone:ph.v}).select().single();if(error)return toast('Non riuscito: '+error.message);S.people.push(data);S.people.sort((a,b)=>a.full_name.localeCompare(b.full_name));closeModal();render()}
 function openPerson(id){
   const p=S.people.find(x=>x.id===id);if(!p)return;const cs=S.certs.filter(c=>c.person_id===id);const ad=isAdmin();
   const head=ad?`<h3>Anagrafica</h3><label>Nome e cognome</label><input id="en" value="${esc(p.full_name||'')}">
   <div class="row" style="flex-wrap:nowrap"><div style="flex:1"><label>Ruolo</label><select id="er"><option value="athlete"${p.role==='athlete'?' selected':''}>Atleta</option><option value="instructor"${p.role==='instructor'?' selected':''}>Istruttore</option></select></div>
-  <div style="flex:1"><label>Telefono</label><input id="ep" value="${esc(p.phone||'')}"></div></div>
+  <div style="flex:1"><label>Telefono (con prefisso)</label><input id="ep" inputmode="tel" placeholder="+39…" value="${esc(p.phone||'')}"></div></div>
+  <label>Provenienza</label>${locSel('el',p.is_local)}
   <label>Note</label><input id="eo" value="${esc(p.note||'')}">
   <div class="row" style="margin-top:12px"><button class="btn" onclick="savePersonEdit('${id}')">Salva anagrafica</button></div>`
   :`<h3>${esc(nm(p))}</h3><p class="note" style="margin:4px 0 12px">${p.role==='instructor'?'Istruttore':'Atleta'}${p.note?' · '+esc(p.note):''}</p>`;
@@ -442,7 +452,7 @@ function openPerson(id){
   <div class="row" style="margin-top:16px"><button class="btn" onclick="saveCert('${id}')">Salva brevetto</button><button class="btn ghost" onclick="closeModal()">Chiudi</button><button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="delPerson('${id}')">Elimina persona</button></div>`:`<div class="row" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`}`)
 }
 async function savePersonEdit(id){const n=$('#en').value.trim();if(!n)return toast('Il nome non può essere vuoto');
-  const u={full_name:n,role:$('#er').value,phone:$('#ep').value.trim()||null,note:$('#eo').value.trim()||null};
+  const ph=normPhone($('#ep').value);if(!ph.ok)return toast(ph.msg);const u={full_name:n,role:$('#er').value,phone:ph.v,is_local:locVal('el'),note:$('#eo').value.trim()||null};
   const {data,error}=await sb.from('people').update(u).eq('id',id).select().single();if(error)return toast('Non riuscito: '+error.message);
   Object.assign(S.people.find(x=>x.id===id),data);S.people.sort((a,b)=>a.full_name.localeCompare(b.full_name));render();openPerson(id);toast('Anagrafica salvata')}
 async function delPerson(id){const p=S.people.find(x=>x.id===id);if(!confirm('Eliminare definitivamente '+p.full_name+' con brevetti e interessi?'))return;
