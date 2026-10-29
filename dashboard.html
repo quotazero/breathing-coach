@@ -100,7 +100,7 @@ const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co',SUPA_KEY='sb_publishab
 const sb=window.supabase?window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.sessionStorage}}):null;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const S={stage:'boot',view:'home',err:'',email:'',org:null,role:null,people:[],certs:[],courses:[],interests:[],acts:[],hide:false,pfilter:'athlete',q:'',open:null};
+const S={ofilter:'to_contact',msg:'Ciao {nome}, qui Blue World Freediving. Stiamo programmando i prossimi corsi: ci dici che brevetto hai (agenzia e livello)? Così sappiamo cosa proporti. Grazie!',stage:'boot',view:'home',err:'',email:'',org:null,role:null,people:[],certs:[],courses:[],interests:[],acts:[],hide:false,pfilter:'athlete',q:'',open:null};
 const SOURCE_NOTE='Brevetti dichiarati nel sondaggio WhatsApp del 27/10/2026';
 const LADDERS=[['wave1','wave2','wave3'],['aida1','aida2','aida3','aida4'],['aa_open','aa_adv','aa_deep']];
 const STAT_NEXT={interested:'contacted',contacted:'booked',booked:'purchased',purchased:'interested'};
@@ -189,7 +189,7 @@ function loginView(){
 }
 function nostaffView(){return `<div class="login"><h1>Accesso non abilitato</h1><p>Questo account non ha un ruolo di gestore o istruttore in un centro.</p><button class="btn ghost" onclick="logout()">Esci</button></div>`}
 
-const VIEWS=[['home','Panoramica'],['people','Persone'],['opp','Opportunità'],['sim','Simulatore corso'],['cal','Calendario'],['map','Mappa funzioni']];
+const VIEWS=[['home','Panoramica'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['cal','Calendario'],['map','Mappa funzioni']];
 function shell(inner){
   return `<div class="app"><aside class="side"><div class="brand">${esc(S.org.name||'Centro')}<small>Dashboard · Quota Zero</small></div>
   <nav class="nav">${VIEWS.filter(v=>isAdmin()||!['sim'].includes(v[0])).map(v=>`<button class="${S.view===v[0]?'sel':''}" onclick="go('${v[0]}')">${v[1]}</button>`).join('')}</nav>
@@ -211,14 +211,14 @@ function homeView(){
    ${pool.length?`<table><tbody>${pool.slice(0,5).map(r=>`<tr class="click" onclick="go('opp')"><td>${esc(r.c.name)}</td><td style="width:36%"><div class="bar"><i style="width:${Math.min(100,r.pool/Math.max(1,pool[0].pool)*100)}%"></i></div></td><td class="num">${r.pool}</td><td><span class="chip ${r.cl}">${r.st}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nessun dato sufficiente.</div>'}
    <p class="note" style="margin:10px 0 0">Persone con il livello precedente, non ancora al livello del corso. Idoneità da verificare sui requisiti reali.</p></div>
   <div class="panel"><h2>Da completare</h2>
-   <div class="item">${noCert} persone senza brevetto registrato<small>Servono per calcolare chi è idoneo al livello successivo.</small></div>
+   <div class="item" style="cursor:pointer" onclick="go('out')">${S.people.filter(p=>p.outreach==='to_contact').length} persone del gruppo WhatsApp non hanno ancora risposto<small>Apri "Da sollecitare" per contattarle una per una. Servono i brevetti per calcolare chi è idoneo al livello successivo.</small></div>
    <div class="item">Prezzi e costi dei corsi${S.courses.some(c=>c.price_cents)?' (parziali)':' non ancora inseriti'}<small>Servono per il simulatore di margine.</small></div>
    <div class="item">Interesse dichiarato per i corsi<small>Arriverà dall'app: l'atleta indica a quali corsi è interessato anche senza una data.</small></div>
    <div class="item">Disponibilità degli istruttori<small>Da definire: oggi si assegna l'istruttore alla singola attività.</small></div></div></div>`
 }
 
 function peopleView(){
-  const list=S.people.filter(p=>p.role===S.pfilter&&(!S.q||p.full_name.toLowerCase().includes(S.q.toLowerCase())));
+  const list=S.people.filter(p=>p.role===S.pfilter&&(!S.q||p.full_name.toLowerCase().includes(S.q.toLowerCase()))).sort((a,b)=>(topCert(b.id)?1:0)-(topCert(a.id)?1:0)||a.full_name.localeCompare(b.full_name));
   const cnt=r=>S.people.filter(p=>p.role===r).length;
   return `<div class="top"><div><h1>Persone</h1><p>Anagrafica del centro con il brevetto più alto e i corsi richiesti.</p></div>
   <div class="row"><div class="seg"><button class="${S.pfilter==='athlete'?'sel':''}" onclick="S.pfilter='athlete';render()">Atleti · ${cnt('athlete')}</button><button class="${S.pfilter==='instructor'?'sel':''}" onclick="S.pfilter='instructor';render()">Istruttori · ${cnt('instructor')}</button></div>
@@ -226,7 +226,7 @@ function peopleView(){
   <input id="q" placeholder="Cerca per nome" value="${esc(S.q)}" oninput="S.q=this.value;renderKeep()" style="max-width:320px;margin-bottom:14px">
   <div class="panel" style="padding:6px 10px">${list.length?`<table><thead><tr><th>Nome</th><th>Brevetto più alto</th><th>Altri brevetti</th><th>Note</th></tr></thead><tbody>
   ${list.map(p=>{const t=topCert(p.id),iv=S.interests.filter(i=>i.person_id===p.id);
-   return `<tr class="click" onclick="openPerson('${p.id}')"><td><b>${esc(nm(p))}</b></td><td>${t?`<span class="chip a">${certLabel(t)}</span>`:'<span class="muted">non registrato</span>'}</td>
+   return `<tr class="click" onclick="openPerson('${p.id}')"><td><b>${esc(nm(p))}</b></td><td>${t?`<span class="chip a">${certLabel(t)}</span>`:p.outreach==='to_contact'?'<span class="chip w">non ha risposto</span>':'<span class="muted">non registrato</span>'}</td>
    <td>${S.certs.filter(c=>c.person_id===p.id&&c!==t).sort((a,b)=>certRank(b)-certRank(a)).map(c=>`<span class="chip">${certLabel(c)}</span>`).join('')||'<span class="muted">—</span>'}${iv.map(i=>{const c=S.courses.find(x=>x.id===i.course_type_id);return c?`<span class="chip ${STAT_CLS[i.status]}">Interesse: ${esc(c.name)}</span>`:''}).join('')}</td><td class="muted">${esc(p.note||'')}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Nessuna persona.</div>'}</div>`
 }
 function renderKeep(){const f=$('#q'),pos=f?.selectionStart;render();const g=$('#q');if(g){g.focus();try{g.setSelectionRange(pos,pos)}catch(e){}}}
@@ -279,6 +279,37 @@ async function saveSim(){
   if(error)return toast('Non riuscito: '+error.message);const c=S.courses.find(x=>x.id===d.id);Object.assign(c,{price_cents:Math.round(d.price*100),duration_days:d.days,instructor_day_cents:Math.round(d.cpd*100)});d.example=false;toast('Salvato nel catalogo');render()
 }
 
+const OUT_LAB={to_contact:'Da contattare',contacted:'Contattato',answered:'Ha risposto',skip:'Escluso'};
+const OUT_NEXT={to_contact:'contacted',contacted:'answered',answered:'skip',skip:'to_contact'};
+const OUT_CLS={to_contact:'w',contacted:'b',answered:'a',skip:''};
+function waLink(p){
+  const d=String(p.phone||'').replace(/\D/g,'');if(!d)return '';
+  const first=(p.full_name||'').split(' ')[0];const nome=/^(senza nome|andrea \(|francesco \()/i.test(p.full_name)||!first?'':first;
+  const t=S.msg.replace('{nome}',nome).replace('Ciao ,','Ciao,').replace(/ +/g,' ');
+  return 'https://wa.me/'+d+'?text='+encodeURIComponent(t)
+}
+function outView(){
+  const all=S.people.filter(p=>p.outreach);const c=k=>all.filter(p=>p.outreach===k).length;
+  const list=all.filter(p=>p.outreach===S.ofilter).sort((a,b)=>a.full_name.localeCompare(b.full_name));
+  const seg=k=>`<button class="${S.ofilter===k?'sel':''}" onclick="S.ofilter='${k}';render()">${OUT_LAB[k]} · ${c(k)}</button>`;
+  return `<div class="top"><div><h1>Da sollecitare</h1><p>Chi è nel gruppo WhatsApp e non ha ancora indicato il brevetto. Si contatta una persona alla volta.</p></div></div>
+  <div class="kpis"><div class="kpi"><b>${all.length}</b><span>Persone nel gruppo</span></div><div class="kpi"><b>${c('answered')}</b><span>Hanno risposto</span></div><div class="kpi"><b>${c('to_contact')}</b><span>Da contattare</span></div><div class="kpi"><b>${c('contacted')}</b><span>Contattati, in attesa</span></div></div>
+  <div class="panel"><h2>Messaggio</h2><textarea id="msg" rows="3" style="width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:10px 12px;font:inherit" oninput="S.msg=this.value">${esc(S.msg)}</textarea>
+  <p class="note" style="margin:8px 0 0">«{nome}» viene sostituito con il nome. Il pulsante apre WhatsApp con il messaggio già scritto: l'invio lo confermi tu.</p></div>
+  <div style="margin-bottom:12px" class="seg">${['to_contact','contacted','answered','skip'].map(seg).join('')}</div>
+  <div class="panel" style="padding:6px 10px">${list.length?`<table><thead><tr><th>Nome</th><th>Telefono</th><th>Note</th><th>Stato</th><th></th></tr></thead><tbody>
+  ${list.map(p=>{const l=waLink(p);return `<tr><td><b>${esc(nm(p))}</b></td><td>${S.hide?'<span class="muted">nascosto</span>':esc(p.phone||'—')}</td><td class="muted" style="font-size:13px">${esc(p.note||'')}</td>
+  <td><button class="chip ${OUT_CLS[p.outreach]}" ${isAdmin()?`onclick="cycleOut('${p.id}')" title="Clic per cambiare stato"`:''}>${OUT_LAB[p.outreach]}</button></td>
+  <td class="num">${l&&isAdmin()?`<a class="btn sm" style="text-decoration:none;display:inline-block" href="${l}" target="_blank" rel="noopener" onclick="markContacted('${p.id}')">Scrivi su WhatsApp</a>`:''}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Nessuna persona in questo stato.</div>'}</div>`
+}
+async function setOut(id,v){
+  const p=S.people.find(x=>x.id===id);if(!p)return;
+  const {error}=await sb.from('people').update({outreach:v,outreach_at:new Date().toISOString()}).eq('id',id);
+  if(error)return toast('Non riuscito: '+error.message);p.outreach=v;render()
+}
+const cycleOut=id=>setOut(id,OUT_NEXT[S.people.find(x=>x.id===id).outreach]);
+function markContacted(id){const p=S.people.find(x=>x.id===id);if(p&&p.outreach==='to_contact')setTimeout(()=>setOut(id,'contacted'),600)}
+
 function calView(){
   const days={};S.acts.filter(a=>a.status!=='cancelled').forEach(a=>{const k=new Date(a.starts_at).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});(days[k]=days[k]||[]).push(a)});
   const keys=Object.keys(days);
@@ -323,7 +354,7 @@ async function savePerson(){const n=$('#pn').value.trim();if(!n)return;const {da
 function openPerson(id){
   const p=S.people.find(x=>x.id===id);if(!p)return;const cs=S.certs.filter(c=>c.person_id===id);
   modal(`<h3>${esc(nm(p))}</h3><p class="note" style="margin:4px 0 12px">${p.role==='instructor'?'Istruttore':'Atleta'}${p.note?' · '+esc(p.note):''}</p>
-  <div class="note" style="margin-bottom:6px">Brevetti</div>${cs.length?cs.map(c=>`<div class="item">${certLabel(c)}${c.cert_date?`<small>${esc(c.cert_date)}</small>`:''}</div>`).join(''):'<div class="muted" style="font-size:14px">Nessun brevetto registrato.</div>'}
+  ${isAdmin()&&p.phone?`<div class="note" style="margin-bottom:10px">Telefono: ${esc(p.phone)}</div>`:''}<div class="note" style="margin-bottom:6px">Brevetti</div>${cs.length?cs.map(c=>`<div class="item">${certLabel(c)}${c.cert_date?`<small>${esc(c.cert_date)}</small>`:''}</div>`).join(''):'<div class="muted" style="font-size:14px">Nessun brevetto registrato.</div>'}
   ${isAdmin()?`<label>Aggiungi brevetto</label><div class="row" style="flex-wrap:nowrap"><input id="ca" placeholder="Agenzia (es. AIDA, Molchanovs)"><input id="cl" placeholder="Livello (es. Wave 2)"></div>
   <div class="row" style="margin-top:16px"><button class="btn" onclick="saveCert('${id}')">Salva brevetto</button><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`:`<div class="row" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`}`)
 }
@@ -336,7 +367,7 @@ function render(){
   if(S.stage==='boot'){r.innerHTML='';return}
   if(S.stage==='login'||S.stage==='code'){r.innerHTML=loginView();return}
   if(S.stage==='nostaff'){r.innerHTML=nostaffView();return}
-  const v={home:homeView,people:peopleView,opp:oppView,sim:simView,cal:calView,map:mapView}[S.view]||homeView;
+  const v={home:homeView,people:peopleView,out:outView,opp:oppView,sim:simView,cal:calView,map:mapView}[S.view]||homeView;
   r.innerHTML=shell(v())
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter'){if($('#cd'))verify();else if($('#em'))sendCode()}if(e.key==='Escape')closeModal()});
