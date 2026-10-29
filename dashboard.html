@@ -245,7 +245,7 @@ function homeView(){
    <div class="item">Disponibilità degli istruttori<small>Da definire: oggi si assegna l'istruttore alla singola attività.</small></div></div></div>`
 }
 
-function actFor(p){if(!p.instr_active)return '';return (p.specialties||[]).map(id=>(S.opts.specialty.find(o=>o.id===id)||{}).label).filter(Boolean).sort().join(', ')}
+function actFor(p){if(!p.instr_active)return '';const ids=new Set(S.links.filter(l=>l.person_id===p.id).map(l=>l.type_id));return S.types.filter(t=>ids.has(t.id)).map(t=>t.name).sort().join(', ')}
 const SORTKEY={name:p=>(p.full_name||'').toLowerCase(),loc:p=>p.is_local===true?0:p.is_local===false?1:2,top:p=>{const t=topCert(p.id);return t?-certRank(t):1e9},oth:p=>-S.certs.filter(c=>c.person_id===p.id).length,note:p=>(p.note||'').toLowerCase()||'\uffff',act:p=>actFor(p).toLowerCase()||'\uffff'};
 function sortFn(){const k=(S.sort&&S.sort.k)||'top',d=(S.sort&&S.sort.d)||1,f=SORTKEY[k];return (a,b)=>{const x=f(a),y=f(b);const c=typeof x==='number'?x-y:String(x).localeCompare(String(y),'it');return (c||SORTKEY.name(a).localeCompare(SORTKEY.name(b),'it'))*(c?d:1)}}
 function setSort(k){S.sort=S.sort&&S.sort.k===k?{k,d:-S.sort.d}:{k,d:1};render()}
@@ -346,13 +346,13 @@ function markContacted(id){const p=S.people.find(x=>x.id===id);if(p&&p.outreach=
 
 async function reloadActs(){const r=await sb.rpc('list_activities',{p_org:S.org.org_id,p_from:new Date(Date.now()-30*864e5).toISOString(),p_days:150});S.acts=Array.isArray(r.data)?r.data:[];render()}
 function dl(d){const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,16)}
-S.opts={place:[],title:[],kind:[],env:[],specialty:[]};
-async function loadOpts(){const r=await sb.from('activity_options').select('id,field,label,base').eq('org_id',S.org.org_id).order('label');S.opts={place:[],title:[],kind:[],env:[],specialty:[]};(r.data||[]).forEach(x=>S.opts[x.field]&&S.opts[x.field].push(x))}
+S.types=[];S.links=[];S.opts={place:[],title:[],kind:[],env:[],specialty:[]};
+async function loadOpts(){const r=await sb.from('activity_options').select('id,field,label,base').eq('org_id',S.org.org_id).order('label');S.opts={place:[],title:[],kind:[],env:[],specialty:[]};(r.data||[]).forEach(x=>S.opts[x.field]&&S.opts[x.field].push(x));
+  const [t,l]=await Promise.all([sb.from('activity_types').select('*').eq('org_id',S.org.org_id).order('name'),sb.from('instructor_activity_types').select('*')]);S.types=t.data||[];S.links=l.data||[]}
 const BASES={kind:[['training','Allenamento'],['course','Corso'],['dry','Apnea a secco']],env:[['sea','Mare'],['pool','Piscina'],['dry','A secco']]};
 function baseLabel(f,b){return(BASES[f].find(x=>x[0]===b)||[0,b])[1]}
-function instrMatch(p,kb,eb){return (p.specialties||[]).some(id=>{const o=S.opts.specialty.find(x=>x.id===id);if(!o)return false;const [k,e]=o.base.split(':');return (k==='*'||k===kb)&&(e==='*'||e===eb)})}
-function instrOptions(sel,kb,eb){return S.people.filter(p=>p.role==='instructor'&&((p.instr_active&&instrMatch(p,kb,eb))||p.id===sel)).map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${esc(p.full_name)}${p.instr_active?'':' (non attivo)'}</option>`).join('')}
-function refreshInstr(){const cur=$('#ai').value;$('#ai').innerHTML='<option value="">— Da assegnare —</option>'+instrOptions(cur,optBase('kind',$('#ak').value),optBase('env',$('#al').value));const hint=$('#ai_h');const n=$('#ai').options.length-1;if(hint)hint.textContent=n?'':'Nessun istruttore attivo per questo tipo di attività.'}
+function instrOptions(sel,typeId){return S.people.filter(p=>p.role==='instructor'&&((p.instr_active&&S.links.some(l=>l.person_id===p.id&&l.type_id===typeId))||p.id===sel)).map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${esc(p.full_name)}${p.instr_active?'':' (non attivo)'}</option>`).join('')}
+function refreshInstr(){const el=$('#ai');if(!el||!$('#aty'))return;const cur=el.value;el.innerHTML='<option value="">— Da assegnare —</option>'+instrOptions(cur,$('#aty').value);const h=$('#ai_h');if(h)h.textContent=el.options.length>1?'':'Nessun istruttore attivo abilitato per questo tipo di attività.'}
 function dflt(f){return S.opts[f][0]?S.opts[f][0].label:''}
 function optBase(f,label){const o=S.opts[f].find(x=>x.label===label);return o?o.base:null}
 function optCur(f,base){const o=S.opts[f].find(x=>x.base===base);return o?o.label:''}
@@ -370,17 +370,42 @@ async function optRename(oid,f,id){const o=S.opts[f].find(x=>x.id===oid);const v
   const {error}=await sb.from('activity_options').update({label:v.trim()}).eq('id',oid);if(error)return toast('Non riuscito: '+error.message);const cur=$('#'+id).value;await loadOpts();$('#'+id).innerHTML=optSel(f,cur===o.label?v.trim():cur);optList(f,id)}
 async function optDel(oid,f,id){const o=S.opts[f].find(x=>x.id===oid);if(!confirm('Togliere "'+o.label+'" dall\'elenco? Le attività già create non cambiano.'))return;
   const {error}=await sb.from('activity_options').delete().eq('id',oid);if(error)return toast('Non riuscito: '+error.message);const cur=$('#'+id).value;await loadOpts();$('#'+id).innerHTML=optSel(f,cur===o.label?'':cur);optList(f,id)}
-function actModal(id,day){const a=id?S.acts.find(x=>x.id===id):null;const st=a?new Date(a.starts_at):(day?new Date(day+'T09:00'):new Date(Date.now()+864e5));if(!a){st.setHours(9,0,0,0)}const en=a?new Date(a.ends_at):new Date(st.getTime()+2*36e5);
+function typeFor(a){if(!a)return S.types[0];return S.types.find(t=>t.id===a.type_id)||S.types.find(t=>t.name===a.title)||S.types.find(t=>t.kind===a.kind&&t.env===a.location_type)||S.types[0]}
+function typePick(){const t=S.types.find(x=>x.id===$('#aty').value);if(!t)return;const prev=S.types.find(x=>x.id===S._prevT);const ti=$('#at');if(!ti.value||(prev&&ti.value===prev.name))ti.value=t.name;S._prevT=t.id;
+  $('#ac').value=t.capacity;const st=new Date($('#as').value);if(!isNaN(st))$('#ae2').value=dl(new Date(st.getTime()+t.duration_min*6e4));refreshInstr()}
+function actModal(id,day){const a=id?S.acts.find(x=>x.id===id):null;
+  if(!S.types.length){modal(`<h3>Nuova attività</h3><p class="note">Prima crea almeno un tipo di attività.</p><div class="row" style="margin-top:14px"><button class="btn" onclick="typesModal()">Tipi di attività</button><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`);return}
+  const ty=typeFor(a);S._prevT=ty.id;
+  const st=a?new Date(a.starts_at):(day?new Date(day+'T09:00'):new Date(Date.now()+864e5));if(!a){st.setHours(9,0,0,0)}const en=a?new Date(a.ends_at):new Date(st.getTime()+ty.duration_min*6e4);
   const seats=[...Array(30).keys()].map(n=>n+1);
-  modal(`<h3>${a?'Modifica attività':'Nuova attività'}</h3>${optField('kind','ak','Tipo',a?optCur('kind',a.kind):dflt('kind'))}${optField('title','at','Titolo',a?a.title:'')}${optField('place','ap','Luogo',a?a.place||'':'')}
-  ${optField('env','al','Ambiente',a?optCur('env',a.location_type):dflt('env'))}
-  <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-width:0"><label>Inizio</label><input id="as" type="datetime-local" value="${dl(st)}"></div><div style="flex:1;min-width:0"><label>Fine</label><input id="ae2" type="datetime-local" value="${dl(en)}"></div></div>
-  <label>Istruttore <span class="muted">(si può assegnare anche dopo)</span></label><select id="ai"><option value="">— Da assegnare —</option>${instrOptions(a?a.instructor_person_id:'',a?a.kind:optBase('kind',dflt('kind')),a?a.location_type:optBase('env',dflt('env')))}</select><div id="ai_h" class="note" style="margin-top:4px"></div>
-  <label>Posti</label><select id="ac">${seats.map(n=>`<option${n===(a?a.capacity:6)?' selected':''}>${n}</option>`).join('')}</select>
-  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveActD('${id||''}')">Salva</button><button class="btn ghost" onclick="closeModal()">Annulla</button>${a?`<button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="cancelActD('${id}')">Annulla attività</button>`:''}</div>`)}
-async function saveActD(id){const t=$('#at').value.trim();if(!t||t==='__new')return toast('Scegli un titolo');const s=new Date($('#as').value),e=new Date($('#ae2').value);if(isNaN(s)||isNaN(e)||e<=s)return toast('Controlla data e orari');
-  const kb=optBase('kind',$('#ak').value),eb=optBase('env',$('#al').value);if(!kb||!eb)return toast('Scegli tipo e ambiente');
-  const rec={kind:kb,title:t,place:($('#ap').value==='__new'?'':$('#ap').value.trim()),location_type:eb,starts_at:s.toISOString(),ends_at:e.toISOString(),capacity:+$('#ac').value||1,instructor_person_id:$('#ai').value||null};
+  modal(`<h3>${a?'Modifica attività':'Nuova attività'}</h3>
+  <label>Tipo di attività</label><div class="row" style="flex-wrap:nowrap;gap:8px"><select id="aty" onchange="typePick()">${S.types.map(t=>`<option value="${t.id}"${t.id===ty.id?' selected':''}>${esc(t.name)}</option>`).join('')}</select><button class="btn ghost" type="button" style="padding:0 14px" title="Gestisci i tipi di attività" onclick="typesModal()">✎</button></div>
+  <label>Titolo</label><input id="at" value="${esc(a?a.title:ty.name)}">
+  ${optField('place','ap','Luogo',a?a.place||'':'')}
+  <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-width:0"><label>Inizio</label><input id="as" type="datetime-local" value="${dl(st)}" onchange="${a?'':'typePick()'}"></div><div style="flex:1;min-width:0"><label>Fine</label><input id="ae2" type="datetime-local" value="${dl(en)}"></div></div>
+  <label>Istruttore <span class="muted">(si può assegnare anche dopo)</span></label><select id="ai"><option value="">— Da assegnare —</option>${instrOptions(a?a.instructor_person_id:'',ty.id)}</select><div id="ai_h" class="note" style="margin-top:4px"></div>
+  <label>Posti</label><select id="ac">${seats.map(n=>`<option${n===(a?a.capacity:ty.capacity)?' selected':''}>${n}</option>`).join('')}</select>
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveActD('${id||''}')">Salva</button><button class="btn ghost" onclick="closeModal()">Annulla</button>${a?`<button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="cancelActD('${id}')">Annulla attività</button>`:''}</div>`);refreshInstr()}
+function typesModal(){modal(`<h3>Tipi di attività</h3><p class="note" style="margin:4px 0 10px">Elenco unico: da qui dipendono il calendario e le specialità degli istruttori.</p>
+  ${S.types.map(t=>`<div class="item" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span><b>${esc(t.name)}</b> <small class="muted">· ${esc(kindLab(t.kind))} · ${esc(envLab(t.env))} · ${t.capacity} posti · ${durLab(t.duration_min)}</small></span><span style="white-space:nowrap"><button class="btn ghost" style="padding:4px 10px" onclick="typeForm('${t.id}')">Modifica</button> <button class="btn ghost" style="padding:4px 10px" onclick="delType('${t.id}')">Elimina</button></span></div>`).join('')||'<div class="muted">Nessun tipo.</div>'}
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="typeForm()">＋ Nuovo tipo</button><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`)}
+const KL={training:'Allenamento',course:'Corso',dry:'Apnea a secco'},EL={sea:'Mare',pool:'Piscina',dry:'A secco'};
+function kindLab(k){return KL[k]||k}function envLab(e){return EL[e]||e}function durLab(m){return m%60?m+' min':(m/60)+' h'}
+function typeForm(id){const t=id?S.types.find(x=>x.id===id):{name:'',kind:'training',env:'sea',capacity:6,duration_min:120};
+  modal(`<h3>${id?'Modifica tipo':'Nuovo tipo di attività'}</h3><label>Nome</label><input id="tn" value="${esc(t.name)}">
+  <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-width:0"><label>Si comporta come</label><select id="tk">${Object.entries(KL).map(([k,l])=>`<option value="${k}"${t.kind===k?' selected':''}>${l}</option>`).join('')}</select></div><div style="flex:1;min-width:0"><label>Ambiente</label><select id="te">${Object.entries(EL).map(([k,l])=>`<option value="${k}"${t.env===k?' selected':''}>${l}</option>`).join('')}</select></div></div>
+  <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-width:0"><label>Posti predefiniti</label><input id="tc" type="number" min="1" value="${t.capacity}"></div><div style="flex:1;min-width:0"><label>Durata (minuti)</label><input id="td" type="number" min="15" step="15" value="${t.duration_min}"></div></div>
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveType('${id||''}')">Salva</button><button class="btn ghost" onclick="typesModal()">Annulla</button></div>`)}
+async function saveType(id){const n=$('#tn').value.trim();if(!n)return toast('Scrivi un nome');const rec={name:n,kind:$('#tk').value,env:$('#te').value,capacity:+$('#tc').value||1,duration_min:+$('#td').value||60};
+  const q=id?sb.from('activity_types').update(rec).eq('id',id).select().single():sb.from('activity_types').insert({...rec,org_id:S.org.org_id}).select().single();
+  const {data,error}=await q;if(error)return toast(/duplicate|unique/i.test(error.message)?'Esiste già un tipo con questo nome':'Non riuscito: '+error.message);
+  if(id)Object.assign(S.types.find(x=>x.id===id),data);else S.types.push(data);S.types.sort((a,b)=>a.name.localeCompare(b.name));typesModal();toast('Tipo salvato')}
+async function delType(id){const t=S.types.find(x=>x.id===id);const used=S.acts.filter(a=>a.type_id===id).length,inst=S.links.filter(l=>l.type_id===id).length;
+  if(!confirm('Eliminare "'+t.name+'"?'+(inst?'\nVerrà tolto da '+inst+' istruttori.':'')+(used?'\nLe '+used+' attività già create restano ma non avranno più il tipo.':'')))return;
+  const {error}=await sb.from('activity_types').delete().eq('id',id);if(error)return toast('Non riuscito: '+error.message);
+  S.types=S.types.filter(x=>x.id!==id);S.links=S.links.filter(l=>l.type_id!==id);typesModal();toast('Tipo eliminato')}
+async function saveActD(id){const ty=S.types.find(x=>x.id===$('#aty').value);if(!ty)return toast('Scegli il tipo di attività');const t=$('#at').value.trim();if(!t)return toast('Scrivi un titolo');const s=new Date($('#as').value),e=new Date($('#ae2').value);if(isNaN(s)||isNaN(e)||e<=s)return toast('Controlla data e orari');
+  const rec={type_id:ty.id,kind:ty.kind,location_type:ty.env,title:t,place:($('#ap').value==='__new'?'':$('#ap').value.trim()),starts_at:s.toISOString(),ends_at:e.toISOString(),capacity:+$('#ac').value||1,instructor_person_id:$('#ai').value||null};
   const q=id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert({...rec,org_id:S.org.org_id,min_rank:0});
   const {error}=await q;if(error)return toast('Non riuscito: '+error.message);closeModal();await reloadActs();toast('Attività salvata')}
 async function cancelActD(id){const why=prompt("Motivo dell'annullamento (visibile ai partecipanti):",'Condizioni meteo');if(why===null)return;
@@ -400,7 +425,7 @@ function calGrid(){
 function calView(){
   const days={};S.acts.filter(a=>a.status!=='cancelled').forEach(a=>{const k=new Date(a.starts_at).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});(days[k]=days[k]||[]).push(a)});
   const keys=Object.keys(days);
-  return `<div class="top"><div><h1>Calendario</h1><p>Attività del centro: sono le stesse che gli atleti vedono nell'app.</p></div>${isAdmin()?`<button class="btn" onclick="actModal()">Nuova attività</button>`:''}</div>
+  return `<div class="top"><div><h1>Calendario</h1><p>Attività del centro: sono le stesse che gli atleti vedono nell'app.</p></div>${isAdmin()?`<div class="row"><button class="btn ghost" onclick="typesModal()">Tipi di attività</button><button class="btn" onclick="actModal()">Nuova attività</button></div>`:''}</div>
   ${calGrid()}${keys.length?`<h2 style="margin:6px 0 10px;font-size:16px">Elenco attività</h2>`:''}
   ${keys.length?keys.map(k=>`<div class="panel"><h2 style="text-transform:capitalize">${esc(k)}</h2><table><tbody>${days[k].map(a=>`<tr ${isAdmin()?`style="cursor:pointer" onclick="actModal('${a.id}')"`:''}><td style="width:110px">${new Date(a.starts_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}–${new Date(a.ends_at).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</td><td><b>${esc(a.title)}</b><div class="muted" style="font-size:13px">${esc(a.place||'')}${a.instructor_name?' · '+esc(a.instructor_name):' · <span style="color:var(--warn)">istruttore da assegnare</span>'}</div></td><td class="num">${a.booked}/${a.capacity}${a.waitlist?` · +${a.waitlist} in attesa`:''}</td></tr>`).join('')}</tbody></table></div>`).join(''):`<div class="note">Nessuna attività in calendario: quelle che crei compaiono qui e nell'app degli atleti.</div>`}`
 }
@@ -455,22 +480,20 @@ function openPerson(id){
   <label>Provenienza</label>${locSel('el',p.is_local)}
   <label>Note</label><input id="eo" value="${esc(p.note||'')}">
   ${p.role==='instructor'?`<div class="panel" style="padding:10px 14px;margin:14px 0 0"><label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0"><input id="ia" type="checkbox" style="width:auto" ${p.instr_active?'checked':''}> <b>Istruttore attivo</b> <span class="muted" style="font-size:12px">(compare nelle tendine delle attività)</span></label>
-  <div class="note" style="margin:10px 0 4px">Attivo per</div><div id="spbox">${spBoxHtml(p)}</div>
-  <div id="spx"></div><button class="btn ghost" type="button" style="margin-top:8px;padding:4px 12px" onclick="spNew()">＋ Nuova specialità</button></div>`:''}
+  <div class="note" style="margin:10px 0 4px">Attivo per (tipi di attività)</div><div id="spbox">${S.types.length?S.types.map(t=>`<label style="display:inline-flex;gap:6px;align-items:center;margin:0 14px 6px 0;cursor:pointer"><input type="checkbox" class="spc" value="${t.id}" style="width:auto" ${S.links.some(l=>l.person_id===p.id&&l.type_id===t.id)?'checked':''}> ${esc(t.name)}</label>`).join(''):'<span class="muted" style="font-size:13px">Nessun tipo definito.</span>'}</div>
+  <button class="btn ghost" type="button" style="margin-top:6px;padding:4px 12px" onclick="typesModal()">Gestisci i tipi di attività</button></div>`:''}
   <div class="row" style="margin-top:12px"><button class="btn" onclick="savePersonEdit('${id}')">Salva anagrafica</button></div>`
   :`<h3>${esc(nm(p))}</h3><p class="note" style="margin:4px 0 12px">${p.role==='instructor'?'Istruttore':'Atleta'}${p.note?' · '+esc(p.note):''}</p>`;
   modal(`${head}<div class="note" style="margin:16px 0 6px">Brevetti</div>${cs.length?cs.map(c=>`<div class="item" style="display:flex;gap:8px;align-items:center;justify-content:space-between"><span>${certLabel(c)}${c.cert_date?` <small>${esc(c.cert_date)}</small>`:''}</span>${ad?`<span style="white-space:nowrap"><button class="btn ghost" style="padding:4px 10px" onclick="editCert('${c.id}')">Modifica</button> <button class="btn ghost" style="padding:4px 10px" onclick="delCert('${c.id}','${id}')">Elimina</button></span>`:''}</div>`).join(''):'<div class="muted" style="font-size:14px">Nessun brevetto registrato.</div>'}
   ${ad?`<label>Aggiungi brevetto</label><div class="row" style="flex-wrap:nowrap"><input id="ca" placeholder="Agenzia (es. AIDA, Molchanovs)"><input id="cl" placeholder="Livello (es. Wave 2)"></div>
   <div class="row" style="margin-top:16px"><button class="btn" onclick="saveCert('${id}')">Aggiungi brevetto</button><button class="btn ghost" onclick="closeModal()">Chiudi</button><button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="delPerson('${id}')">Elimina persona</button></div>`:`<div class="row" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Chiudi</button></div>`}`)
 }
-function spBoxHtml(p){const sel=new Set(p.specialties||[]);return S.opts.specialty.map(o=>`<label style="display:inline-flex;gap:6px;align-items:center;margin:0 14px 6px 0;cursor:pointer"><input type="checkbox" class="spc" value="${o.id}" style="width:auto" ${sel.has(o.id)?'checked':''}> ${esc(o.label)}</label>`).join('')||'<span class="muted" style="font-size:13px">Nessuna specialità: aggiungine una.</span>'}
-function spNew(){$('#spx').innerHTML=`<div class="row" style="flex-wrap:nowrap;gap:8px;margin-top:8px"><input id="spn" placeholder="Nome (es. Immersione libera)"><select id="spk"><option value="*">Ogni tipo</option><option value="training">Allenamento</option><option value="course">Corso</option><option value="dry">Apnea a secco</option></select><select id="spe"><option value="*">Ogni ambiente</option><option value="sea">Mare</option><option value="pool">Piscina</option><option value="dry">A secco</option></select><button class="btn" type="button" onclick="spAdd()">Aggiungi</button></div>`;$('#spn').focus()}
-async function spAdd(){const v=$('#spn').value.trim();if(!v)return;const keep=[...document.querySelectorAll('.spc:checked')].map(x=>x.value);
-  const {data,error}=await sb.from('activity_options').insert({org_id:S.org.org_id,field:'specialty',label:v,base:$('#spk').value+':'+$('#spe').value}).select().single();if(error)return toast('Non riuscito: '+error.message);
-  S.opts.specialty.push(data);keep.push(data.id);$('#spbox').innerHTML=spBoxHtml({specialties:keep});$('#spx').innerHTML='';toast('Specialità aggiunta')}
 async function savePersonEdit(id){const n=$('#en').value.trim();if(!n)return toast('Il nome non può essere vuoto');
-  const ph=normPhone($('#ep').value);if(!ph.ok)return toast(ph.msg);const u={full_name:n,role:$('#er').value,phone:ph.v,is_local:locVal('el'),note:$('#eo').value.trim()||null};if($('#ia')){u.instr_active=$('#ia').checked;u.specialties=[...document.querySelectorAll('.spc:checked')].map(x=>x.value)}
+  const ph=normPhone($('#ep').value);if(!ph.ok)return toast(ph.msg);const u={full_name:n,role:$('#er').value,phone:ph.v,is_local:locVal('el'),note:$('#eo').value.trim()||null};let chk=null;if($('#ia')){u.instr_active=$('#ia').checked;chk=[...document.querySelectorAll('.spc:checked')].map(x=>x.value)}
   const {data,error}=await sb.from('people').update(u).eq('id',id).select().single();if(error)return toast('Non riuscito: '+error.message);
+  if(chk){const d=await sb.from('instructor_activity_types').delete().eq('person_id',id);if(d.error)return toast('Non riuscito: '+d.error.message);
+    if(chk.length){const i=await sb.from('instructor_activity_types').insert(chk.map(t=>({person_id:id,type_id:t})));if(i.error)return toast('Non riuscito: '+i.error.message)}
+    S.links=S.links.filter(l=>l.person_id!==id).concat(chk.map(t=>({person_id:id,type_id:t})))}
   Object.assign(S.people.find(x=>x.id===id),data);S.people.sort((a,b)=>a.full_name.localeCompare(b.full_name));render();openPerson(id);toast('Anagrafica salvata')}
 async function delPerson(id){const p=S.people.find(x=>x.id===id);if(!confirm('Eliminare definitivamente '+p.full_name+' con brevetti e interessi?'))return;
   for(const t of ['person_certs','interests']){const {error}=await sb.from(t).delete().eq('person_id',id);if(error)return toast('Non riuscito ('+t+'): '+error.message)}
