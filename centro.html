@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#061A2B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Centro">
+<script>(function(){try{var p=new URLSearchParams(location.search),n=p.get('n');if(!n){var b=JSON.parse(localStorage.getItem('cn.brand')||'null');n=b&&b.name}if(n){document.title=n;var m=document.querySelector('meta[name=apple-mobile-web-app-title]');if(m)m.content=n}}catch(e){}})()</script>
 <link rel="manifest" href="centro.webmanifest">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
@@ -100,7 +101,7 @@ input.code{letter-spacing:8px;text-align:center;font-size:28px;font-weight:600}
 .cd{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;position:relative}.cd em{font-style:normal;font-size:11px;color:var(--ink2)}.cd.today em{color:var(--ink);font-weight:700}
 .cd .dr{width:36px;height:36px}.cd.sel .dr{box-shadow:0 0 0 2px var(--bg2),0 0 0 3.5px var(--accent)}
 .stat{display:flex;gap:10px;margin-top:10px}.stat div{flex:1;background:var(--bg2);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:22px;font-weight:600}.stat span{font-size:12px;color:var(--ink2)}
-.wxg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.wxd{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--ink2);border-radius:12px;padding:8px 2px;border:1px solid var(--line);text-align:center}.wxd b{font-size:14px;color:var(--ink)}.wxd.g{border-color:rgba(143,224,210,.45)}.wxd.w{border-color:rgba(242,200,121,.7)}.wxd.d{border-color:var(--danger);background:rgba(240,138,122,.08)}
+.wxg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.wxd{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--ink2);border-radius:12px;padding:8px 2px;border:1px solid var(--line);text-align:center}.wxd b{font-size:14px;color:var(--ink)}.wxd.g{border-color:rgba(143,224,210,.45)}.wxd.w{border:2px solid #F2A65A;background:rgba(242,166,90,.09)}.wxd.d{border:2px solid var(--danger);background:rgba(240,138,122,.12)}
 .tdo{display:flex;flex-direction:column;gap:8px;border:1px solid var(--line);border-left-width:4px;border-radius:14px;padding:12px;margin-top:8px;background:var(--bg2)}.tdo small{display:block;color:var(--ink2);font-size:12.5px;margin-top:3px;line-height:1.5}.tdo b{font-size:15px}.tbt{display:flex;gap:8px}.tbt .btn{flex:1}
 .urg{border:1px solid rgba(240,138,122,.6);background:rgba(240,138,122,.07);border-radius:16px;padding:10px 12px;margin-top:8px}.urg .tdo{background:transparent}
 .th{font-size:14px;font-weight:600;margin:16px 0 0}.note2{font-size:13px;line-height:1.6;margin:10px 0;color:var(--ink)}textarea.txt{width:100%;font-size:14px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg)}
@@ -176,22 +177,22 @@ function demoData(){
 const ROSTER_DEMO=[{booking_id:'b1',user_id:'u1',name:'Michela R.',status:'booked',level_name:'Avanzato',n_certs:3},{booking_id:'b2',user_id:'u2',name:'Luca B.',status:'booked',level_name:'Intermedio',n_certs:2},{booking_id:'b3',user_id:'u3',name:'Sara M.',status:'booked',level_name:'Base',n_certs:1},{booking_id:'b4',user_id:'u4',name:'Giovanni P.',status:'booked',level_name:null,n_certs:0},{booking_id:'b5',user_id:'u7',name:'Elena T.',status:'waitlist',level_name:'Base',n_certs:1}];
 
 /* ---------- accesso ---------- */
-function brandIcon(url,cb){const im=new Image();im.crossOrigin='anonymous';im.onerror=()=>cb(null);im.onload=()=>{try{const mk=n=>{const c=document.createElement('canvas');c.width=c.height=n;const x=c.getContext('2d');x.fillStyle='#061A2B';x.fillRect(0,0,n,n);const w=n*.8,h=w*im.naturalHeight/im.naturalWidth,hh=Math.min(h,n*.8),ww=hh*im.naturalWidth/im.naturalHeight;x.drawImage(im,(n-ww)/2,(n-hh)/2,ww,hh);return c.toDataURL('image/png')};cb(mk(512),mk(192),mk(180))}catch(e){cb(null)}};im.src=url}
+function brandIcon(url,mark,cb){const im=new Image();im.crossOrigin='anonymous';im.onerror=()=>cb(null);im.onload=()=>{try{const mk=n=>{const c=document.createElement('canvas');c.width=c.height=n;const x=c.getContext('2d');x.fillStyle='#061A2B';x.fillRect(0,0,n,n);const lim=mark?n*.62:n*.8,r=im.naturalWidth/im.naturalHeight,ww=r>=1?lim:lim*r,hh=r>=1?lim/r:lim;x.drawImage(im,(n-ww)/2,(n-hh)/2,ww,hh);return c.toDataURL('image/png')};cb(mk(512),mk(192),mk(180))}catch(e){cb(null)}};im.src=url}
 function applyBrand(c){
-  if(!c)return;const name=c.name||'Centro';ls('cn.brand',{name,logo_url:c.logo_url||'',slug:c.slug||''});document.title=name;
+  if(!c)return;const name=c.name||'Centro';ls('cn.brand',{name,logo_url:c.logo_url||'',icon_url:c.icon_url||'',slug:c.slug||''});document.title=name;
   const t=document.querySelector('meta[name=apple-mobile-web-app-title]');if(t)t.content=name;
-  if(!c.logo_url)return;
-  brandIcon(c.logo_url,(i512,i192,i180)=>{
+  if(!(c.icon_url||c.logo_url))return;
+  brandIcon(c.icon_url||c.logo_url,!!c.icon_url,(i512,i192,i180)=>{
     if(!i512)return;
     const set=(rel,href,sz)=>{document.querySelectorAll('link[rel="'+rel+'"]').forEach(l=>l.remove());const l=document.createElement('link');l.rel=rel;l.href=href;if(sz)l.sizes=sz;document.head.appendChild(l)};
     set('apple-touch-icon',i180,'180x180');set('icon',i192,'192x192');
-    try{const base=new URL('./',location.href).href;const m={name,short_name:name.slice(0,12),start_url:base+'centro.html'+(c.slug?'?c='+encodeURIComponent(c.slug):''),scope:base,display:'standalone',background_color:'#061A2B',theme_color:'#061A2B',lang:'it',icons:[{src:i192,sizes:'192x192',type:'image/png'},{src:i512,sizes:'512x512',type:'image/png'}]};
+    try{const base=new URL('./',location.href).href;const m={name,short_name:name,start_url:base+'centro.html'+(c.slug?'?c='+encodeURIComponent(c.slug)+'&n='+encodeURIComponent(name):''),scope:base,display:'standalone',background_color:'#061A2B',theme_color:'#061A2B',lang:'it',icons:[{src:i192,sizes:'192x192',type:'image/png'},{src:i512,sizes:'512x512',type:'image/png'}]};
       set('manifest',URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'})))}catch(e){}
   });
 }
 async function init(){
   try{const sl=new URLSearchParams(location.search).get('c');let br=ls('cn.brand');
-    if(sl&&sb&&(!br||br.slug!==sl)){const r=await sb.rpc('center_brand',{p_slug:sl});if(r.data&&r.data.name){br={name:r.data.name,logo_url:r.data.logo_url,slug:r.data.slug};ls('cn.brand',br)}}
+    if(sl&&sb&&(!br||br.slug!==sl)){const r=await sb.rpc('center_brand',{p_slug:sl});if(r.data&&r.data.name){br={name:r.data.name,logo_url:r.data.logo_url,icon_url:r.data.icon_url||'',slug:r.data.slug};ls('cn.brand',br)}}
     applyBrand(br)}catch(e){}
   if(!sb){S.err='Serve connessione per il primo accesso.';return render()}
   const {data}=await sb.auth.getSession();S.user=data.session?.user||null;
@@ -427,14 +428,16 @@ const WXI=c=>c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=57?
 const DIRS=['N','NE','E','SE','S','SO','O','NO'],dirL=d=>d==null?'':DIRS[Math.round(d/45)%8];
 const seaState=h=>h==null?['—','']:h<0.5?['Calmo','g']:h<1?['Poco mosso','g']:h<1.5?['Mosso','w']:h<2.5?['Molto mosso','d']:['Agitato','d'];
 function wxFor(key){if(!S.wx)return null;const a=S.wx.a,m=S.wx.m,i=a.time.indexOf(key);if(i<0)return null;return {rain:a.precipitation_sum[i],prob:a.precipitation_probability_max[i],wind:Math.round(a.wind_speed_10m_max[i]),gust:Math.round(a.wind_gusts_10m_max[i]),wdir:a.wind_direction_10m_dominant[i],wave:m?m.wave_height_max[i]:null,code:a.weather_code[i]}}
-function wxRisk(w){if(!w)return '';const wv=w.wave||0;return(wv>=1.5||w.wind>=20||w.rain>=10)?'d':(wv>=1||w.wind>=15||w.rain>=3)?'w':'g'}
+function wxRisk(w){if(!w)return '';const wv=w.wave||0,c=w.code||0;
+  if(c>=95||wv>=1.5||w.wind>=20||w.gust>=30||w.rain>=10)return 'd';
+  if(wv>=1||w.wind>=15||w.gust>=24||w.rain>=3||(c>=61&&c<=82)||(w.prob>=70&&w.rain>=1))return 'w';return 'g'}
 function wxLine(w){if(!w)return '<span style="color:var(--ink2)">Previsione non ancora disponibile (copre oggi e 3 giorni).</span>';const sl=seaState(w.wave);return `${WXI(w.code)} 🌧 <b>${w.rain}</b> mm (${w.prob??'—'}%) · 💨 <b>${w.wind}</b> nodi ${dirL(w.wdir)}, raff. ${w.gust} · 🌊 <b>${w.wave==null?'—':w.wave.toFixed(1)}</b> m <span class="tg ${sl[1]}">${sl[0]}</span>`}
 function stTag(a){if(a.status==='cancelled')return '';if(isSea(a))return a.weather_status==='confirmed'?'<span class="tg g">Confermata</span>':'<span class="tg w">Osservazione meteo</span>';return ''}
 function wxStrip(){
   if(!S.wx){loadWx();return `<div class="wk" style="text-align:left;padding:12px 14px"><b style="font-size:14px">Meteo e mare · Stazzo</b><div style="color:var(--ink2);font-size:13px;margin-top:4px">${S.wxErr?'Previsione non disponibile (serve connessione).':'Caricamento…'}</div></div>`}
   const days=[0,1,2,3].map(n=>{const k=addDays(n),w=wxFor(k);const lab=n===0?'Oggi':n===1?'Domani':new Date(k+'T12:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric'});
     if(!w)return `<div class="wxd"><span>${lab}</span></div>`;const r=wxRisk(w);
-    return `<div class="wxd ${r}"><span>${lab}</span><div style="font-size:20px">${WXI(w.code)}</div><b>${w.wave==null?'—':w.wave.toFixed(1)} m</b><span>${w.wind} kn ${dirL(w.wdir)}</span><span>${w.rain} mm</span></div>`}).join('');
+    return `<div class="wxd ${r}"><span>${lab}</span>${r==='d'?'<span style="color:var(--danger);font-weight:700">Non si esce</span>':r==='w'?'<span style="color:#F2A65A;font-weight:700">Difficile</span>':''}<div style="font-size:20px">${WXI(w.code)}</div><b>${w.wave==null?'—':w.wave.toFixed(1)} m</b><span>${w.wind} kn ${dirL(w.wdir)}</span><span>${w.rain} mm</span></div>`}).join('');
   return `<div class="wk" style="text-align:left;padding:12px 10px"><b style="font-size:14px;padding-left:4px">Meteo e mare · Stazzo</b><div class="wxg">${days}</div></div>`}
 async function loadOrg2(){
   const id=S.org.org_id,safe=async f=>{try{const r=await f();return r.data||[]}catch(e){return []}};

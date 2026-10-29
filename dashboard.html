@@ -52,7 +52,7 @@ h1,h2,h3{margin:0;font-weight:600}
 .ev.wt{background:transparent;border:1px dashed var(--warn);color:var(--warn)}
 .ev.c{background:rgba(196,166,234,.18);color:var(--violet)}.ev.d{background:rgba(127,180,240,.18);color:var(--blue)}.ev.x{text-decoration:line-through;opacity:.5}
 @media(max-width:700px){.cd{min-height:60px;padding:4px}.ev{font-size:10px;padding:1px 3px}}
-.wxg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.wx{background:rgba(6,26,43,.45);border:1px solid var(--line);border-radius:14px;padding:12px;font-size:13px;display:flex;flex-direction:column;gap:5px}.wxi{font-size:22px}.wxi span{font-size:18px;font-weight:600}
+.wxg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.wx{background:rgba(6,26,43,.45);border:1px solid var(--line);border-radius:14px;padding:12px;font-size:13px;display:flex;flex-direction:column;gap:5px}.wx.nogo{border:2px solid var(--danger);background:rgba(240,138,122,.12)}.wx.hard{border:2px solid #F2A65A;background:rgba(242,166,90,.10)}.wxflag{font-size:12px;font-weight:700;border-radius:8px;padding:3px 8px}.wxflag.d{color:#04131D;background:var(--danger)}.wxflag.w{color:#04131D;background:#F2A65A}.wxi{font-size:22px}.wxi span{font-size:18px;font-weight:600}
 @media(max-width:700px){.wxg{grid-template-columns:1fr 1fr}}
 .kpi.click{cursor:pointer;transition:border-color .15s,transform .15s}.kpi.click:hover{border-color:var(--acc,#8fe3d3);transform:translateY(-2px)}.kpi b{display:block;font-size:32px;font-weight:600;line-height:1.1}
 .kpi span{color:var(--ink2);font-size:13px}
@@ -232,7 +232,7 @@ function shell(inner){
 /* ===== Il centro: profilo obbligatorio + condivisione app ===== */
 const APPURL='https://quotazero.github.io/breathing-coach/centro.html';
 const centerMissing=o=>{const m=[];if(!o.name||!o.name.trim())m.push('Nome');if(!o.logo_url)m.push('Logo');if(o.lat==null||!o.place_name)m.push('Sede (per il meteo)');if(!o.phone)m.push('Telefono del centro');return m};
-function centerLink(){return APPURL+'?c='+encodeURIComponent(S.org.slug)}
+function centerLink(){return APPURL+'?c='+encodeURIComponent(S.org.slug)+'&n='+encodeURIComponent(S.org.name)}
 function centerView(){const o=S.org,ad=isAdmin(),miss=centerMissing(o),ok=!miss.length;
   const chk=(l,v)=>`<div class="item" style="display:flex;gap:10px;align-items:center"><span style="color:${v?'var(--accent)':'var(--warn,#F2C879)'};font-size:18px">${v?'✓':'○'}</span><span>${l}</span></div>`;
   return `<div class="top"><div><h1>Il centro</h1><p>Compila questi dati una sola volta: servono a generare l'app del centro, con logo e nome già dentro.</p></div></div>
@@ -249,6 +249,9 @@ function centerView(){const o=S.org,ad=isAdmin(),miss=centerMissing(o),ok=!miss.
       <div style="background:#061A2B;border:1px solid var(--line);border-radius:14px;padding:14px;text-align:center;min-height:110px;display:flex;align-items:center;justify-content:center">${o.logo_url?`<img id="clg" src="${esc(o.logo_url)}" style="max-width:100%;max-height:96px">`:'<span class="muted">Nessun logo</span>'}</div>
       <input id="clf" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="margin-top:8px" ${ad?'':'disabled'}>
       <div class="muted" style="font-size:12px;margin-top:4px">Meglio PNG con sfondo trasparente.</div>
+      <label style="margin-top:12px">Simbolo per l'icona <span class="muted">(facoltativo: solo il simbolo, senza scritte)</span></label>
+      <div style="background:#061A2B;border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center;min-height:70px">${o.icon_url?`<img src="${esc(o.icon_url)}" style="max-height:70px">`:'<span class="muted">Userà il logo</span>'}</div>
+      <input id="cif" type="file" accept="image/png,image/jpeg,image/webp" style="margin-top:8px" ${ad?'':'disabled'}>
     </div>
   </div>
   <div class="row" style="margin-top:16px"><button class="btn" onclick="saveCenter()" ${ad?'':'disabled'}>Salva</button></div></div>
@@ -273,6 +276,8 @@ async function saveCenter(){const o=S.org;const rec={name:$('#cn').value.trim(),
   if(GEO){rec.place_name=GEO.name;rec.lat=GEO.lat;rec.lon=GEO.lon}
   const f=$('#clf').files[0];
   if(f){try{const blob=await resizeLogo(f);const path=o.org_id+'/logo-'+Date.now()+'.png';const up=await sb.storage.from('center-logos').upload(path,blob,{contentType:'image/png',upsert:true});if(up.error)throw up.error;rec.logo_url=sb.storage.from('center-logos').getPublicUrl(path).data.publicUrl}catch(e){return toast('Logo non caricato: '+(e.message||e))}}
+  const fi=$('#cif').files[0];
+  if(fi){try{const blob=await resizeLogo(fi);const path=o.org_id+'/icon-'+Date.now()+'.png';const up=await sb.storage.from('center-logos').upload(path,blob,{contentType:'image/png',upsert:true});if(up.error)throw up.error;rec.icon_url=sb.storage.from('center-logos').getPublicUrl(path).data.publicUrl}catch(e){return toast('Simbolo non caricato: '+(e.message||e))}}
   const {error}=await sb.from('organizations').update(rec).eq('id',o.org_id);if(error)return toast('Non riuscito: '+error.message);
   Object.assign(o,rec);GEO=null;S.wx=null;render();toast('Dati del centro salvati')}
 function shareApp(){const t=`Ciao! Ecco l'app di ${S.org.name}. Aprila da Safari (iPhone) o Chrome (Android), accedi con la tua email e poi tocca Condividi → "Aggiungi a Home": l'icona è già quella del centro.\n${centerLink()}`;window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank','noopener')}
@@ -293,13 +298,14 @@ function seaState(h){return h==null?['—','']:h<0.5?['Calmo','a']:h<1?['Poco mo
 function wxCard(){if(!S.wx){loadWx();return `<div class="panel"><h2>Meteo e mare · Stazzo</h2><div class="muted" style="font-size:14px">${S.wxErr?'Meteo non disponibile in questo momento.':'Caricamento…'}</div></div>`}
   const a=S.wx.a,m=S.wx.m;const days=a.time.map((t,i)=>{const d=new Date(t+'T12:00');const lab=i===0?'Oggi':i===1?'Domani':d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric'});
     const wh=m?m.wave_height_max[i]:null,[sl,sc]=seaState(wh);
-    return `<div class="wx"><b style="text-transform:capitalize">${lab}</b><div class="wxi">${WXI(a.weather_code[i])} <span>${Math.round(a.temperature_2m_max[i])}°</span></div>
+    const w0=wxFor(t),rk=wxRisk(w0),why=wxWhy(w0);
+    return `<div class="wx ${rk==='d'?'nogo':rk==='w'?'hard':''}"><b style="text-transform:capitalize">${lab}</b>${rk==='d'?`<div class="wxflag d">Non si esce${why?': '+why:''}</div>`:rk==='w'?`<div class="wxflag w">Difficile${why?': '+why:''}</div>`:''}<div class="wxi">${WXI(a.weather_code[i])} <span>${Math.round(a.temperature_2m_max[i])}°</span></div>
     <div>🌧 <b>${a.precipitation_sum[i]}</b> mm <span class="muted">· ${a.precipitation_probability_max[i]??'—'}%</span></div>
     <div>💨 <b>${Math.round(a.wind_speed_10m_max[i])}</b> nodi <span class="muted">${dirL(a.wind_direction_10m_dominant[i])} · raff. ${Math.round(a.wind_gusts_10m_max[i])}</span></div>
     <div>🌊 <b>${wh==null?'—':wh.toFixed(1)}</b> m <span class="muted">${m&&m.wave_period_max[i]?m.wave_period_max[i].toFixed(0)+' s · '+dirL(m.wave_direction_dominant[i]):''}</span></div>
     <span class="chip ${sc}" style="align-self:flex-start">${sl}</span></div>`}).join('');
   return `<div class="panel"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Meteo e mare · Stazzo</h2><span class="muted" style="font-size:12px">Open-Meteo · onde massime del giorno</span></div><div class="wxg">${days}</div>
-  <div class="note" style="margin-top:10px">Previsione indicativa da modello: il mare sotto costa può essere diverso. Prima di un\'uscita controlla il bollettino ufficiale e decidi sul posto.</div></div>`}
+  <div class="note" style="margin-top:10px">Rosso = non si esce (temporale, pioggia forte, vento o mare oltre soglia). Arancione = giornata difficile. Soglie indicative, da tarare. Previsione indicativa da modello: il mare sotto costa può essere diverso. Prima di un\'uscita controlla il bollettino ufficiale e decidi sul posto.</div></div>`}
 function todoPanel(){const ad=isAdmin(),t0=addDays(0),t1=addDays(1);
   const live=S.acts.filter(a=>a.status==='scheduled');const sea=live.filter(isSea),todayAll=live.filter(a=>dkey(a.starts_at)===t0).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   const tm=x=>new Date(x).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
@@ -338,7 +344,7 @@ function homeView(){
 }
 
 function actFor(p){if(!p.instr_active)return '';const ids=new Set(S.links.filter(l=>l.person_id===p.id).map(l=>l.type_id));return S.types.filter(t=>ids.has(t.id)).map(t=>t.name).sort().join(', ')}
-const SORTKEY={name:p=>(p.full_name||'').toLowerCase(),loc:p=>p.is_local===true?0:p.is_local===false?1:2,top:p=>{const t=topCert(p.id);return t?-certRank(t):1e9},oth:p=>-S.certs.filter(c=>c.person_id===p.id).length,note:p=>(p.note||'').toLowerCase()||'\uffff',act:p=>actFor(p).toLowerCase()||'\uffff'};
+const SORTKEY={staff:p=>p.is_staff?0:1,name:p=>(p.full_name||'').toLowerCase(),loc:p=>p.is_local===true?0:p.is_local===false?1:2,top:p=>{const t=topCert(p.id);return t?-certRank(t):1e9},oth:p=>-S.certs.filter(c=>c.person_id===p.id).length,note:p=>(p.note||'').toLowerCase()||'\uffff',act:p=>actFor(p).toLowerCase()||'\uffff'};
 function sortFn(){const k=(S.sort&&S.sort.k)||'top',d=(S.sort&&S.sort.d)||1,f=SORTKEY[k];return (a,b)=>{const x=f(a),y=f(b);const c=typeof x==='number'?x-y:String(x).localeCompare(String(y),'it');return (c||SORTKEY.name(a).localeCompare(SORTKEY.name(b),'it'))*(c?d:1)}}
 function setSort(k){S.sort=S.sort&&S.sort.k===k?{k,d:-S.sort.d}:{k,d:1};render()}
 function th(k,l,cls){const on=S.sort&&S.sort.k===k;return `<th class="${cls||''}" style="cursor:pointer;user-select:none;white-space:nowrap" onclick="setSort('${k}')">${l} <span style="opacity:${on?1:.3}">${on?(S.sort.d===1?'▲':'▼'):'↕'}</span></th>`}
@@ -350,9 +356,9 @@ function peopleView(){
   ${isAdmin()?'<button class="btn" onclick="addPerson()">Aggiungi persona</button>':''}</div></div>
   <div class="row" style="margin-bottom:12px;gap:12px"><div class="seg">${[['all','Tutti'],['local','Locali'],['ext','Non locali'],['tbd','Da indicare']].map(k=>`<button class="${lf===k[0]?'sel':''}" onclick="S.lfilter='${k[0]}';render()">${k[1]} · ${lc(k[0])}</button>`).join('')}</div>
   <input id="q" placeholder="Cerca per nome" value="${esc(S.q)}" oninput="S.q=this.value;renderKeep()" style="max-width:280px"></div>
-  <div class="panel" style="padding:6px 10px">${list.length?`<table><thead><tr>${th('name','Nome')}${th('loc','Provenienza')}${S.pfilter==='instructor'?th('act','Attivo per'):''}${th('top','Brevetto più alto')}${th('oth','Altri brevetti')}${th('note','Note')}</tr></thead><tbody>
+  <div class="panel" style="padding:6px 10px">${list.length?`<table><thead><tr>${th('name','Nome')}${th('staff','Staff')}${th('loc','Provenienza')}${S.pfilter==='instructor'?th('act','Attivo per'):''}${th('top','Brevetto più alto')}${th('oth','Altri brevetti')}${th('note','Note')}</tr></thead><tbody>
   ${list.map(p=>{const t=topCert(p.id),iv=S.interests.filter(i=>i.person_id===p.id);
-   return `<tr class="click" onclick="openPerson('${p.id}')"><td style="white-space:nowrap"><b>${esc(nm(p))}</b>${p.user_id?' <span class="chip a" title="Collegato a un account dell\'app">app</span>':''}</td><td><span class="chip ${p.is_local===true?'a':p.is_local===false?'b':'w'}" ${isAdmin()?`style="cursor:pointer" title="Clic per cambiare" onclick="event.stopPropagation();cycleLoc('${p.id}')"`:''}>${LOC_LAB[p.is_local==null?null:p.is_local]}</span></td>${S.pfilter==='instructor'?`<td>${actFor(p)?actFor(p).split(', ').map(x=>`<span class="chip a">${esc(x)}</span>`).join(''):`<span class="chip w">${p.instr_active?'nessuna specialità':'non attivo'}</span>`}</td>`:''}<td>${t?`<span class="chip a">${certLabel(t)}</span>`:p.outreach==='to_contact'?'<span class="chip w">non ha risposto</span>':'<span class="muted">non registrato</span>'}</td>
+   return `<tr class="click" onclick="openPerson('${p.id}')"><td style="white-space:nowrap"><b>${esc(nm(p))}</b>${p.user_id?' <span class="chip a" title="Collegato a un account dell\'app">app</span>':''}</td><td><span class="chip ${p.is_staff?'b':''}" ${isAdmin()?`style="cursor:pointer" title="Clic per cambiare" onclick="event.stopPropagation();toggleStaff('${p.id}')"`:''}>${p.is_staff?'Staff':'—'}</span></td><td><span class="chip ${p.is_local===true?'a':p.is_local===false?'b':'w'}" ${isAdmin()?`style="cursor:pointer" title="Clic per cambiare" onclick="event.stopPropagation();cycleLoc('${p.id}')"`:''}>${LOC_LAB[p.is_local==null?null:p.is_local]}</span></td>${S.pfilter==='instructor'?`<td>${actFor(p)?actFor(p).split(', ').map(x=>`<span class="chip a">${esc(x)}</span>`).join(''):`<span class="chip w">${p.instr_active?'nessuna specialità':'non attivo'}</span>`}</td>`:''}<td>${t?`<span class="chip a">${certLabel(t)}</span>`:p.outreach==='to_contact'?'<span class="chip w">non ha risposto</span>':'<span class="muted">non registrato</span>'}</td>
    <td>${S.certs.filter(c=>c.person_id===p.id&&c!==t).sort((a,b)=>certRank(b)-certRank(a)).map(c=>`<span class="chip">${certLabel(c)}</span>`).join('')||'<span class="muted">—</span>'}${iv.map(i=>{const c=S.courses.find(x=>x.id===i.course_type_id);return c?`<span class="chip ${STAT_CLS[i.status]}">Interesse: ${esc(c.name)}</span>`:''}).join('')}</td><td class="muted">${esc(p.note||'')}</td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Nessuna persona.</div>'}</div>`
 }
 function renderKeep(){const f=$('#q'),pos=f?.selectionStart;render();const g=$('#q');if(g){g.focus();try{g.setSelectionRange(pos,pos)}catch(e){}}}
@@ -442,7 +448,10 @@ const dkey=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).p
 const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return dkey(d)};
 const fmtDT=x=>new Date(x).toLocaleString('it-IT',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
 function wxFor(key){if(!S.wx)return null;const a=S.wx.a,m=S.wx.m,i=a.time.indexOf(key);if(i<0)return null;return {rain:a.precipitation_sum[i],prob:a.precipitation_probability_max[i],wind:Math.round(a.wind_speed_10m_max[i]),gust:Math.round(a.wind_gusts_10m_max[i]),wdir:a.wind_direction_10m_dominant[i],wave:m?m.wave_height_max[i]:null,per:m?m.wave_period_max[i]:null,code:a.weather_code[i]}}
-function wxRisk(w){if(!w)return '';const wv=w.wave||0;return(wv>=1.5||w.wind>=20||w.rain>=10)?'d':(wv>=1||w.wind>=15||w.rain>=3)?'w':'a'}
+function wxRisk(w){if(!w)return '';const wv=w.wave||0,c=w.code||0,storm=c>=95;
+  if(storm||wv>=1.5||w.wind>=20||w.gust>=30||w.rain>=10)return 'd';
+  if(wv>=1||w.wind>=15||w.gust>=24||w.rain>=3||(c>=61&&c<=82)||(w.prob>=70&&w.rain>=1))return 'w';return 'a'}
+function wxWhy(w){if(!w)return '';const r=[],wv=w.wave||0,c=w.code||0;if(c>=95)r.push('temporale');if(w.rain>=10)r.push('pioggia forte');else if(w.rain>=3||(c>=61&&c<=82))r.push('pioggia');if(wv>=1)r.push('mare '+wv.toFixed(1)+' m');if(w.wind>=15)r.push('vento '+w.wind+' nodi');return r.join(' · ')}
 function wxLine(w){if(!w)return '<span class="muted">Previsione non ancora disponibile (copre oggi e 3 giorni).</span>';const sl=seaState(w.wave);return `${WXI(w.code)} 🌧 <b>${w.rain}</b> mm (${w.prob??'—'}%) · 💨 <b>${w.wind}</b> nodi ${dirL(w.wdir)}, raff. ${w.gust} · 🌊 <b>${w.wave==null?'—':w.wave.toFixed(1)}</b> m <span class="chip ${sl[1]}" style="margin:0 0 0 4px">${sl[0]}</span>`}
 function stChip(a){if(a.status==='cancelled')return '<span class="chip d">Annullata</span>';if(a.status==='completed')return '<span class="chip">Svolta</span>';if(isSea(a))return a.weather_status==='confirmed'?'<span class="chip a">Confermata</span>':'<span class="chip w">Osservazione meteo</span>';return ''}
 function dl(d){const z=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return z.toISOString().slice(0,16)}
@@ -612,16 +621,19 @@ function normPhone(v){let d=String(v||'').trim();if(!d)return {ok:true,v:null};d
 const LOC_LAB={true:'Locale',false:'Non locale',null:'Da indicare'};
 function locSel(id,cur){return `<select id="${id}"><option value=""${cur==null?' selected':''}>Da indicare</option><option value="1"${cur===true?' selected':''}>Locale (zona Acireale / Catania)</option><option value="0"${cur===false?' selected':''}>Non locale (viene da fuori)</option></select>`}
 function locVal(id){const v=$('#'+id).value;return v===''?null:v==='1'}
+async function toggleStaff(id){const p=S.people.find(x=>x.id===id);const n=!p.is_staff;
+  const {error}=await sb.from('people').update({is_staff:n}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);p.is_staff=n;renderKeep();toast(n?'Segnato come staff':'Tolto dallo staff')}
 async function cycleLoc(id){const p=S.people.find(x=>x.id===id);const n=p.is_local==null?true:p.is_local===true?false:null;
   const {error}=await sb.from('people').update({is_local:n}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);p.is_local=n;renderKeep()}
-function addPerson(){modal(`<h3>Aggiungi persona</h3><label>Nome e cognome</label><input id="pn"><label>Ruolo</label><select id="pr"><option value="athlete">Atleta</option><option value="instructor">Istruttore</option></select><label>Provenienza</label>${locSel("pl",null)}<label>Telefono (con prefisso, es. +39 333 1234567)</label><input id="pph" inputmode="tel" placeholder="+39…"><div class="row" style="margin-top:18px"><button class="btn" onclick="savePerson()">Aggiungi</button><button class="btn ghost" onclick="closeModal()">Annulla</button></div>`)}
-async function savePerson(){const n=$('#pn').value.trim();if(!n)return;const ph=normPhone($('#pph').value);if(!ph.ok)return toast(ph.msg);const {data,error}=await sb.from('people').insert({org_id:S.org.org_id,full_name:n,role:$('#pr').value,is_local:locVal('pl'),phone:ph.v}).select().single();if(error)return toast('Non riuscito: '+error.message);S.people.push(data);S.people.sort((a,b)=>a.full_name.localeCompare(b.full_name));closeModal();render()}
+function addPerson(){modal(`<h3>Aggiungi persona</h3><label>Nome e cognome</label><input id="pn"><label>Ruolo</label><select id="pr"><option value="athlete">Atleta</option><option value="instructor">Istruttore</option></select><label>Provenienza</label>${locSel("pl",null)}<label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="pst" style="width:auto"> Staff <span class="muted">(non paga i corsi; gli istruttori sono sempre staff)</span></label><label>Telefono (con prefisso, es. +39 333 1234567)</label><input id="pph" inputmode="tel" placeholder="+39…"><div class="row" style="margin-top:18px"><button class="btn" onclick="savePerson()">Aggiungi</button><button class="btn ghost" onclick="closeModal()">Annulla</button></div>`)}
+async function savePerson(){const n=$('#pn').value.trim();if(!n)return;const ph=normPhone($('#pph').value);if(!ph.ok)return toast(ph.msg);const {data,error}=await sb.from('people').insert({org_id:S.org.org_id,full_name:n,role:$('#pr').value,is_local:locVal('pl'),is_staff:$('#pst').checked,phone:ph.v}).select().single();if(error)return toast('Non riuscito: '+error.message);S.people.push(data);S.people.sort((a,b)=>a.full_name.localeCompare(b.full_name));closeModal();render()}
 function openPerson(id){
   const p=S.people.find(x=>x.id===id);if(!p)return;const cs=S.certs.filter(c=>c.person_id===id);const ad=isAdmin();
   const head=ad?`<h3>Anagrafica</h3><label>Nome e cognome</label><input id="en" value="${esc(p.full_name||'')}">
   <div class="row" style="flex-wrap:nowrap"><div style="flex:1"><label>Ruolo</label><select id="er"><option value="athlete"${p.role==='athlete'?' selected':''}>Atleta</option><option value="instructor"${p.role==='instructor'?' selected':''}>Istruttore</option></select></div>
   <div style="flex:1"><label>Telefono (con prefisso)</label><input id="ep" inputmode="tel" placeholder="+39…" value="${esc(p.phone||'')}"></div></div>
   <label>Provenienza</label>${locSel('el',p.is_local)}
+  <label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="est" style="width:auto"${p.is_staff?' checked':''}> Staff <span class="muted">(non paga i corsi)</span></label>
   <label>Account app <span class="muted">(collega questa scheda a chi usa l'app)</span></label>${accSel(p)}
   <label>Note</label><input id="eo" value="${esc(p.note||'')}">
   ${p.role==='instructor'?`<div class="panel" style="padding:10px 14px;margin:14px 0 0"><label style="display:flex;gap:8px;align-items:center;cursor:pointer;margin:0"><input id="ia" type="checkbox" style="width:auto" ${p.instr_active?'checked':''}> <b>Istruttore attivo</b> <span class="muted" style="font-size:12px">(compare nelle tendine delle attività)</span></label>
@@ -636,7 +648,7 @@ function openPerson(id){
 function accSel(p){const used=new Map(S.people.filter(x=>x.user_id&&x.id!==p.id).map(x=>[x.user_id,x.full_name]));const sg=!p.user_id?suggestMember(p):null;
   return `<select id="eu"><option value="">— non collegato —</option>${S.members.map(m=>{const u=used.get(m.user_id);return `<option value="${m.user_id}"${m.user_id===p.user_id?' selected':''}${u?' disabled':''}>${esc(m.name)} · ${m.role==='admin'?'gestore':m.role==='instructor'?'istruttore':'atleta'}${u?' (già collegato a '+esc(u)+')':''}</option>`}).join('')}</select>${sg?`<div class="note" style="margin-top:6px">Suggerito: <b>${esc(sg.name)}</b> <button class="btn" type="button" style="padding:2px 10px;margin-left:6px" onclick="$('#eu').value='${sg.user_id}'">Seleziona</button></div>`:''}`}
 async function savePersonEdit(id){const n=$('#en').value.trim();if(!n)return toast('Il nome non può essere vuoto');
-  const ph=normPhone($('#ep').value);if(!ph.ok)return toast(ph.msg);const u={full_name:n,role:$('#er').value,phone:ph.v,is_local:locVal('el'),user_id:$('#eu')?$('#eu').value||null:undefined,note:$('#eo').value.trim()||null};let chk=null;if($('#ia')){u.instr_active=$('#ia').checked;chk=[...document.querySelectorAll('.spc:checked')].map(x=>x.value)}
+  const ph=normPhone($('#ep').value);if(!ph.ok)return toast(ph.msg);const u={full_name:n,role:$('#er').value,phone:ph.v,is_local:locVal('el'),is_staff:$('#est').checked||$('#er').value==='instructor',user_id:$('#eu')?$('#eu').value||null:undefined,note:$('#eo').value.trim()||null};let chk=null;if($('#ia')){u.instr_active=$('#ia').checked;chk=[...document.querySelectorAll('.spc:checked')].map(x=>x.value)}
   const {data,error}=await sb.from('people').update(u).eq('id',id).select().single();if(error)return toast('Non riuscito: '+error.message);
   if(chk){const d=await sb.from('instructor_activity_types').delete().eq('person_id',id);if(d.error)return toast('Non riuscito: '+d.error.message);
     if(chk.length){const i=await sb.from('instructor_activity_types').insert(chk.map(t=>({person_id:id,type_id:t})));if(i.error)return toast('Non riuscito: '+i.error.message)}
