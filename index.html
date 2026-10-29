@@ -1458,41 +1458,56 @@ function renderCenterDetail(c){
     <div id="ct-acts"><p>…</p></div>`;
   loadCenterActs([c]);
 }
-async function loadCenterActs(cs){
-  const box=$('ct-acts');if(!box||!sb||!cs.length)return;
-  const loc=lang==='en'?'en-GB':'it-IT';
-  const fmt=x=>new Date(x).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-  let html='';
-  try{
-    const nr=await sb.from('notifications').select('id,message,created_at,read_at').in('org_id',cs.map(c=>c.org_id)).order('created_at',{ascending:false}).limit(6);
-    const ns=nr.data||[];
-    if(ns.length){
-      html+=`<h2>${L2('Avvisi dal centro','Messages from the center')}</h2>`+ns.map(n=>`<div class="note" style="margin-top:8px;${n.read_at?'opacity:.7':'border-left:3px solid var(--accent)'}">${esc(n.message)}<br><span style="color:var(--ink2);font-size:12px">${fmt(n.created_at)}</span></div>`).join('');
-      const unread=ns.filter(n=>!n.read_at).map(n=>n.id);
-      if(unread.length)sb.from('notifications').update({read_at:new Date().toISOString()}).in('id',unread).then(()=>{});
-    }
-  }catch(e){}
-  for(const c of cs.filter(c=>c.role==='athlete'||c.role)){
-    try{
-      const r=await sb.rpc('list_activities',{p_org:c.org_id,p_from:new Date().toISOString(),p_days:30});
-      const list=(Array.isArray(r.data)?r.data:[]).filter(a=>a.status==='scheduled'||(a.status==='cancelled'&&a.my_status));
-      html+=`<h2>${L2('Prossime attività','Upcoming activities')}${cs.length>1?' · '+esc(c.name):''}</h2>`;
-      if(!list.length){html+=`<p>${L2('Nessuna attività in programma.','No activities scheduled.')}</p>`;continue}
-      html+=list.map(a=>{
-        const cancelled=a.status==='cancelled',sea=a.location_type==='sea'&&a.kind!=='dry';
-        const left=Math.max(0,a.capacity-a.booked);
-        const chip=cancelled?`<span style="color:#F08A7A">${L2('Annullata','Cancelled')}</span>`:sea?(a.weather_status==='confirmed'?`<span style="color:var(--accent)">${L2('Confermata','Confirmed')}</span>`:`<span style="color:#F2C879">${L2('Meteo da confermare','Weather to be confirmed')}</span>`):'';
-        let act='';
-        if(!cancelled){
-          if(a.my_status==='booked')act=`<button class="btn ghost" style="padding:10px;font-size:15px" onclick="cancelBook('${a.id}')">${L2('Annulla prenotazione','Cancel booking')}</button>`;
-          else if(a.my_status==='waitlist')act=`<button class="btn ghost" style="padding:10px;font-size:15px" onclick="cancelBook('${a.id}')">${L2('In lista d’attesa · esci','On waitlist · leave')}</button>`;
-          else if(!a.allowed)act=`<p style="color:var(--ink2);font-size:13px;margin:8px 0 0">${L2('Livello non sufficiente per questa attività.','Your level is not enough for this activity.')}</p>`;
-          else act=`<button class="btn" style="padding:10px;font-size:15px" onclick="bookAct('${a.id}')">${left>0?L2('Prenota','Book'):L2('Lista d’attesa','Join waitlist')}</button>`;
-        }
-        return `<div class="note" style="margin-top:8px;${cancelled?'opacity:.6':''}"><b>${esc(a.title)}</b> ${chip}<br><span style="color:var(--ink2);font-size:13px">${fmt(a.starts_at)}${a.place?' · '+esc(a.place):''}${a.instructor_name?' · '+esc(a.instructor_name):''}<br>${cancelled?esc(a.cancel_reason||''):(left>0?L2('Posti liberi: ','Spots left: ')+left:L2('Completa','Full'))}${a.my_status==='booked'?' · <b>'+L2('Sei iscritto','You are booked')+'</b>':''}</span>${act}</div>`}).join('');
-    }catch(e){}
+let ctActs=[],ctSel=null,ctExp=false,ctMonth=null,ctNotes=[];
+const dkeyA=d=>{d=new Date(d);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+function actCard(a){
+  const loc=lang==='en'?'en-GB':'it-IT';const fmt=x=>new Date(x).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const cancelled=a.status==='cancelled',sea=a.location_type==='sea'&&a.kind!=='dry',left=Math.max(0,a.capacity-a.booked),past=new Date(a.starts_at)<new Date();
+  const chip=cancelled?`<span style="color:#F08A7A">${L2('Annullata','Cancelled')}</span>`:sea?(a.weather_status==='confirmed'?`<span style="color:var(--accent)">${L2('Confermata','Confirmed')}</span>`:`<span style="color:#F2C879">${L2('Meteo da confermare','Weather to be confirmed')}</span>`):'';
+  let act='';
+  if(!cancelled&&!past){
+    if(a.my_status==='booked')act=`<button class="btn ghost" style="padding:10px;font-size:15px" onclick="cancelBook('${a.id}')">${L2('Annulla prenotazione','Cancel booking')}</button>`;
+    else if(a.my_status==='waitlist')act=`<button class="btn ghost" style="padding:10px;font-size:15px" onclick="cancelBook('${a.id}')">${L2('In lista d’attesa · esci','On waitlist · leave')}</button>`;
+    else if(!a.allowed)act=`<p style="color:var(--ink2);font-size:13px;margin:8px 0 0">${L2('Livello non sufficiente per questa attività.','Your level is not enough for this activity.')}</p>`;
+    else act=`<button class="btn" style="padding:10px;font-size:15px" onclick="bookAct('${a.id}')">${left>0?L2('Prenota','Book'):L2('Lista d’attesa','Join waitlist')}</button>`;
   }
-  box.innerHTML=html;
+  return `<div class="note" style="margin-top:8px;${cancelled||past?'opacity:.6':''}"><b>${esc(a.title)}</b> ${chip}<br><span style="color:var(--ink2);font-size:13px">${fmt(a.starts_at)}${a.place?' · '+esc(a.place):''}${a.instructor_name?' · '+esc(a.instructor_name):''}<br>${cancelled?esc(a.cancel_reason||''):(left>0?L2('Posti liberi: ','Spots left: ')+left:L2('Completa','Full'))}${a.my_status==='booked'?' · <b>'+L2('Sei iscritto','You are booked')+'</b>':''}</span>${act}</div>`}
+async function loadCenterActs(cs){
+  const box=$('ct-acts');if(!box||!sb||!cs.length)return;const c=cs[0];
+  try{const nr=await sb.from('notifications').select('id,message,created_at,read_at').eq('org_id',c.org_id).order('created_at',{ascending:false}).limit(5);ctNotes=nr.data||[]}catch(e){ctNotes=[]}
+  try{const r=await sb.rpc('list_activities',{p_org:c.org_id,p_from:new Date(Date.now()-35*864e5).toISOString(),p_days:200});ctActs=(Array.isArray(r.data)?r.data:[]).filter(a=>a.status==='scheduled'||(a.status==='cancelled'&&a.my_status))}catch(e){ctActs=[]}
+  if(!ctSel)ctSel=dkeyA(new Date());
+  renderCtCal();
+  const unread=ctNotes.filter(n=>!n.read_at).map(n=>n.id);
+  if(unread.length)try{sb.from('notifications').update({read_at:new Date().toISOString()}).in('id',unread).then(()=>{})}catch(e){}
+}
+function ctMove(dir){const d=new Date(ctSel+'T12:00');if(ctExp)d.setMonth(d.getMonth()+dir);else d.setDate(d.getDate()+7*dir);ctSel=dkeyA(d);renderCtCal()}
+function ctPick(k){ctSel=k;renderCtCal()}
+function ctToggle(){ctExp=!ctExp;renderCtCal()}
+function renderCtCal(){
+  const box=$('ct-acts');if(!box)return;
+  const loc=lang==='en'?'en-GB':'it-IT',sel=new Date(ctSel+'T12:00'),today=dkeyA(new Date());
+  const by={};ctActs.forEach(a=>{const k=dkeyA(a.starts_at);(by[k]=by[k]||[]).push(a)});
+  let days=[];
+  if(ctExp){const f=new Date(sel.getFullYear(),sel.getMonth(),1),off=(f.getDay()+6)%7;for(let i=0;i<42;i++){const d=new Date(f.getFullYear(),f.getMonth(),1-off+i);if(i>=35&&d.getMonth()!==f.getMonth())break;days.push(d)}}
+  else{const off=(sel.getDay()+6)%7;for(let i=0;i<7;i++)days.push(new Date(sel.getFullYear(),sel.getMonth(),sel.getDate()-off+i))}
+  const dot=a=>{const sea=a.location_type==='sea'&&a.kind!=='dry';const col=a.status==='cancelled'?'#F08A7A':sea&&a.weather_status!=='confirmed'?'#F2C879':a.kind==='course'?'#C4A6EA':a.kind==='dry'?'#7FB4F0':'var(--accent)';return `<i style="width:6px;height:6px;border-radius:50%;background:${col};display:block"></i>`};
+  const wd=[...Array(7).keys()].map(i=>new Date(2024,0,1+i).toLocaleDateString(loc,{weekday:'narrow'}));
+  const label=ctExp?sel.toLocaleDateString(loc,{month:'long',year:'numeric'}):(days[0].toLocaleDateString(loc,{day:'numeric',month:'short'})+' – '+days[6].toLocaleDateString(loc,{day:'numeric',month:'short'}));
+  const cell=d=>{const k=dkeyA(d),isSel=k===ctSel,out=ctExp&&d.getMonth()!==sel.getMonth(),dots=(by[k]||[]).slice(0,3).map(dot).join('');
+    return `<button onclick="ctPick('${k}')" style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:12px;${isSel?'background:var(--accent);color:#04131D;':''}${k===today&&!isSel?'border:1px solid var(--accent);':'border:1px solid transparent;'}${out?'opacity:.35;':''}"><span style="font-size:15px;font-weight:600">${d.getDate()}</span><span style="display:flex;gap:3px;height:6px">${isSel?'':dots}</span></button>`};
+  const list=(by[ctSel]||[]).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
+  const notes=ctNotes.length?`<h2>${L2('Avvisi dal centro','Messages from the center')}</h2>`+ctNotes.map(n=>`<div class="note" style="margin-top:8px;${n.read_at?'opacity:.7':'border-left:3px solid var(--accent)'}">${esc(n.message)}<br><span style="color:var(--ink2);font-size:12px">${new Date(n.created_at).toLocaleString(loc,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`).join(''):'';
+  box.innerHTML=`${notes}
+    <div id="ct-calw" style="margin-top:14px;background:var(--bg2);border-radius:16px;padding:10px 8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 6px 8px"><button class="pill" onclick="ctMove(-1)" aria-label="‹">‹</button><button onclick="ctToggle()" style="font-weight:600;font-size:16px;text-transform:capitalize">${esc(label)} <span style="color:var(--ink2)">${ctExp?'▴':'▾'}</span></button><button class="pill" onclick="ctMove(1)" aria-label="›">›</button></div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:11px;color:var(--ink2);margin-bottom:4px">${wd.map(x=>`<span>${esc(x)}</span>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${days.map(cell).join('')}</div>
+      ${ctExp?'':`<p style="text-align:center;color:var(--ink2);font-size:12px;margin:8px 0 0">${L2('Tocca il mese per vederlo intero','Tap the month to see it all')}</p>`}
+    </div>
+    <h2 style="text-transform:capitalize">${esc(sel.toLocaleDateString(loc,{weekday:'long',day:'numeric',month:'long'}))}</h2>
+    ${list.length?list.map(actCard).join(''):`<p>${L2('Nessuna attività in questo giorno.','No activities on this day.')}</p>`}`;
+  const w=$('ct-calw');let x0=null;w.ontouchstart=e=>{x0=e.touches[0].clientX};w.ontouchend=e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>50)ctMove(dx<0?1:-1)};
 }
 async function bookAct(id){try{const {data,error}=await sb.rpc('book_activity',{p_act:id});if(error)throw error;toast(data==='waitlist'?L2('Sei in lista d’attesa','You are on the waitlist'):L2('Prenotato','Booked'))}catch(e){const m=String(e.message||'');toast(/level too low/i.test(m)?L2('Livello non sufficiente','Level too low'):/already started/i.test(m)?L2('Attività già iniziata','Already started'):L2('Non riuscito. Riprova.','Failed. Try again.'))}renderCenter()}
 async function cancelBook(id){try{const {error}=await sb.rpc('cancel_booking',{p_act:id});if(error)throw error;toast(L2('Prenotazione annullata','Booking cancelled'))}catch(e){toast(L2('Non riuscito. Riprova.','Failed. Try again.'))}renderCenter()}
