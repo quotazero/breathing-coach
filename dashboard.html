@@ -220,7 +220,7 @@ function loginView(){
 }
 function nostaffView(){return `<div class="login"><h1>Accesso non abilitato</h1><p>Questo account non ha un ruolo di gestore o istruttore in un centro.</p><button class="btn ghost" onclick="logout()">Esci</button></div>`}
 
-const VIEWS=[['home','Panoramica'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['types','Attività'],['center','Il centro'],['cal','Calendario'],['map','Mappa funzioni']];
+const VIEWS=[['home','Panoramica'],['people','Persone'],['out','Da sollecitare'],['opp','Opportunità'],['sim','Simulatore corso'],['types','Attività'],['center','Il centro'],['meteo','Meteo'],['cal','Calendario'],['map','Mappa funzioni']];
 function shell(inner){
   return `<div class="app"><aside class="side"><div class="brand"><img src="icons/blueworld-logo.png?v=2" alt="Blue World Freediving"><small>Dashboard</small></div>
   <nav class="nav">${VIEWS.filter(v=>isAdmin()||!['sim'].includes(v[0])).map(v=>`<button class="${S.view===v[0]?'sel':''}" onclick="go('${v[0]}')">${v[1]}</button>`).join('')}</nav>
@@ -282,15 +282,49 @@ async function saveCenter(){const o=S.org;const rec={name:$('#cn').value.trim(),
   Object.assign(o,rec);GEO=null;S.wx=null;render();toast('Dati del centro salvati')}
 function shareApp(){const t=`Ciao! Ecco l'app di ${S.org.name}. Aprila da Safari (iPhone) o Chrome (Android), accedi con la tua email e poi tocca Condividi → "Aggiungi a Home": l'icona è già quella del centro.\n${centerLink()}`;window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank','noopener')}
 
+
+/* ===== Pagina Meteo: dettaglio orario ===== */
+function openMeteo(k){S.wxDay=k;go('meteo')}
+function wxHour(i){const h=S.wx.ah,m=S.wx.mh;if(!h)return null;
+  return {t:h.time[i],code:h.weather_code[i],temp:h.temperature_2m[i],rain:h.precipitation[i]||0,prob:h.precipitation_probability?h.precipitation_probability[i]:null,wind:Math.round(h.wind_speed_10m[i]),gust:Math.round(h.wind_gusts_10m[i]),wave:m&&m.wave_height?m.wave_height[i]:null,per:m&&m.wave_period?m.wave_period[i]:null}}
+function hRisk(x){const wv=x.wave||0,c=x.code||0;
+  if(c>=95||x.rain>=4||wv>=1.5||x.wind>=20||x.gust>=30)return 'd';
+  if(x.rain>=1||(c>=61&&c<=82)||wv>=1||x.wind>=15||x.gust>=24)return 'w';return 'a'}
+function meteoView(){
+  if(!S.wx){loadWx();return `<div class="top"><div><h1>Meteo</h1><p>${S.wxErr?'Meteo non disponibile in questo momento.':'Caricamento…'}</p></div></div>`}
+  const a=S.wx.a,days=a.time;if(!S.wxDay||!days.includes(S.wxDay))S.wxDay=days[0];
+  if(!S.wx.ah)return `<div class="top"><div><h1>Meteo</h1><p>Il dettaglio orario si sta caricando… <button class="btn ghost" onclick="S.wx=null;render()">Ricarica</button></p></div></div>`;
+  const idx=[];S.wx.ah.time.forEach((t,i)=>{if(t.slice(0,10)===S.wxDay)idx.push(i)});
+  const hrs=idx.map(wxHour),lab=k=>{const i=days.indexOf(k);return i===0?'Oggi':i===1?'Domani':new Date(k+'T12:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric'})};
+  const tabs=days.map((k,i)=>{const r=wxRisk(wxFor(k));return `<button class="${S.wxDay===k?'sel':''}" style="${r==='d'?'border-color:var(--danger)':r==='w'?'border-color:#F2A65A':''}" onclick="S.wxDay='${k}';render()">${lab(k)}${r==='d'?' 🔴':r==='w'?' 🟠':''}</button>`}).join('');
+  const day=hrs.filter(x=>+x.t.slice(11,13)>=6&&+x.t.slice(11,13)<=21);
+  const maxR=Math.max(1,...hrs.map(x=>x.rain));
+  const bars=hrs.map(x=>{const hh=x.t.slice(11,13),r=hRisk(x);return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0" title="${hh}:00 · ${x.rain} mm · ${x.prob??'—'}%"><div style="height:80px;display:flex;align-items:flex-end;width:100%"><div style="width:100%;height:${Math.max(x.rain>0?4:1,Math.round(x.rain/maxR*80))}px;background:${x.rain>=4?'var(--danger)':x.rain>=1?'#F2A65A':x.rain>0?'var(--blue)':'var(--line)'};border-radius:3px 3px 0 0"></div></div><span style="font-size:10px;color:var(--muted,#8FB1C2)">${+hh%3===0?hh:''}</span></div>`}).join('');
+  // finestre utili 06-21
+  const win=[];let st=null;day.forEach((x,i)=>{const ok=hRisk(x)==='a';if(ok&&st==null)st=x.t.slice(11,13);if((!ok||i===day.length-1)&&st!=null){const en=ok?(+x.t.slice(11,13)+1):+x.t.slice(11,13);win.push([st,String(en).padStart(2,'0')]);st=null}});
+  const wins=win.filter(w=>+w[1]-+w[0]>=2);
+  const totRain=hrs.reduce((n,x)=>n+x.rain,0),rainH=hrs.filter(x=>x.rain>=0.2).map(x=>+x.t.slice(11,13));
+  const rainTxt=rainH.length?`Pioggia prevista tra le ${String(Math.min(...rainH)).padStart(2,'0')}:00 e le ${String(Math.max(...rainH)+1).padStart(2,'0')}:00 · totale ${totRain.toFixed(1)} mm`:'Nessuna pioggia prevista';
+  const row=x=>{const r=hRisk(x),hh=x.t.slice(11,13);return `<tr style="${r==='d'?'background:rgba(240,138,122,.12)':r==='w'?'background:rgba(242,166,90,.10)':''}"><td><b>${hh}:00</b></td><td>${WXI(x.code)}</td><td>${Math.round(x.temp)}°</td><td>${x.rain>0?'<b>'+x.rain.toFixed(1)+'</b> mm':'—'} <span class="muted">${x.prob!=null?x.prob+'%':''}</span></td><td>${x.wind} <span class="muted">raff. ${x.gust}</span></td><td>${x.wave==null?'—':x.wave.toFixed(1)+' m'} <span class="muted">${x.per?Math.round(x.per)+' s':''}</span></td><td>${r==='d'?'<span class="chip d">Non si esce</span>':r==='w'?'<span class="chip w">Difficile</span>':'<span class="chip a">Ok</span>'}</td></tr>`};
+  const d0=wxFor(S.wxDay),rk=wxRisk(d0),why=wxWhy(d0);
+  return `<div class="top"><div><h1>Meteo e mare · ${esc(S.org.place_name||'Stazzo')}</h1><p>Dettaglio orario da Open-Meteo. Previsione indicativa da modello: decidi sul posto.</p></div></div>
+  <div class="seg" style="margin-bottom:12px">${tabs}</div>
+  <div class="panel" style="${rk==='d'?'border:2px solid var(--danger)':rk==='w'?'border:2px solid #F2A65A':''}">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0;text-transform:capitalize">${new Date(S.wxDay+'T12:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</h2>${rk==='d'?`<span class="chip d">Non si esce${why?': '+esc(why):''}</span>`:rk==='w'?`<span class="chip w">Difficile${why?': '+esc(why):''}</span>`:'<span class="chip a">Giornata buona</span>'}</div>
+    <p class="note" style="margin:8px 0">${rainTxt}${wins.length?' · <b>Fasce utili:</b> '+wins.map(w=>w[0]+':00–'+w[1]+':00').join(', '):' · <b>Nessuna fascia utile</b> tra le 06 e le 21'}</p>
+    <div style="font-size:12px;color:#8FB1C2;margin:10px 0 2px">Pioggia ora per ora (mm)</div><div style="display:flex;gap:2px;align-items:flex-end">${bars}</div></div>
+  <div class="panel" style="padding:6px 10px;overflow:auto"><table><thead><tr><th>Ora</th><th></th><th>Temp</th><th>Pioggia</th><th>Vento (nodi)</th><th>Onde</th><th>Esito</th></tr></thead><tbody>${day.map(row).join('')}</tbody></table></div>
+  <div class="note">Esito per ora: rosso = temporale, pioggia ≥4 mm/h, vento ≥20 nodi, raffiche ≥30 o onde ≥1,5 m. Arancione = pioggia ≥1 mm/h, vento ≥15, raffiche ≥24 o onde ≥1 m. Soglie indicative, da tarare.</div>`}
+
 function go(v){S.view=v;S.open=null;render()}
 
 /* ---------- meteo (Open-Meteo, nessuna chiave) ---------- */
 const wxLat=()=>(S.org&&S.org.lat)||37.6205,wxLon=()=>(S.org&&S.org.lon)||15.1925;
 async function loadWx(){if(S.wxBusy||(S.wx&&Date.now()-S.wx.t<18e5))return;S.wxBusy=true;
   try{const q=`latitude=${wxLat()}&longitude=${wxLon()}&timezone=Europe%2FRome&forecast_days=4`;
-    const [a,m]=await Promise.all([fetch(`https://api.open-meteo.com/v1/forecast?${q}&wind_speed_unit=kn&daily=weather_code,temperature_2m_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant`).then(r=>r.json()),
-      fetch(`https://marine-api.open-meteo.com/v1/marine?${q}&daily=wave_height_max,wave_period_max,wave_direction_dominant`).then(r=>r.json())]);
-    if(!a.daily)throw 0;S.wx={t:Date.now(),a:a.daily,m:m.daily||null};S.wxErr=false}catch(e){S.wxErr=true}
+    const [a,m]=await Promise.all([fetch(`https://api.open-meteo.com/v1/forecast?${q}&wind_speed_unit=kn&hourly=weather_code,temperature_2m,precipitation,precipitation_probability,wind_speed_10m,wind_gusts_10m&daily=weather_code,temperature_2m_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant`).then(r=>r.json()),
+      fetch(`https://marine-api.open-meteo.com/v1/marine?${q}&hourly=wave_height,wave_period&daily=wave_height_max,wave_period_max,wave_direction_dominant`).then(r=>r.json())]);
+    if(!a.daily)throw 0;S.wx={t:Date.now(),a:a.daily,m:m.daily||null,ah:a.hourly||null,mh:m.hourly||null};S.wxErr=false}catch(e){S.wxErr=true}
   S.wxBusy=false;if(S.view==='home'&&S.stage==='app')render()}
 const WXI=c=>c===0?'☀️':c<=2?'🌤️':c===3?'☁️':c<=48?'🌫️':c<=57?'🌦️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌧️':c<=86?'🌨️':'⛈️';
 const DIRS=['N','NE','E','SE','S','SO','O','NO'];const dirL=d=>d==null?'':DIRS[Math.round(d/45)%8];
@@ -299,13 +333,13 @@ function wxCard(){if(!S.wx){loadWx();return `<div class="panel"><h2>Meteo e mare
   const a=S.wx.a,m=S.wx.m;const days=a.time.map((t,i)=>{const d=new Date(t+'T12:00');const lab=i===0?'Oggi':i===1?'Domani':d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric'});
     const wh=m?m.wave_height_max[i]:null,[sl,sc]=seaState(wh);
     const w0=wxFor(t),rk=wxRisk(w0),why=wxWhy(w0);
-    return `<div class="wx ${rk==='d'?'nogo':rk==='w'?'hard':''}"><b style="text-transform:capitalize">${lab}</b>${rk==='d'?`<div class="wxflag d">Non si esce${why?': '+why:''}</div>`:rk==='w'?`<div class="wxflag w">Difficile${why?': '+why:''}</div>`:''}<div class="wxi">${WXI(a.weather_code[i])} <span>${Math.round(a.temperature_2m_max[i])}°</span></div>
+    return `<div class="wx ${rk==='d'?'nogo':rk==='w'?'hard':''}" style="cursor:pointer" title="Clic per il dettaglio orario" onclick="openMeteo('${t}')"><b style="text-transform:capitalize">${lab}</b>${rk==='d'?`<div class="wxflag d">Non si esce${why?': '+why:''}</div>`:rk==='w'?`<div class="wxflag w">Difficile${why?': '+why:''}</div>`:''}<div class="wxi">${WXI(a.weather_code[i])} <span>${Math.round(a.temperature_2m_max[i])}°</span></div>
     <div>🌧 <b>${a.precipitation_sum[i]}</b> mm <span class="muted">· ${a.precipitation_probability_max[i]??'—'}%</span></div>
     <div>💨 <b>${Math.round(a.wind_speed_10m_max[i])}</b> nodi <span class="muted">${dirL(a.wind_direction_10m_dominant[i])} · raff. ${Math.round(a.wind_gusts_10m_max[i])}</span></div>
     <div>🌊 <b>${wh==null?'—':wh.toFixed(1)}</b> m <span class="muted">${m&&m.wave_period_max[i]?m.wave_period_max[i].toFixed(0)+' s · '+dirL(m.wave_direction_dominant[i]):''}</span></div>
     <span class="chip ${sc}" style="align-self:flex-start">${sl}</span></div>`}).join('');
   return `<div class="panel"><div class="row" style="justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Meteo e mare · Stazzo</h2><span class="muted" style="font-size:12px">Open-Meteo · onde massime del giorno</span></div><div class="wxg">${days}</div>
-  <div class="note" style="margin-top:10px">Rosso = non si esce (temporale, pioggia forte, vento o mare oltre soglia). Arancione = giornata difficile. Soglie indicative, da tarare. Previsione indicativa da modello: il mare sotto costa può essere diverso. Prima di un\'uscita controlla il bollettino ufficiale e decidi sul posto.</div></div>`}
+  <div class="note" style="margin-top:10px">Clic su un giorno per il dettaglio orario. Rosso = non si esce (temporale, pioggia forte, vento o mare oltre soglia). Arancione = giornata difficile. Soglie indicative, da tarare. Previsione indicativa da modello: il mare sotto costa può essere diverso. Prima di un\'uscita controlla il bollettino ufficiale e decidi sul posto.</div></div>`}
 function todoPanel(){const ad=isAdmin(),t0=addDays(0),t1=addDays(1);
   const live=S.acts.filter(a=>a.status==='scheduled');const sea=live.filter(isSea),todayAll=live.filter(a=>dkey(a.starts_at)===t0).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   const tm=x=>new Date(x).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
@@ -676,7 +710,7 @@ function render(){
   if(S.stage==='boot'){r.innerHTML='';return}
   if(S.stage==='login'||S.stage==='code'){r.innerHTML=loginView();return}
   if(S.stage==='nostaff'){r.innerHTML=nostaffView();return}
-  const v={home:homeView,people:peopleView,out:outView,opp:oppView,sim:simView,cal:calView,types:typesView,center:centerView,map:mapView}[S.view]||homeView;
+  const v={home:homeView,people:peopleView,out:outView,opp:oppView,sim:simView,cal:calView,types:typesView,center:centerView,meteo:meteoView,map:mapView}[S.view]||homeView;
   r.innerHTML=shell(v())
 }
 document.addEventListener('keydown',e=>{if(e.key==='Enter'){if($('#cd'))verify();else if($('#em'))sendCode()}if(e.key==='Escape')closeModal()});
