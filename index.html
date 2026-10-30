@@ -450,6 +450,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   <p class="tiny" id="wta-err" style="color:#F2A0A0;min-height:18px"></p>
   <div style="flex:1"></div>
   <button class="btn" id="b-wta-save" data-i18n="save"></button>
+  <button class="btn ghost" id="b-wta-absent" style="display:none;margin-top:10px"></button>
 </section>
 <section class="screen" id="s-pb-add">
   <div class="top"><h1 id="pbadd-title"></h1><button class="pill" id="b-pbadd-back" data-i18n="back"></button></div>
@@ -584,7 +585,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.11';
+const VERSION='0.9.12';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -2026,6 +2027,34 @@ Object.assign(T.en,{tab_breath_s:'Breath',tab_static_s:'Static',tab_water:'Water
   wl_water_sub:(n,tot)=>n?(n===1?'1 training this week':n+' this week'):tot?'None this week':'Sea and pool',cal_leg_w:'Water'});
 COL.water='var(--water)';
 const WDISC=['CWT','CWTB','CNF','FIM','DYN','DYNB','DNF'];
+
+/* --- allenamenti del centro -> diario Acqua --- */
+const KEY_CTDIS='bc.ctdis.v1';let ctSyncAt=0;
+function ctPending(r){const a=r.actualParams||{};return !!a.centerAct&&a.depth==null&&!a.discipline&&!a.outcome&&!a.focus&&!r.notes}
+function ctTag(r){const a=r.actualParams||{};if(!a.centerAct)return '';return ' · <span style="color:var(--accent)">'+L2('dal centro','from the center')+'</span>'+(ctPending(r)?' · <b style="color:#F2C879">'+L2('da completare','to complete')+'</b>':'')}
+async function syncCenterRecords(force){
+  if(isGuest()||!sb||!user)return;if(!force&&Date.now()-ctSyncAt<120000)return;ctSyncAt=Date.now();
+  const cs=lsJ('bc.centers.v1',[]);if(!cs.length)return;
+  const now=Date.now(),from=new Date(now-60*864e5).toISOString();let all=[];
+  await Promise.all(cs.map(async c=>{try{const r=await sb.rpc('list_activities',{p_org:c.org_id,p_from:from,p_days:61});if(Array.isArray(r.data))r.data.forEach(a=>all.push({...a,_c:c}))}catch(e){}}));
+  if(!all.length)return;
+  const byId=new Map(all.map(a=>[a.id,a])),dis=lsJ(KEY_CTDIS,[]);let recs=lsJ(KEY.sess,[]),changed=false;
+  const have=new Set(recs.filter(r=>r.exerciseId==='water'&&r.actualParams&&r.actualParams.centerAct).map(r=>r.actualParams.centerAct));
+  // pulizia: record non ancora completati se il centro ha annullato o la prenotazione non c'è più
+  const gone=recs.filter(r=>r.exerciseId==='water'&&ctPending(r)&&byId.has(r.actualParams.centerAct)&&(()=>{const a=byId.get(r.actualParams.centerAct);return a.status==='cancelled'||!['booked','attended'].includes(a.my_status)})()).map(r=>r.id);
+  for(const id of gone){await deleteSession(id);changed=true}
+  if(gone.length)recs=lsJ(KEY.sess,[]);
+  const add=all.filter(a=>a.status==='scheduled'&&['booked','attended'].includes(a.my_status)&&new Date(a.starts_at)<=now&&(a.location_type==='sea'||a.location_type==='pool')&&a.kind!=='dry'&&!have.has(a.id)&&!dis.includes(a.id));
+  add.forEach(a=>{const d=new Date(a.starts_at).toISOString();recs.push({id:uuid(),schemaVersion:SCHEMA,protocolId:'water-log-v1',exerciseId:'water',startedAt:d,endedAt:d,plannedParams:{},actualParams:{where:a.location_type,place:a.place||undefined,centerAct:a.id,centerTitle:a.title},status:'completed',abortReason:null,cyclesCompleted:0,elapsedSec:0,plannedSec:0,feedback:null,notes:'',nextParams:null,synced:false,owner:user.id,diag:{}});changed=true});
+  if(add.length){lsSet(KEY.sess,JSON.stringify(recs));try{pushSessions()}catch(e){}}
+  if(changed){try{renderWeek()}catch(e){}if($('s-cal').classList.contains('on'))renderCal();if($('s-water').classList.contains('on'))renderWater()}
+}
+async function absentCenter(id){
+  const r=lsJ(KEY.sess,[]).find(x=>x.id===id);if(!r)return;const act=r.actualParams&&r.actualParams.centerAct;
+  if(!confirm(L2('Non ci sei andato? Verrà tolto dal calendario e segnato assente per il centro.','Did you not go? It will be removed from your calendar and marked absent for the center.')))return;
+  if(act){const dis=lsJ(KEY_CTDIS,[]);if(!dis.includes(act)){dis.push(act);lsSet(KEY_CTDIS,JSON.stringify(dis))}try{await sb.rpc('mark_my_absence',{p_act:act})}catch(e){}}
+  await deleteSession(id);track('center_absent');toast(L2('Tolto dal calendario','Removed from your calendar'));
+  if($('s-water-add').classList.contains('on'))waterExit();else{renderCal();try{renderWeek()}catch(e){}}}
 function waterRecs(){return lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='water'&&r.status==='completed').sort((a,b)=>a.startedAt<b.startedAt?-1:1)}
 function migrateWater(){
   const all=lsJ(KEY.sess,[]);let ch=0;
@@ -2055,6 +2084,7 @@ function openWaterAdd(rec,day,from){
   let iso=todayISO;if(rec){const d=new Date(rec.startedAt);iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}else if(day)iso=keyToISO(day);
   if(iso>todayISO)iso=todayISO;$('wta-date').value=iso;$('wta-date').max=todayISO;
   $('wta-title').textContent=rec?t('wt_edit'):t('wt_add_title');
+  {const ab=$('b-wta-absent'),ct=rec&&rec.actualParams&&rec.actualParams.centerAct;ab.style.display=ct?'block':'none';ab.textContent=L2('Non ci sono andato','I did not go');ab.onclick=()=>absentCenter(rec.id);if(ct){$('wta-title').textContent=(rec.actualParams.centerTitle||t('wt_edit'))}}
   renderWtForm();renderTabs('s-water');show('s-water-add');track('water_add_open',{from:from||'water'});
 }
 function waterExit(){if(wtFrom==='cal'){wtFrom=null;renderCal();renderTabs('s-cal');show('s-cal')}else goTab('s-water')}
@@ -2063,8 +2093,8 @@ $('b-wt-add').onclick=()=>openWaterAdd();
 $('b-wta-save').onclick=()=>{
   const raw=$('wta-m').value.trim();let depth;
   if(raw!==''){depth=+raw;if(!(depth>0)||depth>400)return $('wta-err').textContent=t('wt_err')}
-  const day=$('wta-date').value;const when=day?new Date(day+'T12:00:00'):new Date();
-  const ap={where:wtWhere,place:$('wta-place').value.trim()||undefined,discipline:wtDisc||undefined,depth:depth!=null?Math.round(depth*10)/10:undefined,outcome:wtOut||undefined,focus:$('wta-focus').value.trim()||undefined};
+  const day=$('wta-date').value;let when=day?new Date(day+'T12:00:00'):new Date();if(wtEdit&&day&&dayKey(wtEdit.startedAt)===dayKey(when))when=new Date(wtEdit.startedAt);
+  const ap={centerAct:wtEdit&&wtEdit.actualParams?wtEdit.actualParams.centerAct:undefined,centerTitle:wtEdit&&wtEdit.actualParams?wtEdit.actualParams.centerTitle:undefined,where:wtWhere,place:$('wta-place').value.trim()||undefined,discipline:wtDisc||undefined,depth:depth!=null?Math.round(depth*10)/10:undefined,outcome:wtOut||undefined,focus:$('wta-focus').value.trim()||undefined};
   const all=lsJ(KEY.sess,[]);let id;
   if(wtEdit){const r=all.find(x=>x.id===wtEdit.id);if(r){r.startedAt=r.endedAt=when.toISOString();r.actualParams=ap;r.notes=$('wta-notes').value.trim();r.synced=false;id=r.id}track('water_edited')}
   else{id=uuid();all.push({id,schemaVersion:SCHEMA,protocolId:'water-log-v1',exerciseId:'water',startedAt:when.toISOString(),endedAt:when.toISOString(),plannedParams:{},actualParams:ap,status:'completed',abortReason:null,cyclesCompleted:0,elapsedSec:0,plannedSec:0,feedback:null,notes:$('wta-notes').value.trim(),nextParams:null,synced:false,owner:user?user.id:null,diag:{}});
@@ -2087,7 +2117,7 @@ function renderWater(){
     if(es.length>=2)h+=`<h2>${t('wt_chart')}</h2>`+discChart(es,'CWT','var(--water)');
     h+=`<div style="margin-top:8px">`+rs.slice().reverse().map(r=>{const a=r.actualParams,d=new Date(r.startedAt);
       const bits=[a.where?t('wt_'+a.where):'',a.place?esc(a.place):'',a.discipline?esc(a.discipline):'',a.depth!=null?`<b>${a.depth} m</b>`:''].filter(Boolean).join(' · ');
-      return `<div class="hist"><div class="ht"><b>${d.toLocaleDateString(lang)}</b> · ${bits}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button><button class="del" data-id="${r.id}" aria-label="delete">${ICON.trash}</button></div>`}).join('')+`</div>`;
+      return `<div class="hist"><div class="ht"><b>${d.toLocaleDateString(lang)}</b> · ${bits}${ctTag(r)}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button><button class="del" data-id="${r.id}" aria-label="delete">${ICON.trash}</button></div>`}).join('')+`</div>`;
   }
   $('wt-body').innerHTML=h;
   const f=$('b-wt-first');if(f)f.onclick=()=>openWaterAdd();
@@ -2138,7 +2168,7 @@ function renderWeek(){
 }
 
 /* --- welcome --- */
-function renderWelcome(){renderCenterCard();
+function renderWelcome(){renderCenterCard();syncCenterRecords();
   $('wl-hi').textContent=T[lang].wl_hi(userLabel()||(profile&&profile.display_name)||'');
   renderWeek();
   const br=lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='breathing'&&r.status==='completed').pop();
@@ -2165,7 +2195,7 @@ $('b-tip').onclick=()=>{const b=$('tipbox');b.textContent=t('tip_box');b.style.d
 /* --- calendario --- */
 let calM=null,calSel=null;
 function pbDaySet(){const st=new Set();[...DISC.dry,...DISC.pool,...DISC.sea].forEach(c=>{let best=0;allEntries(c).forEach(e=>{if(e.v>best){best=e.v;st.add(dayKey(e.t))}})});return st}
-function openCal(){const d=new Date();calM=new Date(d.getFullYear(),d.getMonth(),1);calSel=dayKey(d);renderCal();renderTabs('s-cal');show('s-cal');track('calendar_open')}
+function openCal(){syncCenterRecords();const d=new Date();calM=new Date(d.getFullYear(),d.getMonth(),1);calSel=dayKey(d);renderCal();renderTabs('s-cal');show('s-cal');track('calendar_open')}
 let calCt={},calCtKey='';
 async function loadCalCenter(){
   if(isGuest()||!sb)return;const cs=lsJ('bc.centers.v1',[]);if(!cs.length)return;
@@ -2191,17 +2221,18 @@ function renderCal(){
   lsJ(KEY.sess,[]).forEach(r=>{if(dayKey(r.startedAt)!==sel)return;const ty=actType(r);const a=r.actualParams||{},p=r.plannedParams||{};
     if(ty==='breath')L.push([r,'breath',T[lang].cal_act_b(t2(r.elapsedSec||0),r.cyclesCompleted||0,p.cycles||0)+(r.status==='aborted'?` <span style="color:var(--danger);font-weight:600">· ${lang==='en'?'stopped':'interrotta'}</span>`:'')]);
     else if(ty==='static')L.push([r,'static',T[lang].cal_act_s(fmt(a.holdSec||0))]);
-    else if(ty==='water'){const w=r.actualParams||{};L.push([r,'water',[t('tab_water'),w.where?t('wt_'+w.where):'',w.place?esc(w.place):'',w.discipline||'',w.depth!=null?w.depth+' m':''].filter(Boolean).join(' · ')])}
+    else if(ty==='water'){const w=r.actualParams||{};L.push([r,'water',[t('tab_water'),w.where?t('wt_'+w.where):'',w.place?esc(w.place):'',w.discipline||'',w.depth!=null?w.depth+' m':''].filter(Boolean).join(' · ')+ctTag(r)])}
     else if(r.exerciseId==='pb'&&r.status==='completed')L.push([r,'pb',T[lang].cal_act_p(esc(T[lang]['D_'+a.discipline]||a.discipline),pbFmt(a.discipline,a.value))])});
   L.sort((x,y)=>new Date(x[0].startedAt)-new Date(y[0].startedAt));
-  $('cal-day').innerHTML=L.length?L.map(([r,ty,txt])=>ty==='water'?`<div class="hist"><div class="ht"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${(OUT[(r.actualParams||{}).outcome]||[0,COL.pb])[1]}"></i>${txt}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button></div>`:`<div class="dayrow"><i style="background:${COL[ty]}"></i><span><b>${new Date(r.startedAt).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'})}</b> ${txt}</span></div>`).join(''):`<p>${t('cal_none')}</p>`;
+  $('cal-day').innerHTML=L.length?L.map(([r,ty,txt])=>ty==='water'?`<div class="hist"><div class="ht"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${(OUT[(r.actualParams||{}).outcome]||[0,COL.pb])[1]}"></i>${txt}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button>${(r.actualParams||{}).centerAct?`<button class="ed ab" data-id="${r.id}" aria-label="absent" title="${L2('Non ci sono andato','I did not go')}" style="font-size:18px">✕</button>`:''}</div>`:`<div class="dayrow"><i style="background:${COL[ty]}"></i><span><b>${new Date(r.startedAt).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'})}</b> ${txt}</span></div>`).join(''):`<p>${t('cal_none')}</p>`;
   const hasC=lsJ('bc.centers.v1',[]).length>0;$('cal-ctleg').innerHTML=hasC?`<span class="ctd" style="position:static;display:inline-block;vertical-align:middle"></span> ${L2('attività del centro','center activity')} · <span class="ctd m" style="position:static;display:inline-block;vertical-align:middle"></span><span style="display:inline-block;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#06222B;font-size:10px;font-weight:800;line-height:15px;text-align:center;vertical-align:middle;margin-left:3px">✓</span> ${L2('prenotata da te','booked by you')}`:'';
   const cl=(cby[sel]||[]).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   if(cl.length){const tm=x=>new Date(x).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'});
     $('cal-day').innerHTML+=`<h2 style="margin-top:14px">${L2('Dal tuo centro','From your center')}</h2>`+cl.map(a=>{const b=a.my_status==='booked'&&a.status==='scheduled',c=a.status==='cancelled';
       return `<button class="note ctr${b?' bkd':''}" style="display:block;width:100%;text-align:left;margin-top:8px;${c?'opacity:.6':''}" onclick="openCenterAt('${a._c.org_id}','${dkeyA(a.starts_at)}')"><b>${esc(a.title)}</b> · ${tm(a.starts_at)} ${c?`<span style="color:var(--danger)">${L2('Annullata','Cancelled')}</span>`:b?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:`<span style="color:var(--ink2)">${L2('Organizzata dal centro · tocca per prenotare','Organized by the center · tap to book')}</span>`}<br><span style="color:var(--ink2);font-size:13px">${esc(a._c.name)}${a.place?' · '+esc(a.place):''}</span></button>`}).join('')}
   if(!renderCal._ld||renderCal._ld!==calM.getTime()){renderCal._ld=calM.getTime();loadCalCenter()}
-  $('cal-day').querySelectorAll('.ed').forEach(b=>b.onclick=()=>{const r=lsJ(KEY.sess,[]).find(x=>x.id===b.dataset.id);if(r)openWaterAdd(r,null,'cal')});
+  $('cal-day').querySelectorAll('.ed:not(.ab)').forEach(b=>b.onclick=()=>{const r=lsJ(KEY.sess,[]).find(x=>x.id===b.dataset.id);if(r)openWaterAdd(r,null,'cal')});
+  $('cal-day').querySelectorAll('.ab').forEach(b=>b.onclick=()=>absentCenter(b.dataset.id));
   $('b-cal-add').textContent=t('cal_add');
 }
 $('b-cal-add').onclick=()=>openWaterAdd(null,calSel,'cal');
