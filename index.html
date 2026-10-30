@@ -585,7 +585,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.12';
+const VERSION='0.9.13';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1517,6 +1517,8 @@ function actCard(a){
     else if(a.my_status==='waitlist')act=`<button class="btn ghost" style="padding:10px;font-size:15px" onclick="cancelBook('${a.id}')">${L2('In lista d’attesa · esci','On waitlist · leave')}</button>`;
     else if(!a.allowed)act=`<p style="color:var(--ink2);font-size:13px;margin:8px 0 0">${L2('Livello non sufficiente per questa attività.','Your level is not enough for this activity.')}</p>`;
     else act=`<button class="btn" style="padding:10px;font-size:15px" onclick="bookAct('${a.id}')">${left>0?L2('Prenota','Book'):L2('Lista d’attesa','Join waitlist')}</button>`;
+  }else if(!cancelled&&past&&['booked','attended'].includes(a.my_status)&&lsJ(KEY.sess,[]).some(r=>r.actualParams&&r.actualParams.centerAct===a.id)){
+    act=`<button class="btn" style="padding:10px;font-size:15px" onclick="completeCt('${a.id}')">${L2('Completa i dati dell’allenamento','Complete the training details')}</button>`;
   }
   return `<div class="note${a.my_status==='booked'&&!cancelled?' bkd':''}" style="margin-top:8px;${cancelled||past?'opacity:.6':''}"><b>${esc(a.title)}</b> ${a.my_status==='booked'&&!cancelled?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:chip}<br><span style="color:var(--ink2);font-size:13px">${fmt(a.starts_at)}${a.place?' · '+esc(a.place):''}${a.instructor_name?' · '+esc(a.instructor_name):''}<br>${cancelled?esc(a.cancel_reason||''):(left>0?L2('Posti liberi: ','Spots left: ')+left:L2('Completa','Full'))}${a.my_status==='booked'?' · <b>'+L2('Sei iscritto','You are booked')+'</b>':''}</span>${act}</div>`}
 
@@ -1530,7 +1532,7 @@ async function loadRequests(c){
 function rqWhen(r){const loc=lang==='en'?'en-GB':'it-IT',d=new Date(r.req_date+'T12:00').toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short'});return d+' · '+(r.slot==='exact'&&r.req_time?String(r.req_time).slice(0,5):SLOT[r.slot][lang==='en'?1:0].toLowerCase())}
 function renderRequests(){
   const box=$('ct-req');if(!box)return;const loc=lang==='en'?'en-GB':'it-IT';
-  const mine=rqList.filter(r=>r.mine),others=rqList.filter(r=>!r.mine&&r.status==='open'&&!r.expired);
+  const mine=rqList.filter(r=>r.mine&&r.status!=='activated'),others=rqList.filter(r=>!r.mine&&r.status==='open'&&!r.expired);
   const openMine=mine.filter(r=>(r.status==='open'||r.status==='alternative')&&!r.expired).length;
   const stl=r=>r.expired?`<span style="color:var(--ink2)">${L2('Scaduta senza risposta','Expired, no answer')}</span>`:r.status==='open'?`<span style="color:#F2C879">${L2('In attesa del centro','Waiting for the center')}</span>`:r.status==='alternative'?`<span style="color:var(--accent)">${L2('Il centro propone un altro orario','The center proposes another time')}</span>`:r.status==='activated'?`<span style="color:var(--accent)">✓ ${L2('Attivata','Activated')}</span>`:r.status==='declined'?`<span style="color:#F08A7A">${L2('Non fattibile','Not possible')}</span>`:`<span style="color:var(--ink2)">${L2('Annullata','Cancelled')}</span>`;
   const mineH=mine.map(r=>{let x='';
@@ -2049,6 +2051,7 @@ async function syncCenterRecords(force){
   if(add.length){lsSet(KEY.sess,JSON.stringify(recs));try{pushSessions()}catch(e){}}
   if(changed){try{renderWeek()}catch(e){}if($('s-cal').classList.contains('on'))renderCal();if($('s-water').classList.contains('on'))renderWater()}
 }
+function completeCt(act){const r=lsJ(KEY.sess,[]).find(x=>x.actualParams&&x.actualParams.centerAct===act);if(r)openWaterAdd(r,null,'ctr')}
 async function absentCenter(id){
   const r=lsJ(KEY.sess,[]).find(x=>x.id===id);if(!r)return;const act=r.actualParams&&r.actualParams.centerAct;
   if(!confirm(L2('Non ci sei andato? Verrà tolto dal calendario e segnato assente per il centro.','Did you not go? It will be removed from your calendar and marked absent for the center.')))return;
@@ -2087,7 +2090,7 @@ function openWaterAdd(rec,day,from){
   {const ab=$('b-wta-absent'),ct=rec&&rec.actualParams&&rec.actualParams.centerAct;ab.style.display=ct?'block':'none';ab.textContent=L2('Non ci sono andato','I did not go');ab.onclick=()=>absentCenter(rec.id);if(ct){$('wta-title').textContent=(rec.actualParams.centerTitle||t('wt_edit'))}}
   renderWtForm();renderTabs('s-water');show('s-water-add');track('water_add_open',{from:from||'water'});
 }
-function waterExit(){if(wtFrom==='cal'){wtFrom=null;renderCal();renderTabs('s-cal');show('s-cal')}else goTab('s-water')}
+function waterExit(){if(wtFrom==='ctr'){wtFrom=null;renderTabs('s-center');show('s-center');renderCenter()}else if(wtFrom==='cal'){wtFrom=null;renderCal();renderTabs('s-cal');show('s-cal')}else goTab('s-water')}
 $('b-wta-back').onclick=waterExit;
 $('b-wt-add').onclick=()=>openWaterAdd();
 $('b-wta-save').onclick=()=>{
@@ -2224,15 +2227,16 @@ function renderCal(){
     else if(ty==='water'){const w=r.actualParams||{};L.push([r,'water',[t('tab_water'),w.where?t('wt_'+w.where):'',w.place?esc(w.place):'',w.discipline||'',w.depth!=null?w.depth+' m':''].filter(Boolean).join(' · ')+ctTag(r)])}
     else if(r.exerciseId==='pb'&&r.status==='completed')L.push([r,'pb',T[lang].cal_act_p(esc(T[lang]['D_'+a.discipline]||a.discipline),pbFmt(a.discipline,a.value))])});
   L.sort((x,y)=>new Date(x[0].startedAt)-new Date(y[0].startedAt));
-  $('cal-day').innerHTML=L.length?L.map(([r,ty,txt])=>ty==='water'?`<div class="hist"><div class="ht"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${(OUT[(r.actualParams||{}).outcome]||[0,COL.pb])[1]}"></i>${txt}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button>${(r.actualParams||{}).centerAct?`<button class="ed ab" data-id="${r.id}" aria-label="absent" title="${L2('Non ci sono andato','I did not go')}" style="font-size:18px">✕</button>`:''}</div>`:`<div class="dayrow"><i style="background:${COL[ty]}"></i><span><b>${new Date(r.startedAt).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'})}</b> ${txt}</span></div>`).join(''):`<p>${t('cal_none')}</p>`;
+  $('cal-day').innerHTML=L.length?L.map(([r,ty,txt])=>ty==='water'?`<div class="hist" data-wid="${r.id}" style="cursor:pointer"><div class="ht"><i style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;background:${(OUT[(r.actualParams||{}).outcome]||[0,COL.pb])[1]}"></i>${txt}${dyExtra(r)}${dyFocus(r)}${r.notes?'<br>'+esc(r.notes):''}</div><button class="ed" data-id="${r.id}" aria-label="edit">${ICON.pencil}</button>${(r.actualParams||{}).centerAct?`<button class="ed ab" data-id="${r.id}" aria-label="absent" title="${L2('Non ci sono andato','I did not go')}" style="font-size:18px">✕</button>`:''}</div>`:`<div class="dayrow"><i style="background:${COL[ty]}"></i><span><b>${new Date(r.startedAt).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'})}</b> ${txt}</span></div>`).join(''):`<p>${t('cal_none')}</p>`;
   const hasC=lsJ('bc.centers.v1',[]).length>0;$('cal-ctleg').innerHTML=hasC?`<span class="ctd" style="position:static;display:inline-block;vertical-align:middle"></span> ${L2('attività del centro','center activity')} · <span class="ctd m" style="position:static;display:inline-block;vertical-align:middle"></span><span style="display:inline-block;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#06222B;font-size:10px;font-weight:800;line-height:15px;text-align:center;vertical-align:middle;margin-left:3px">✓</span> ${L2('prenotata da te','booked by you')}`:'';
-  const cl=(cby[sel]||[]).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
+  const linked=new Set(lsJ(KEY.sess,[]).map(r=>r.actualParams&&r.actualParams.centerAct).filter(Boolean));const cl=(cby[sel]||[]).filter(a=>!linked.has(a.id)).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   if(cl.length){const tm=x=>new Date(x).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'});
     $('cal-day').innerHTML+=`<h2 style="margin-top:14px">${L2('Dal tuo centro','From your center')}</h2>`+cl.map(a=>{const b=a.my_status==='booked'&&a.status==='scheduled',c=a.status==='cancelled';
       return `<button class="note ctr${b?' bkd':''}" style="display:block;width:100%;text-align:left;margin-top:8px;${c?'opacity:.6':''}" onclick="openCenterAt('${a._c.org_id}','${dkeyA(a.starts_at)}')"><b>${esc(a.title)}</b> · ${tm(a.starts_at)} ${c?`<span style="color:var(--danger)">${L2('Annullata','Cancelled')}</span>`:b?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:`<span style="color:var(--ink2)">${L2('Organizzata dal centro · tocca per prenotare','Organized by the center · tap to book')}</span>`}<br><span style="color:var(--ink2);font-size:13px">${esc(a._c.name)}${a.place?' · '+esc(a.place):''}</span></button>`}).join('')}
   if(!renderCal._ld||renderCal._ld!==calM.getTime()){renderCal._ld=calM.getTime();loadCalCenter()}
-  $('cal-day').querySelectorAll('.ed:not(.ab)').forEach(b=>b.onclick=()=>{const r=lsJ(KEY.sess,[]).find(x=>x.id===b.dataset.id);if(r)openWaterAdd(r,null,'cal')});
-  $('cal-day').querySelectorAll('.ab').forEach(b=>b.onclick=()=>absentCenter(b.dataset.id));
+  $('cal-day').querySelectorAll('.ed:not(.ab)').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=lsJ(KEY.sess,[]).find(x=>x.id===b.dataset.id);if(r)openWaterAdd(r,null,'cal')});
+  $('cal-day').querySelectorAll('.ab').forEach(b=>b.onclick=e=>{e.stopPropagation();absentCenter(b.dataset.id)});
+  $('cal-day').querySelectorAll('.hist[data-wid]').forEach(h=>h.onclick=()=>{const r=lsJ(KEY.sess,[]).find(x=>x.id===h.dataset.wid);if(r)openWaterAdd(r,null,'cal')});
   $('b-cal-add').textContent=t('cal_add');
 }
 $('b-cal-add').onclick=()=>openWaterAdd(null,calSel,'cal');
