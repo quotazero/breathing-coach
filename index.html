@@ -585,7 +585,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.13';
+const VERSION='0.9.14';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1520,7 +1520,7 @@ function actCard(a){
   }else if(!cancelled&&past&&['booked','attended'].includes(a.my_status)&&lsJ(KEY.sess,[]).some(r=>r.actualParams&&r.actualParams.centerAct===a.id)){
     act=`<button class="btn" style="padding:10px;font-size:15px" onclick="completeCt('${a.id}')">${L2('Completa i dati dell’allenamento','Complete the training details')}</button>`;
   }
-  return `<div class="note${a.my_status==='booked'&&!cancelled?' bkd':''}" style="margin-top:8px;${cancelled||past?'opacity:.6':''}"><b>${esc(a.title)}</b> ${a.my_status==='booked'&&!cancelled?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:chip}<br><span style="color:var(--ink2);font-size:13px">${fmt(a.starts_at)}${a.place?' · '+esc(a.place):''}${a.instructor_name?' · '+esc(a.instructor_name):''}<br>${cancelled?esc(a.cancel_reason||''):(left>0?L2('Posti liberi: ','Spots left: ')+left:L2('Completa','Full'))}${a.my_status==='booked'?' · <b>'+L2('Sei iscritto','You are booked')+'</b>':''}</span>${act}</div>`}
+  return `<div class="note${a.my_status==='booked'&&!cancelled?' bkd':''}" style="margin-top:8px;${cancelled||past?'opacity:.6':''}"><b>${esc(a.title)}</b> ${a.my_status==='booked'&&!cancelled?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:chip}<br><span style="color:var(--ink2);font-size:13px">${fmt(a.starts_at)}${a.place?' · '+esc(a.place):''}${a.instructor_name?' · '+esc(a.instructor_name):''}<br>${(a.equipment||[]).length&&!cancelled?`<b>${L2('Porta','Bring')}:</b> ${esc(a.equipment.join(', '))}<br>`:''}${cancelled?esc(a.cancel_reason||''):(left>0?L2('Posti liberi: ','Spots left: ')+left:L2('Completa','Full'))}${a.my_status==='booked'?' · <b>'+L2('Sei iscritto','You are booked')+'</b>':''}</span>${act}</div>`}
 
 /* --- richieste di allenamento --- */
 let rqList=[],rqTypes=[],rqForm=false,rqOrg=null;
@@ -1635,7 +1635,7 @@ async function loadHomeAgenda(cs){
   const loc=lang==='en'?'en-GB':'it-IT',tm=x=>new Date(x).toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'}),today=dkeyA(now);
   const mine=all.filter(a=>a.my_status==='booked'&&a.status==='scheduled'&&new Date(a.starts_at)>=new Date(now-36e5*3)).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   const cancelledMine=all.filter(a=>a.my_status&&a.status==='cancelled'&&dkeyA(a.starts_at)>=today);
-  const row=(a,k)=>`<button class="tdy" onclick="openCenterAt('${a._c.org_id}','${dkeyA(a.starts_at)}')"><span class="k">${k}</span><br><b>${esc(a.title)}</b> · ${tm(a.starts_at)}<small>${esc(a._c.name)}${a.place?' · '+esc(a.place):''}${a.location_type==='sea'&&a.kind!=='dry'?(a.weather_status==='confirmed'?' · '+L2('confermata','confirmed'):' · '+L2('meteo da confermare','weather to be confirmed')):''}</small></button>`;
+  const row=(a,k)=>`<button class="tdy" onclick="openCenterAt('${a._c.org_id}','${dkeyA(a.starts_at)}')"><span class="k">${k}</span><br><b>${esc(a.title)}</b> · ${tm(a.starts_at)}<small>${(a.equipment||[]).length?L2('Porta','Bring')+': '+esc(a.equipment.join(', '))+'<br>':''}${esc(a._c.name)}${a.place?' · '+esc(a.place):''}${a.location_type==='sea'&&a.kind!=='dry'?(a.weather_status==='confirmed'?' · '+L2('confermata','confirmed'):' · '+L2('meteo da confermare','weather to be confirmed')):''}</small></button>`;
   const td=mine.filter(a=>dkeyA(a.starts_at)===today),nx=mine.filter(a=>dkeyA(a.starts_at)!==today).slice(0,2);
   box.innerHTML=cancelledMine.map(a=>`<button class="tdy" style="border-color:var(--danger)" onclick="openCenterAt('${a._c.org_id}','${dkeyA(a.starts_at)}')"><span class="k" style="color:var(--danger)">${L2('Annullata','Cancelled')}</span><br><b>${esc(a.title)}</b> · ${new Date(a.starts_at).toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short'})}<small>${esc(a._c.name)}</small></button>`).join('')+
     td.map(a=>row(a,L2('Oggi · prenotata','Today · booked'))).join('')+
@@ -2232,7 +2232,7 @@ function renderCal(){
   const linked=new Set(lsJ(KEY.sess,[]).map(r=>r.actualParams&&r.actualParams.centerAct).filter(Boolean));const cl=(cby[sel]||[]).filter(a=>!linked.has(a.id)).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   if(cl.length){const tm=x=>new Date(x).toLocaleTimeString(lang,{hour:'2-digit',minute:'2-digit'});
     $('cal-day').innerHTML+=`<h2 style="margin-top:14px">${L2('Dal tuo centro','From your center')}</h2>`+cl.map(a=>{const b=a.my_status==='booked'&&a.status==='scheduled',c=a.status==='cancelled';
-      return `<button class="note ctr${b?' bkd':''}" style="display:block;width:100%;text-align:left;margin-top:8px;${c?'opacity:.6':''}" onclick="openCenterAt('${a._c.org_id}','${dkeyA(a.starts_at)}')"><b>${esc(a.title)}</b> · ${tm(a.starts_at)} ${c?`<span style="color:var(--danger)">${L2('Annullata','Cancelled')}</span>`:b?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:`<span style="color:var(--ink2)">${L2('Organizzata dal centro · tocca per prenotare','Organized by the center · tap to book')}</span>`}<br><span style="color:var(--ink2);font-size:13px">${esc(a._c.name)}${a.place?' · '+esc(a.place):''}</span></button>`}).join('')}
+      return `<button class="note ctr${b?' bkd':''}" style="display:block;width:100%;text-align:left;margin-top:8px;${c?'opacity:.6':''}" onclick="openCenterAt('${a._c.org_id}','${dkeyA(a.starts_at)}')"><b>${esc(a.title)}</b> · ${tm(a.starts_at)} ${c?`<span style="color:var(--danger)">${L2('Annullata','Cancelled')}</span>`:b?`<span style="color:var(--accent)">✓ ${L2('Prenotata','Booked')}</span>`:`<span style="color:var(--ink2)">${L2('Organizzata dal centro · tocca per prenotare','Organized by the center · tap to book')}</span>`}<br><span style="color:var(--ink2);font-size:13px">${esc(a._c.name)}${a.place?' · '+esc(a.place):''}${(a.equipment||[]).length?'<br>'+L2('Porta','Bring')+': '+esc(a.equipment.join(', ')):''}</span></button>`}).join('')}
   if(!renderCal._ld||renderCal._ld!==calM.getTime()){renderCal._ld=calM.getTime();loadCalCenter()}
   $('cal-day').querySelectorAll('.ed:not(.ab)').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=lsJ(KEY.sess,[]).find(x=>x.id===b.dataset.id);if(r)openWaterAdd(r,null,'cal')});
   $('cal-day').querySelectorAll('.ab').forEach(b=>b.onclick=e=>{e.stopPropagation();absentCenter(b.dataset.id)});
