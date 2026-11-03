@@ -258,6 +258,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   </div>
   <div style="margin:10px 0 0"><button class="pill acc" id="b-account3" style="width:100%;text-align:left;display:none"></button></div>
   <button class="wk" id="wk"><div class="wkg" id="wk-grid"></div><div class="wkl" id="wk-line"></div></button>
+  <div id="wl-ck"></div>
   <div id="wl-push"></div>
   <div id="wl-me"></div>
   <div id="wl-today"></div>
@@ -605,7 +606,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.21';
+const VERSION='0.9.22';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1537,7 +1538,7 @@ function actCard(a){
     if(a.my_status==='booked')act=`<button class="btn ghost" style="padding:10px;font-size:15px" onclick="cancelBook('${a.id}')">${L2('Annulla prenotazione','Cancel booking')}</button>`;
     else if(a.my_status==='waitlist')act=`<button class="btn ghost" style="padding:10px;font-size:15px" onclick="cancelBook('${a.id}')">${L2('In lista d’attesa · esci','On waitlist · leave')}</button>`;
     else if(!a.allowed)act=`<p style="color:var(--ink2);font-size:13px;margin:8px 0 0">${L2('Livello non sufficiente per questa attività.','Your level is not enough for this activity.')}</p>`;
-    else act=`<button class="btn" style="padding:10px;font-size:15px" onclick="bookAct('${a.id}')">${left>0?L2('Prenota','Book'):L2('Lista d’attesa','Join waitlist')}</button>`;
+    else act=(a.my_rsvp==='no'?`<p style="color:var(--ink2);font-size:13px;margin:8px 0 6px">${L2('Hai risposto: non partecipi.','You answered: not attending.')}</p>`:'')+`<div style="display:flex;gap:8px;margin-top:8px"><button class="btn" style="padding:10px;font-size:15px;flex:1" onclick="bookAct('${a.id}')">${left>0?L2('Partecipo','I’m in'):L2('Lista d’attesa','Join waitlist')}</button>${a.my_rsvp==='no'?'':`<button class="btn ghost" style="padding:10px;font-size:15px;flex:1" onclick="cancelBook('${a.id}')">${L2('Non partecipo','I’m out')}</button>`}</div>`;
   }else if(!cancelled&&past&&['booked','attended'].includes(a.my_status)&&lsJ(KEY.sess,[]).some(r=>r.actualParams&&r.actualParams.centerAct===a.id)){
     act=`<button class="btn" style="padding:10px;font-size:15px" onclick="completeCt('${a.id}')">${L2('Completa i dati dell’allenamento','Complete the training details')}</button>`;
   }
@@ -1621,8 +1622,8 @@ function renderCtCal(){
     ${list.length?list.map(actCard).join(''):`<p>${L2('Nessuna attività in questo giorno.','No activities on this day.')}</p>`}`;
   const w=$('ct-calw');let x0=null;w.ontouchstart=e=>{x0=e.touches[0].clientX};w.ontouchend=e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>50)ctMove(dx<0?1:-1)};
 }
-async function bookAct(id){try{const {data,error}=await sb.rpc('book_activity',{p_act:id});if(error)throw error;toast(data==='waitlist'?L2('Sei in lista d’attesa','You are on the waitlist'):L2('Prenotato','Booked'))}catch(e){const m=String(e.message||'');toast(/level too low/i.test(m)?L2('Livello non sufficiente','Level too low'):/already started/i.test(m)?L2('Attività già iniziata','Already started'):L2('Non riuscito. Riprova.','Failed. Try again.'))}renderCenter()}
-async function cancelBook(id){try{const {error}=await sb.rpc('cancel_booking',{p_act:id});if(error)throw error;toast(L2('Prenotazione annullata','Booking cancelled'))}catch(e){toast(L2('Non riuscito. Riprova.','Failed. Try again.'))}renderCenter()}
+async function bookAct(id){await rsvpAct(id,true);renderCenter()}
+async function cancelBook(id){await rsvpAct(id,false);renderCenter()}
 async function joinCenter(code){
   localStorage.removeItem('bc.join.pending');
   if(isGuest()){localStorage.setItem('bc.join.pending',code);renderTabs('s-center');show('s-center');renderCenter();return}
@@ -1635,6 +1636,7 @@ async function joinCenter(code){
     if($('ct-err'))$('ct-err').textContent=m;else toast(m);return;
   }
   ctOrg=null;ctAdd=false;renderTabs('s-center');show('s-center');renderCenter();renderCenterCard();
+  setTimeout(async()=>{try{await ckLoad(true);if(ckMiss1().length)ckOpen()}catch(e){}},600);
 }
 let qrTimer=null;
 async function showMyQR(){
@@ -1933,6 +1935,7 @@ async function pushUpdate(){
 /* invito in home: un tocco per attivare le notifiche (su iPhone prima serve la Home) */
 async function pushAsk(){const box=$('wl-push');if(!box)return;box.innerHTML='';
   if(isGuest()||!sb)return;
+  if(instAsk(box))return;
   let st={n:0,t:0};try{st=JSON.parse(localStorage.getItem('bc.pushask.v1')||'{"n":0,"t":0}')}catch(e){}
   if(st.n>=3||(st.t&&Date.now()-st.t<7*864e5))return;
   const en=lang==='en',later=()=>{st.n++;st.t=Date.now();try{localStorage.setItem('bc.pushask.v1',JSON.stringify(st))}catch(e){}box.innerHTML=''};
@@ -2214,7 +2217,7 @@ function renderWeek(){
 }
 
 /* --- welcome --- */
-function renderWelcome(){renderCenterCard();syncCenterRecords();try{pushAsk()}catch(e){}try{meAlertHome()}catch(e){}
+function renderWelcome(){renderCenterCard();syncCenterRecords();try{ckHome()}catch(e){}try{pushAsk()}catch(e){}try{navPending()}catch(e){}try{meAlertHome()}catch(e){}
   $('wl-hi').textContent=T[lang].wl_hi(userLabel()||'');
   renderWeek();
   const br=lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='breathing'&&r.status==='completed').pop();
@@ -2628,6 +2631,106 @@ document.addEventListener('click',e=>{const b=e.target.closest('#s-me [data-act]
   else if(a==='file')meOpenFile(b.dataset.path);else if(a==='share-save')meShareSave(b.dataset.org,b.dataset.name,b.closest('.meitem'))});
 $('b-me-back').onclick=()=>goTab('s-welcome');
 $('b-me-open').onclick=openMe;
+/* ===== CHECK-IN, RISPOSTE SI/NO E INSTALLAZIONE (0.9.22) ===== */
+const CK={at:0,priv:{},consent:false,docs:[],hab:false,centers:[]};
+async function ckLoad(force){
+  if(!sb||isGuest()||!user)return false;
+  if(!force&&Date.now()-CK.at<45000)return true;
+  let cs=lsJ('bc.centers.v1',[]);
+  if(!cs.length){try{const r=await sb.rpc('my_centers');cs=Array.isArray(r.data)?r.data:[]}catch(e){}}
+  CK.centers=cs;if(!cs.length)return false;
+  const r=await Promise.all([sb.from('athlete_private').select('*').eq('user_id',user.id).maybeSingle(),sb.from('profiles').select('consent_at,display_name').eq('user_id',user.id).maybeSingle(),
+    sb.from('athlete_docs').select('kind,expires_on').eq('user_id',user.id),sb.from('athlete_habits').select('id').eq('user_id',user.id).limit(1)]);
+  CK.priv=r[0].data||{};CK.consent=!!(r[1].data&&r[1].data.consent_at);CK.dname=(r[1].data&&r[1].data.display_name)||'';CK.docs=r[2].data||[];CK.hab=!!(r[3].data&&r[3].data.length);CK.at=Date.now();return true}
+function ckMiss1(){const p=CK.priv||{},m=[];if(!p.full_name)m.push(L2('nome e cognome','full name'));if(!p.phone)m.push(L2('telefono','phone'));if(!p.birth_date)m.push(L2('data di nascita','birth date'));if(!CK.consent)m.push(L2('consenso privacy','privacy consent'));return m}
+function ckMiss2(){const p=CK.priv||{},m=[],t=new Date().toISOString().slice(0,10);
+  if(!(p.emergency_name&&p.emergency_phone))m.push(L2('contatto di emergenza','emergency contact'));
+  if(!CK.docs.some(d=>String(d.kind).startsWith('medico_')&&d.expires_on&&d.expires_on>=t))m.push(L2('certificato medico valido','valid medical certificate'));
+  if(!CK.hab)m.push(L2('cosa fai e dove ti alleni','what you do and where'));return m}
+function ckPhone(v){let d=String(v||'').trim().replace(/[^0-9+]/g,'');if(d.startsWith('00'))d='+'+d.slice(2);if(/^3\d{8,9}$/.test(d))d='+39'+d;
+  return /^\+[0-9]{8,15}$/.test(d)?d:null}
+function ckSheet(html,onReady){const o=document.createElement('div');o.className='mesheet';o.innerHTML=`<div class="mepanel rqbox">${html}</div>`;document.body.appendChild(o);
+  const close=()=>o.remove();o.addEventListener('click',e=>{if(e.target===o)close()});o.querySelectorAll('[data-x]').forEach(b=>b.onclick=close);onReady(o,close);return o}
+async function ckOpen(){
+  if(isGuest()||!user){openAccount&&openAccount(true);return}
+  try{await ckLoad(true)}catch(e){}
+  const p=CK.priv||{},nm=p.full_name||'';
+  ckSheet(`<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${L2('La tua scheda per il centro','Your sheet for the center')}</h2><button class="pill" data-x>✕</button></div>
+  <p class="tiny" style="margin:6px 0 4px">${L2('Servono al centro per iscriverti alle uscite e per avvisarti nel modo giusto. Ci vuole un minuto.','The center needs this to sign you up for sessions and to notify you properly. It takes a minute.')}</p>
+  <label>${L2('Nome e cognome','Full name')} *</label><input class="txt" id="ck-n" value="${esc(nm)}" autocomplete="name">
+  <label>${L2('Telefono','Phone')} *</label><input class="txt" id="ck-p" type="tel" value="${esc(p.phone||'')}" placeholder="+39…" autocomplete="tel">
+  <label>${L2('Data di nascita','Birth date')} *</label><input class="txt" id="ck-b" type="date" value="${esc(p.birth_date||'')}">
+  <p class="tiny" style="margin:12px 0 4px">${L2('Facoltativo, puoi aggiungerlo dopo (serve prima delle uscite in acqua):','Optional, you can add it later (needed before water sessions):')}</p>
+  <label>${L2('Contatto di emergenza: nome','Emergency contact: name')}</label><input class="txt" id="ck-en" value="${esc(p.emergency_name||'')}">
+  <label>${L2('Contatto di emergenza: telefono','Emergency contact: phone')}</label><input class="txt" id="ck-ep" type="tel" value="${esc(p.emergency_phone||'')}" placeholder="+39…">
+  <label class="mechk" style="margin-top:12px"><input type="checkbox" id="ck-c" ${CK.consent?'checked':''}><span>${L2('Ho letto l’<a href="privacy.html" target="_blank">informativa privacy</a> e accetto che il centro veda questi dati.','I have read the <a href="privacy.html" target="_blank">privacy notice</a> and agree that the center can see this data.')} *</span></label>
+  <div class="err" id="ck-err"></div><button class="btn" data-ok>${L2('Conferma','Confirm')}</button>`,(o,close)=>{
+    o.querySelector('[data-ok]').onclick=async()=>{const btn=o.querySelector('[data-ok]'),er=o.querySelector('#ck-err');er.textContent='';
+      const n=o.querySelector('#ck-n').value.trim(),ph=ckPhone(o.querySelector('#ck-p').value),b=o.querySelector('#ck-b').value,en=o.querySelector('#ck-en').value.trim(),epRaw=o.querySelector('#ck-ep').value.trim(),ep=ckPhone(epRaw);
+      if(n.split(/\s+/).filter(Boolean).length<2)return er.textContent=L2('Scrivi nome e cognome.','Enter first and last name.');
+      if(!ph)return er.textContent=L2('Telefono non valido: usa il prefisso (es. +39…).','Invalid phone: include the country code (e.g. +39…).');
+      if(!b||b>new Date().toISOString().slice(0,10)||b<'1900-01-01')return er.textContent=L2('Controlla la data di nascita.','Check the birth date.');
+      if(epRaw&&!ep)return er.textContent=L2('Telefono di emergenza non valido.','Invalid emergency phone.');
+      if(!o.querySelector('#ck-c').checked)return er.textContent=L2('Serve il consenso privacy per continuare.','Privacy consent is required to continue.');
+      btn.disabled=true;
+      try{const {data,error}=await sb.rpc('checkin_save',{p_name:n,p_phone:ph,p_birth:b,p_consent:PRIVACY_VERSION,p_emg_name:en||null,p_emg_phone:(en&&ep)?ep:null});if(error)throw error;
+        close();toast(data&&data.linked?L2('Fatto: sei stato collegato alla tua scheda','Done: linked to your record'):L2('Grazie, scheda salvata','Thanks, saved'));track('checkin_done');
+        await ckLoad(true);ckHome();try{ME.loaded=false}catch(e){}}
+      catch(e){er.textContent=L2('Non riuscito: ','Failed: ')+(e.message||e);btn.disabled=false}}})}
+async function ckHome(){const box=$('wl-ck');if(!box)return;box.innerHTML='';
+  if(isGuest()||!sb||!user)return;
+  try{if(!(await ckLoad()))return}catch(e){return}
+  const m1=ckMiss1();
+  if(m1.length){box.innerHTML=`<div class="note" style="border:1px solid var(--accent);margin:8px 0 0"><b>${L2('Completa la tua scheda per il centro','Complete your sheet for the center')}</b><p class="tiny" style="margin:6px 0 10px">${L2('Mancano: ','Missing: ')}${esc(m1.join(', '))}. ${L2('Senza non puoi prenotare le uscite.','Without it you cannot book sessions.')}</p><button class="btn" id="b-ck-go">${L2('Completa ora','Complete now')}</button></div>`;$('b-ck-go').onclick=ckOpen;return}
+  const m2=ckMiss2();let st={};try{st=JSON.parse(localStorage.getItem('bc.ck2.v1')||'{}')}catch(e){}
+  if(m2.length&&!(st.t&&Date.now()-st.t<3*864e5)){box.innerHTML=`<div class="note" style="border:1px solid #E8B04A;margin:8px 0 0"><b>${L2('Per le uscite in acqua ti manca','For water sessions you still need')}</b><p class="tiny" style="margin:6px 0 10px">${esc(m2.join(', '))}.</p><button class="btn" id="b-ck-me">${L2('Apri il profilo','Open profile')}</button><button class="btn ghost" id="b-ck-no" style="margin-top:8px">${L2('Più tardi','Later')}</button></div>`;
+    $('b-ck-me').onclick=openMe;$('b-ck-no').onclick=()=>{try{localStorage.setItem('bc.ck2.v1',JSON.stringify({t:Date.now()}))}catch(e){}box.innerHTML=''}}}
+const CK_L2_HARD=false;
+async function ckGate(a){
+  try{if(!(await ckLoad()))return true}catch(e){return true}
+  if(ckMiss1().length){toast(L2('Prima completa la tua scheda','Complete your sheet first'));ckOpen();return false}
+  const wet=a&&(a.location_type==='sea'||a.location_type==='pool')&&a.kind!=='dry',m2=ckMiss2();
+  if(wet&&m2.length){
+    if(CK_L2_HARD){toast(L2('Per le uscite in acqua mancano: ','For water sessions you need: ')+m2.join(', '));openMe();return false}
+    if(confirm(L2('Per le uscite in acqua il centro chiede: '+m2.join(', ')+'.\n\nVuoi completarli ora? (Annulla = prenota comunque)','For water sessions the center asks for: '+m2.join(', ')+'.\n\nComplete them now? (Cancel = book anyway)'))){openMe();return false}}
+  return true}
+/* risposta Si / No alla partecipazione */
+async function rsvpAct(id,yes){
+  const a=(ctActs||[]).find(x=>x.id===id);
+  if(yes&&!(await ckGate(a)))return false;
+  try{const {data,error}=await sb.rpc('rsvp_activity',{p_act:id,p_yes:!!yes});if(error)throw error;
+    toast(!yes?L2('Risposta registrata: non partecipi','Noted: you are not attending'):data==='waitlist'?L2('Sei in lista d’attesa','You are on the waitlist'):L2('Prenotato: partecipi','Booked: you are attending'));track('rsvp',{yes:!!yes});return true}
+  catch(e){const m=String(e.message||'');toast(/level too low/i.test(m)?L2('Livello non sufficiente','Level too low'):/already started/i.test(m)?L2('Attività già iniziata','Already started'):L2('Non riuscito. Riprova.','Failed. Try again.'));return false}}
+async function rsvpPrompt(id,ans){
+  let act=null;const cs=lsJ('bc.centers.v1',[]);
+  for(const c of cs){try{const r=await sb.rpc('list_activities',{p_org:c.org_id,p_from:new Date(Date.now()-864e5).toISOString(),p_days:30});act=(Array.isArray(r.data)?r.data:[]).find(x=>x.id===id);if(act){ctActs=(ctActs||[]).filter(x=>x.id!==id).concat([act]);break}}catch(e){}}
+  if(!act||act.status!=='scheduled'||new Date(act.starts_at)<new Date()){toast(L2('Attività non più disponibile','Activity no longer available'));return}
+  if(ans==='yes'||ans==='no'){await rsvpAct(id,ans==='yes');try{renderCenter()}catch(e){}return}
+  const loc=lang==='en'?'en-GB':'it-IT',when=new Date(act.starts_at).toLocaleString(loc,{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+  ckSheet(`<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${L2('Partecipi?','Are you coming?')}</h2><button class="pill" data-x>✕</button></div>
+   <p style="margin:10px 0 14px"><b>${esc(act.title)}</b><br>${esc(when)}${act.place?' · '+esc(act.place):''}</p>
+   <button class="btn" data-y>${L2('Sì, partecipo','Yes, I’m coming')}</button><button class="btn ghost" data-n style="margin-top:8px">${L2('No, non partecipo','No, I’m not coming')}</button>`,(o,close)=>{
+    o.querySelector('[data-y]').onclick=async()=>{close();await rsvpAct(id,true);try{renderCenter()}catch(e){}};
+    o.querySelector('[data-n]').onclick=async()=>{close();await rsvpAct(id,false);try{renderCenter()}catch(e){}}})}
+/* link dalle notifiche */
+try{const q=new URLSearchParams(location.search);if(q.get('rsvp')||q.get('checkin')){sessionStorage.setItem('bc.nav',JSON.stringify({rsvp:q.get('rsvp'),a:q.get('a'),checkin:q.get('checkin')}));history.replaceState(null,'',location.pathname)}}catch(e){}
+async function navPending(){let n=null;try{n=JSON.parse(sessionStorage.getItem('bc.nav')||'null')}catch(e){}
+  if(!n||!sb||!user||isGuest())return;try{sessionStorage.removeItem('bc.nav')}catch(e){}
+  if(n.checkin)ckOpen();else if(n.rsvp&&/^[0-9a-f-]{36}$/i.test(n.rsvp))rsvpPrompt(n.rsvp,n.a)}
+try{if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',e=>{const u=e.data&&e.data.bcNav;if(!u)return;try{const q=new URLSearchParams(String(u).split('?')[1]||'');sessionStorage.setItem('bc.nav',JSON.stringify({rsvp:q.get('rsvp'),a:q.get('a'),checkin:q.get('checkin')}));navPending()}catch(_){}})}catch(e){}
+[2500,6000,12000].forEach(t=>setTimeout(navPending,t));
+/* installazione su Android */
+let BIP=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();BIP=e;try{pushAsk()}catch(_){}});
+window.addEventListener('appinstalled',()=>{BIP=null;try{pushAsk()}catch(_){}});
+function instAsk(box){
+  if(!/Android/i.test(navigator.userAgent)||env().standalone)return false;
+  let st={n:0,t:0};try{st=JSON.parse(localStorage.getItem('bc.instask.v1')||'{"n":0,"t":0}')}catch(e){}
+  if(st.n>=3||(st.t&&Date.now()-st.t<5*864e5))return false;
+  box.innerHTML=`<div class="note" style="border:1px solid var(--accent);margin:8px 0 0"><b>${L2('Aggiungi l’app alla Home','Add the app to your Home screen')}</b><p class="tiny" style="margin:6px 0 10px">${BIP?L2('Si apre come una vera app, senza browser, e potrai ricevere gli avvisi del centro.','It opens like a real app, without the browser, and you can receive center alerts.'):L2('Tocca il menu ⋮ del browser, poi «Installa app» o «Aggiungi a schermata Home». Si apre come una vera app e potrai ricevere gli avvisi del centro.','Tap the browser ⋮ menu, then “Install app” or “Add to Home screen”. It opens like a real app and you can receive center alerts.')}</p>${BIP?`<button class="btn" id="b-inst-on">${L2('Aggiungi alla Home','Add to Home')}</button>`:''}<button class="btn ghost" id="b-inst-no" style="margin-top:8px">${BIP?L2('Non ora','Not now'):L2('Ho capito','Got it')}</button></div>`;
+  $('b-inst-no').onclick=()=>{st.n++;st.t=Date.now();try{localStorage.setItem('bc.instask.v1',JSON.stringify(st))}catch(e){}box.innerHTML=''};
+  if(BIP)$('b-inst-on').onclick=async()=>{try{BIP.prompt();const c=await BIP.userChoice;BIP=null;track('install_prompt',{o:c&&c.outcome});box.innerHTML=''}catch(e){box.innerHTML=''}};
+  return true}
 </script>
 </body>
 </html>
