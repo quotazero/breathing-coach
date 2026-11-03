@@ -603,12 +603,73 @@ function actModal(id,day){const a=id?S.acts.find(x=>x.id===id):null;
   <label>Tipo di attività</label><div class="row" style="flex-wrap:nowrap;gap:8px"><select id="aty" onchange="typePick()">${S.types.map(t=>`<option value="${t.id}"${t.id===ty.id?' selected':''}>${esc(t.name)}</option>`).join('')}</select><button class="btn ghost" type="button" style="padding:0 14px" title="Gestisci i tipi di attività" onclick="typesModal()">✎</button></div>
   <label>Titolo</label><input id="at" value="${esc(a?a.title:ty.name)}">
   ${optField('place','ap','Luogo',a?a.place||'':'')}
-  <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-width:0"><label>Inizio</label><input id="as" type="datetime-local" value="${dl(st)}" onchange="${a?'updWx()':'typePick()'}"></div><div style="flex:1;min-width:0"><label>Fine</label><input id="ae2" type="datetime-local" value="${dl(en)}"></div></div>
+  <div class="row" style="flex-wrap:nowrap"><div style="flex:1;min-width:0"><label>Inizio</label><input id="as" type="datetime-local" value="${dl(st)}" onchange="${a?'updWx()':'typePick();rpSync()'}"></div><div style="flex:1;min-width:0"><label>Fine</label><input id="ae2" type="datetime-local" value="${dl(en)}" ${a?'':'onchange="rpUpd()"'}></div></div>
   <div id="awbox" style="display:${isSea({location_type:ty.env,kind:ty.kind})?'block':'none'}"><label>Stato (attività in mare)</label><select id="aw"><option value="watch"${!a||a.weather_status!=='confirmed'?' selected':''}>Osservazione meteo</option><option value="confirmed"${a&&a.weather_status==='confirmed'?' selected':''}>Confermata</option></select><div id="wxl" class="note" style="margin-top:6px"></div></div>
   <label>Istruttore <span class="muted">(si può assegnare anche dopo)</span></label><select id="ai"><option value="">— Da assegnare —</option>${instrOptions(a?a.instructor_person_id:'',ty.id)}</select><div id="ai_h" class="note" style="margin-top:4px"></div>
   <label>Posti</label><select id="ac">${seats.map(n=>`<option${n===(a?a.capacity:ty.capacity)?' selected':''}>${n}</option>`).join('')}</select>
   <label>Attrezzatura richiesta</label><div id="eqbox"></div></details>
-  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveActD('${id||''}')">Salva</button><button class="btn ghost" onclick="closeModal()">Annulla</button>${a?`<button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="cancelActD('${id}')">Annulla attività</button>`:''}</div>`);refreshInstr();updWx();eqRender();if(a)loadRost(a.id)}
+  ${a?'<div id="serbox"></div>':repeatBox(st)}
+  <div class="row" style="margin-top:16px"><button class="btn" onclick="saveActD('${id||''}')">Salva</button><button class="btn ghost" onclick="closeModal()">Annulla</button>${a?`<button class="btn ghost" style="margin-left:auto;color:#ff8a8a" onclick="cancelActD('${id}')">Annulla attività</button>`:''}</div>`);refreshInstr();updWx();eqRender();S._ser=null;S.rpTouch=false;if(a){loadRost(a.id);loadSeries(a.id)}else rpUpd()}
+/* ===== Ricorrenza attività ===== */
+const RPDN=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+function repeatBox(st){const wd=(st.getDay()+6)%7;
+  return `<div class="panel" style="padding:10px 14px;margin:12px 0 0"><label style="margin:0 0 4px">Ripeti</label>
+  <select id="rp" onchange="rpUpd()"><option value="">Non si ripete</option><option value="d">Ogni giorno</option><option value="w">Ogni settimana</option><option value="w2">Ogni 2 settimane</option><option value="m">Ogni mese (stesso giorno)</option></select>
+  <div id="rpw" style="display:none;margin-top:8px"><div class="note" style="margin-bottom:4px">Nei giorni</div>${RPDN.map((d,i)=>`<label style="display:inline-flex;gap:5px;align-items:center;margin:0 12px 6px 0;cursor:pointer"><input type="checkbox" class="rpd" value="${i}" style="width:auto"${i===wd?' checked':''} onchange="S.rpTouch=true;rpUpd()"> ${d}</label>`).join('')}</div>
+  <div id="rpe" style="display:none;margin-top:8px"><label style="margin:0 0 4px">Finisce</label><div class="row" style="flex-wrap:nowrap;gap:8px"><select id="rpm" onchange="rpUpd()" style="flex:1"><option value="n">Dopo</option><option value="u">Entro il</option></select><span id="rpnb" style="flex:1;display:flex;gap:6px;align-items:center"><input id="rpn" type="number" min="2" max="60" value="8" oninput="rpUpd()" style="width:80px"> <span class="muted">volte</span></span><input id="rpu" type="date" onchange="rpUpd()" style="display:none;flex:1"></div></div>
+  <div id="rpp" class="note" style="margin-top:8px"></div></div>`}
+function rpSync(){if(!$('#rp'))return;if(!S.rpTouch){const st=new Date($('#as').value);if(!isNaN(st)){const wd=(st.getDay()+6)%7;document.querySelectorAll('.rpd').forEach(c=>{c.checked=(+c.value===wd)})}}rpUpd()}
+function rpOcc(){const k=$('#rp')?$('#rp').value:'';if(!k)return null;
+  const s=new Date($('#as').value),e=new Date($('#ae2').value);if(isNaN(s)||isNaN(e)||e<=s)return {err:'Controlla data e orari'};
+  const MAXN=60,lim=new Date(s.getFullYear(),s.getMonth(),s.getDate()+183,23,59);
+  const mode=$('#rpm').value,N=Math.max(2,Math.min(MAXN,+$('#rpn').value||2));let until=null;
+  if(mode==='u'){const v=$('#rpu').value;if(!v)return {err:'Scegli la data di fine'};until=new Date(v+'T23:59');if(until<s)return {err:'La data di fine è prima dell\'inizio'}}
+  const days=[...document.querySelectorAll('.rpd:checked')].map(x=>+x.value);
+  if((k==='w'||k==='w2')&&!days.length)return {err:'Scegli almeno un giorno'};
+  const sw=(s.getDay()+6)%7,wk0=new Date(s.getFullYear(),s.getMonth(),s.getDate()-sw);
+  const out=[];let cut=false;
+  for(let i=0;i<=190;i++){const d=new Date(s.getFullYear(),s.getMonth(),s.getDate()+i,s.getHours(),s.getMinutes());
+    if(until&&d>until)break;
+    if(d>lim){cut=true;break}
+    if(out.length>=(mode==='n'?N:MAXN)){cut=mode==='u';break}
+    let ok=false;
+    if(k==='d')ok=true;
+    else if(k==='w'||k==='w2'){const wd=(d.getDay()+6)%7,md=new Date(d.getFullYear(),d.getMonth(),d.getDate()-wd),idx=Math.round((md-wk0)/(7*864e5));ok=days.includes(wd)&&idx%(k==='w2'?2:1)===0}
+    else if(k==='m')ok=d.getDate()===s.getDate();
+    if(ok)out.push(d)}
+  const ty=$('#aty').value;let skipped=0;
+  const list=out.filter(d=>{const dup=S.acts.some(a=>a.type_id===ty&&a.status!=='cancelled'&&new Date(a.starts_at).getTime()===d.getTime());if(dup)skipped++;return !dup});
+  return {list,skipped,cut,first:out[0],last:out[out.length-1],mode,N}}
+function rpUpd(){const k=$('#rp');if(!k)return;const v=k.value;
+  $('#rpw').style.display=(v==='w'||v==='w2')?'block':'none';$('#rpe').style.display=v?'block':'none';
+  const mu=$('#rpm').value==='u';$('#rpnb').style.display=mu?'none':'flex';$('#rpu').style.display=mu?'block':'none';
+  const pp=$('#rpp');if(!v){pp.innerHTML='';return}
+  const o=rpOcc();if(o.err){pp.innerHTML='<span style="color:var(--warn)">'+esc(o.err)+'</span>';return}
+  const f=d=>d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});
+  if(!o.list.length){pp.innerHTML='<span style="color:var(--warn)">Nessuna data da creare con queste scelte.</span>';return}
+  pp.innerHTML='<b>Verranno create '+o.list.length+' attività</b>, dal '+f(o.list[0])+' al '+f(o.list[o.list.length-1])+'.'+(o.skipped?'<br>'+o.skipped+' già presenti (stesso tipo e orario): saltate.':'')+(o.cut?'<br>Limite: massimo 60 attività e 6 mesi per volta.':'')}
+async function saveRepeat(rec,s,e){const o=rpOcc();if(!o||o.err)return toast(o?o.err:'Ripetizione non valida');if(!o.list.length)return toast('Nessuna data da creare');
+  if(!confirm('Creare '+o.list.length+' attività, dal '+o.list[0].toLocaleDateString('it-IT')+' al '+o.list[o.list.length-1].toLocaleDateString('it-IT')+'?'))return;
+  const sid=crypto.randomUUID(),dur=e-s;
+  const rows=o.list.map(d=>({...rec,starts_at:d.toISOString(),ends_at:new Date(d.getTime()+dur).toISOString(),org_id:S.org.org_id,min_rank:0,series_id:sid}));
+  const {error}=await sb.from('activities').insert(rows);if(error)return toast('Non riuscito: '+error.message);
+  closeModal();await reloadActs();toast(rows.length+' attività create')}
+async function loadSeries(id){S._ser=null;const r=await sb.from('activities').select('series_id').eq('id',id).single();const sid=r.data&&r.data.series_id;if(!sid)return;
+  const q=await sb.from('activities').select('id,starts_at').eq('series_id',sid).eq('status','scheduled').order('starts_at');const l=q.data||[];
+  const me=S.acts.find(x=>x.id===id),from=me?new Date(me.starts_at):new Date(),now=new Date();
+  const nxt=l.filter(x=>new Date(x.starts_at)>=from).length,fut=l.filter(x=>new Date(x.starts_at)>=now).length;
+  S._ser={sid,act:id};const el=$('#serbox');if(!el)return;
+  el.innerHTML=`<div class="panel" style="padding:10px 14px;margin:12px 0 0"><b>Fa parte di una serie</b> <span class="muted">(${l.length} in programma)</span><label style="margin:8px 0 4px">"Salva" e "Annulla attività" valgono per</label><select id="asc"><option value="this">Solo questa</option><option value="next">Questa e le successive (${nxt})</option><option value="all">Tutte le future della serie (${fut})</option></select><div class="note" style="margin-top:6px">Con più attività vengono applicati tipo, titolo, luogo, orario, istruttore, posti e attrezzatura. Le date restano quelle di ciascuna.</div></div>`}
+async function applySeries(id,sc,rec,s,e,old){
+  const r=await sb.from('activities').select('id,starts_at,place').eq('series_id',S._ser.sid).eq('status','scheduled').order('starts_at');
+  const from=sc==='next'?new Date(old.starts_at):new Date();
+  const t=(r.data||[]).filter(x=>x.id!==id&&new Date(x.starts_at)>=from&&(sc==='next'?new Date(x.starts_at)>new Date(old.starts_at):true));
+  const dur=e-s,patch={...rec};delete patch.weather_status;delete patch.starts_at;delete patch.ends_at;let n=0;
+  await Promise.all(t.map(async x=>{const d=new Date(x.starts_at);d.setHours(s.getHours(),s.getMinutes(),0,0);
+    const {error}=await sb.from('activities').update({...patch,starts_at:d.toISOString(),ends_at:new Date(d.getTime()+dur).toISOString()}).eq('id',x.id);if(error)return;n++;
+    const a0=S.acts.find(y=>y.id===x.id);
+    if(a0&&(a0.booked>0||a0.waitlist>0)&&(new Date(x.starts_at).getTime()!==d.getTime()||(a0.place||'')!==rec.place))await sb.from('activity_notices').insert({org_id:S.org.org_id,activity_id:x.id,kind:'moved',detail:'Prima: '+fmtDT(x.starts_at)+(x.place?' – '+x.place:'')})}));
+  return n}
 async function loadRost(aid){const el0=$('#rost');const r=await sb.rpc('activity_roster',{p_act:aid});const el=$('#rost');if(!el)return;
   if(r.error){el.innerHTML='<b>Partecipanti</b><br><span class="muted">Non disponibili con questo accesso.</span>';return}
   const ro=(r.data||[]).filter(x=>x.status!=='cancelled');const ins=ro.filter(x=>x.status!=='waitlist'),wl=ro.filter(x=>x.status==='waitlist');
@@ -648,17 +709,20 @@ async function delType(id){const t=S.types.find(x=>x.id===id);const used=S.acts.
 async function saveActD(id){const ty=S.types.find(x=>x.id===$('#aty').value);if(!ty)return toast('Scegli il tipo di attività');const t=$('#at').value.trim();if(!t)return toast('Scrivi un titolo');const s=new Date($('#as').value),e=new Date($('#ae2').value);if(isNaN(s)||isNaN(e)||e<=s)return toast('Controlla data e orari');
   const rec={type_id:ty.id,kind:ty.kind,location_type:ty.env,title:t,place:($('#ap').value==='__new'?'':$('#ap').value.trim()),starts_at:s.toISOString(),ends_at:e.toISOString(),capacity:+$('#ac').value||1,instructor_person_id:$('#ai').value||null,weather_status:isSea({location_type:ty.env,kind:ty.kind})?$('#aw').value:null,equipment:S.eq||[]};
   {const sv=document.getElementById('eqsv');if(sv&&sv.checked){const r2=await sb.from('activity_types').update({equipment_default:S.eq}).eq('id',ty.id).select().single();if(r2.data)Object.assign(ty,r2.data)}}
+  if(!id&&$('#rp')&&$('#rp').value)return saveRepeat(rec,s,e);
+  const sc=id&&$('#asc')?$('#asc').value:'this';
   const old=id?S.acts.find(x=>x.id===id):null;
   const moved=old&&old.status==='scheduled'&&(old.booked>0||old.waitlist>0)&&(new Date(old.starts_at).getTime()!==s.getTime()||(old.place||'')!==rec.place);
   const q=id?sb.from('activities').update(rec).eq('id',id):sb.from('activities').insert({...rec,org_id:S.org.org_id,min_rank:0});
   const {error}=await q;if(error)return toast('Non riuscito: '+error.message);if(moved)await sb.from('activity_notices').insert({org_id:S.org.org_id,activity_id:id,kind:'moved',detail:'Prima: '+fmtDT(old.starts_at)+(old.place?' – '+old.place:'')});
-  closeModal();await reloadActs();toast('Attività salvata'+(moved?': ricordati di avvisare gli iscritti':''))}
-async function cancelActD(id){const why=prompt("Motivo dell'annullamento (visibile ai partecipanti):",'Condizioni meteo');if(why===null)return;
-  const act=S.acts.find(x=>x.id===id);
-  const {error}=await sb.from('activities').update({status:'cancelled',cancel_reason:why}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);
-  const has=act&&(act.booked>0||act.waitlist>0);
-  if(has)await sb.from('activity_notices').insert({org_id:S.org.org_id,activity_id:id,kind:'cancelled',detail:why});
-  closeModal();await reloadActs();toast('Attività annullata'+(has?': ricordati di avvisare gli iscritti':''))}
+  let extra=0;if(id&&sc!=='this'&&S._ser&&S._ser.act===id&&old)extra=await applySeries(id,sc,rec,s,e,old);
+  closeModal();await reloadActs();toast('Attività salvata'+(extra?' (+'+extra+' della serie)':'')+(moved?': ricordati di avvisare gli iscritti':''))}
+async function cancelActD(id){const sc=$('#asc')?$('#asc').value:'this';let ids=[id];
+  if(sc!=='this'&&S._ser&&S._ser.act===id){const me=S.acts.find(x=>x.id===id);const r=await sb.from('activities').select('id,starts_at').eq('series_id',S._ser.sid).eq('status','scheduled');const from=sc==='next'&&me?new Date(me.starts_at):new Date();ids=[...new Set([id,...(r.data||[]).filter(x=>new Date(x.starts_at)>=from).map(x=>x.id)])]}
+  const why=prompt(ids.length>1?"Motivo dell'annullamento di "+ids.length+" attività (visibile ai partecipanti):":"Motivo dell'annullamento (visibile ai partecipanti):",'Condizioni meteo');if(why===null)return;
+  const {error}=await sb.from('activities').update({status:'cancelled',cancel_reason:why}).in('id',ids);if(error)return toast('Non riuscito: '+error.message);
+  let has=0;for(const x of ids){const act=S.acts.find(y=>y.id===x);if(act&&(act.booked>0||act.waitlist>0)){has++;await sb.from('activity_notices').insert({org_id:S.org.org_id,activity_id:x,kind:'cancelled',detail:why})}}
+  closeModal();await reloadActs();toast((ids.length>1?ids.length+' attività annullate':'Attività annullata')+(has?': ricordati di avvisare gli iscritti':''))}
 async function confirmAct(id){const {error}=await sb.from('activities').update({weather_status:'confirmed'}).eq('id',id);if(error)return toast('Non riuscito: '+error.message);const a=S.acts.find(x=>x.id===id);if(a)a.weather_status='confirmed';render();toast('Attività confermata')}
 async function noticeModal(nid){const n=S.notices.find(x=>x.id===nid),a=n&&S.acts.find(x=>x.id===n.activity_id);if(!n||!a)return toast('Attività non trovata');
   const r=await sb.rpc('activity_roster',{p_act:a.id});const ro=(r.data||[]).filter(x=>x.status!=='cancelled');
