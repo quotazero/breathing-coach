@@ -1,5 +1,5 @@
 // Service worker di Breathing Coach: funzionamento offline + notifiche push
-const CACHE='bc-v0.9.40';
+const CACHE='bc-v0.9.41';
 const CORE=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png','favicon.png','about.html','privacy.html','centro.html','centro.webmanifest','qr.js'];
 const CDN=['cdn.jsdelivr.net','fonts.googleapis.com','fonts.gstatic.com'];
 self.addEventListener('install',e=>{
@@ -38,7 +38,7 @@ self.addEventListener('fetch',e=>{
 self.addEventListener('push',e=>{
   let d={};try{d=e.data?e.data.json():{}}catch(_){d={body:e.data?e.data.text():''}}
   e.waitUntil(self.registration.showNotification(d.title||'Breathing Coach',{
-    body:d.body||'',icon:'icon-192.png',badge:'icon-192.png',tag:'bc-reminder',data:{url:d.url||'./'}}));
+    body:d.body||'',icon:'icon-192.png',badge:'icon-192.png',tag:d.tag||('bc-'+Date.now()),data:{url:d.url||'./'}}));
 });
 self.addEventListener('notificationclick',e=>{
   e.notification.close();const url=(e.notification.data&&e.notification.data.url)||'./';

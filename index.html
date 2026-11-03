@@ -258,6 +258,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   </div>
   <div style="margin:10px 0 0"><button class="pill acc" id="b-account3" style="width:100%;text-align:left;display:none"></button></div>
   <button class="wk" id="wk"><div class="wkg" id="wk-grid"></div><div class="wkl" id="wk-line"></div></button>
+  <div id="wl-push"></div>
   <div id="wl-me"></div>
   <div id="wl-today"></div>
   <h2 data-i18n="wl_q"></h2>
@@ -546,8 +547,13 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
       <p class="tiny" id="push-state" style="margin:6px 0 10px"></p>
       <button class="btn" id="b-push-on" style="display:none"></button>
       <div id="push-opts" style="display:none">
-        <label style="display:flex;gap:10px;align-items:center;margin:0 0 10px"><span id="push-time-l"></span><input class="txt" type="time" id="push-time" value="19:00" style="width:auto;margin:0"></label>
-        <label style="display:flex;gap:10px;align-items:center;margin:0 0 12px;font-size:14px"><input type="checkbox" id="push-streak" checked style="width:20px;height:20px;accent-color:var(--accent)"><span id="push-streak-l"></span></label>
+        <label class="mechk"><input type="checkbox" id="push-chg" checked><span id="push-chg-l"></span></label>
+        <label class="mechk"><input type="checkbox" id="push-exp" checked><span id="push-exp-l"></span></label>
+        <label class="mechk"><input type="checkbox" id="push-daily"><span id="push-daily-l"></span></label>
+        <div id="push-daily-opts" style="display:none;margin:0 0 12px 32px">
+          <label style="display:flex;gap:10px;align-items:center;margin:0 0 10px"><span id="push-time-l"></span><input class="txt" type="time" id="push-time" value="19:00" style="width:auto;margin:0"></label>
+          <label style="display:flex;gap:10px;align-items:center;margin:0;font-size:14px"><input type="checkbox" id="push-streak" checked style="width:20px;height:20px;accent-color:var(--accent)"><span id="push-streak-l"></span></label>
+        </div>
         <button class="btn ghost" id="b-push-off"></button>
       </div>
     </div>
@@ -599,7 +605,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.20';
+const VERSION='0.9.21';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1880,44 +1886,65 @@ $('b-diag-back').onclick=()=>goTab('s-welcome');
 /* ---------- notifiche push (promemoria giornaliero) ---------- */
 const VAPID_PUB='BKhbbX1hV1Nd6IV0GSApPZEo4l03CfA3OAlUuyavZ5-gEb22Y1W6JB1wLf-_ffeoFMtVOU9VWZwbXmawpFtbtCo';
 const pushOK=()=>('serviceWorker' in navigator)&&('PushManager' in window)&&('Notification' in window);
-function pushT(){const en=lang==='en';return en?{h:'Daily reminder',on:'Turn on reminders',off:'Turn off',time:'Remind me at',streak:'Warn me if I’m about to lose my streak',s_on:'Reminders are on.',s_off:'Get a daily nudge to train.',s_ios:'To get notifications, add the app to the Home screen first.',s_no:'This browser doesn’t support notifications.',s_den:'Notifications are blocked. Enable them in your phone settings.',s_err:'Couldn’t turn on reminders. Try again.'}:{h:'Promemoria giornaliero',on:'Attiva i promemoria',off:'Disattiva',time:'Ricordamelo alle',streak:'Avvisami se rischio di perdere la serie',s_on:'Promemoria attivi.',s_off:'Ricevi ogni giorno un promemoria per allenarti.',s_ios:'Per ricevere le notifiche aggiungi prima l’app alla Home.',s_no:'Questo browser non supporta le notifiche.',s_den:'Le notifiche sono bloccate. Attivale dalle impostazioni del telefono.',s_err:'Non sono riuscito ad attivare i promemoria. Riprova.'}}
+function pushT(){const en=lang==='en';return en?{h:'Notifications',on:'Turn on notifications',chg:'Activity cancellations and changes',exp:'Membership and document expiry',daily:'Daily training reminder',off:'Turn off',time:'Remind me at',streak:'Warn me if I’m about to lose my streak',s_on:'Notifications are on. Booking reminders are set in “Profile & documents”.',s_off:'Get alerts when a session is cancelled or moved, booking reminders and expiry dates.',s_ios:'To get notifications, add the app to the Home screen first.',s_no:'This browser doesn’t support notifications.',s_den:'Notifications are blocked. Enable them in your phone settings.',s_err:'Couldn’t turn on reminders. Try again.'}:{h:'Notifiche',on:'Attiva le notifiche',chg:'Annullamenti e spostamenti delle attività',exp:'Scadenze di tesseramenti e documenti',daily:'Promemoria giornaliero di allenamento',off:'Disattiva',time:'Ricordamelo alle',streak:'Avvisami se rischio di perdere la serie',s_on:'Notifiche attive. I promemoria di prenotazione si impostano in «Profilo e documenti».',s_off:'Ricevi un avviso se un’uscita viene annullata o spostata, promemoria per prenotare e scadenze.',s_ios:'Per ricevere le notifiche aggiungi prima l’app alla Home.',s_no:'Questo browser non supporta le notifiche.',s_den:'Le notifiche sono bloccate. Attivale dalle impostazioni del telefono.',s_err:'Non sono riuscito ad attivare i promemoria. Riprova.'}}
 function b64u(b){const p='='.repeat((4-b.length%4)%4);const r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))}
 function ab2b64(buf){return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 try{if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}catch(e){}
 async function pushReg(){return navigator.serviceWorker.register('sw.js')}
+async function pushSub(){try{const reg=await navigator.serviceWorker.getRegistration('sw.js');return reg?await reg.pushManager.getSubscription():null}catch(e){return null}}
 async function renderPush(){
-  const x=pushT();$('push-h').textContent=x.h;$('b-push-on').textContent=x.on;$('b-push-off').textContent=x.off;$('push-time-l').textContent=x.time;$('push-streak-l').textContent=x.streak;
+  const x=pushT();$('push-h').textContent=x.h;$('b-push-on').textContent=x.on;$('b-push-off').textContent=x.off;$('push-time-l').textContent=x.time;$('push-streak-l').textContent=x.streak;$('push-chg-l').textContent=x.chg;$('push-exp-l').textContent=x.exp;$('push-daily-l').textContent=x.daily;
   const card=$('push-card');if(!user||user.is_anonymous){card.style.display='none';return}card.style.display='';
   $('b-push-on').style.display='none';$('push-opts').style.display='none';
   if(!pushOK()){$('push-state').textContent=isIOS&&!env().standalone?x.s_ios:x.s_no;return}
   if(Notification.permission==='denied'){$('push-state').textContent=x.s_den;return}
-  let sub=null;try{const reg=await navigator.serviceWorker.getRegistration('sw.js')||await pushReg();sub=await reg.pushManager.getSubscription()}catch(e){}
+  const sub=await pushSub();
   if(sub){
     $('push-state').textContent=x.s_on;$('push-opts').style.display='';
-    try{const {data}=await sb.from('push_subs').select('remind_time,streak_on').eq('endpoint',sub.endpoint).maybeSingle();
-      if(data){$('push-time').value=String(data.remind_time).slice(0,5);$('push-streak').checked=!!data.streak_on}}catch(e){}
+    try{const [a,b]=await Promise.all([sb.from('push_subs').select('remind_on,remind_time,streak_on').eq('endpoint',sub.endpoint).maybeSingle(),sb.from('notify_prefs').select('changes,expiry').eq('user_id',user.id).maybeSingle()]);
+      const d=a.data;if(d){$('push-time').value=String(d.remind_time).slice(0,5);$('push-streak').checked=!!d.streak_on;$('push-daily').checked=!!d.remind_on}
+      const pr=b.data;$('push-chg').checked=pr?pr.changes!==false:true;$('push-exp').checked=pr?pr.expiry!==false:true}catch(e){}
+    $('push-daily-opts').style.display=$('push-daily').checked?'':'none';
   }else{$('push-state').textContent=x.s_off;$('b-push-on').style.display=''}
 }
-async function pushSave(sub){
+async function pushSave(sub,daily){
   const j=sub.toJSON();
   const row={user_id:user.id,endpoint:sub.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth,tz:Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Rome',
-    remind_on:true,remind_time:$('push-time').value||'19:00',streak_on:$('push-streak').checked,last_sent:null};
+    remind_on:!!daily,remind_time:$('push-time').value||'19:00',streak_on:$('push-streak').checked,last_sent:null};
   const {error}=await sb.from('push_subs').upsert(row,{onConflict:'endpoint'});if(error)throw error;
 }
+async function pushEnable(daily){
+  const perm=await Notification.requestPermission();if(perm!=='granted')return false;
+  const reg=await pushReg();await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)});
+  await pushSave(sub,daily);
+  try{await sb.from('notify_prefs').upsert({user_id:user.id,changes:true,expiry:true},{onConflict:'user_id',ignoreDuplicates:true})}catch(e){}
+  track('push_on');log('push:on');return true}
 $('b-push-on').onclick=async()=>{
-  try{
-    const perm=await Notification.requestPermission();if(perm!=='granted'){await renderPush();return}
-    const reg=await pushReg();await navigator.serviceWorker.ready;
-    const sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)});
-    await pushSave(sub);track('push_on');log('push:on');
-  }catch(e){log('push:error',e.message);$('push-state').textContent=pushT().s_err;return}
+  try{await pushEnable(false)}catch(e){log('push:error',e.message);$('push-state').textContent=pushT().s_err;return}
   renderPush();
 };
 async function pushUpdate(){
-  try{const reg=await navigator.serviceWorker.getRegistration('sw.js');const sub=reg&&await reg.pushManager.getSubscription();if(!sub)return;
-    await sb.from('push_subs').update({remind_time:$('push-time').value||'19:00',streak_on:$('push-streak').checked,last_sent:null}).eq('endpoint',sub.endpoint)}catch(e){log('push:update-error',e.message)}
-}
-$('push-time').onchange=pushUpdate;$('push-streak').onchange=pushUpdate;
+  const sub=await pushSub();if(!sub)return;
+  try{await sb.from('push_subs').update({remind_on:$('push-daily').checked,remind_time:$('push-time').value||'19:00',streak_on:$('push-streak').checked,last_sent:null}).eq('endpoint',sub.endpoint);
+    await sb.from('notify_prefs').upsert({user_id:user.id,changes:$('push-chg').checked,expiry:$('push-exp').checked,updated_at:new Date().toISOString()},{onConflict:'user_id'})}catch(e){log('push:update-error',e.message)}
+  $('push-daily-opts').style.display=$('push-daily').checked?'':'none'}
+['push-time','push-streak','push-chg','push-exp','push-daily'].forEach(id=>{$(id).onchange=pushUpdate});
+/* invito in home: un tocco per attivare le notifiche (su iPhone prima serve la Home) */
+async function pushAsk(){const box=$('wl-push');if(!box)return;box.innerHTML='';
+  if(isGuest()||!sb)return;
+  let st={n:0,t:0};try{st=JSON.parse(localStorage.getItem('bc.pushask.v1')||'{"n":0,"t":0}')}catch(e){}
+  if(st.n>=3||(st.t&&Date.now()-st.t<7*864e5))return;
+  const en=lang==='en',later=()=>{st.n++;st.t=Date.now();try{localStorage.setItem('bc.pushask.v1',JSON.stringify(st))}catch(e){}box.innerHTML=''};
+  const draw=(title,text,on,onclick)=>{box.innerHTML=`<div class="note" style="border:1px solid var(--accent);margin:8px 0 0"><b>${title}</b><p class="tiny" style="margin:6px 0 10px">${text}</p>${on?`<button class="btn" id="b-ask-on">${on}</button>`:''}<button class="btn ghost" id="b-ask-no" style="margin-top:8px">${on?(en?'Not now':'Non ora'):(en?'Got it':'Ho capito')}</button></div>`;
+    $('b-ask-no').onclick=later;if(on)$('b-ask-on').onclick=onclick};
+  if(isIOS&&!env().standalone){
+    draw(en?'Get alerts on your iPhone':'Ricevi gli avvisi sul tuo iPhone',en?'To receive notifications the app must be on your Home Screen: tap Share (the square with an arrow), then “Add to Home Screen”, and open the app from the new icon. You’ll be able to turn notifications on there.':'Per ricevere le notifiche l’app deve stare nella schermata Home: tocca Condividi (il quadrato con la freccia), poi «Aggiungi alla schermata Home» e apri l’app dalla nuova icona. Lì potrai attivare le notifiche.');return}
+  if(!pushOK()||Notification.permission==='denied')return;
+  if(await pushSub())return;
+  draw(en?'Don’t miss center alerts':'Non perdere gli avvisi del centro',en?'We’ll tell you if a session is cancelled or moved, remind you to book and warn you about expiring memberships and certificates.':'Ti avvisiamo se un’uscita viene annullata o spostata, ti ricordiamo di prenotare e ti segnaliamo le scadenze di tesseramenti e certificati.',en?'Turn on notifications':'Attiva le notifiche',async()=>{
+    $('b-ask-on').disabled=true;
+    try{const ok=await pushEnable(false);if(ok){box.innerHTML='';toast(en?'Notifications on':'Notifiche attivate')}else later()}catch(e){log('push:ask-error',e.message);toast(pushT().s_err);$('b-ask-on').disabled=false}})}
 $('b-push-off').onclick=async()=>{
   try{const reg=await navigator.serviceWorker.getRegistration('sw.js');const sub=reg&&await reg.pushManager.getSubscription();
     if(sub){await sb.from('push_subs').delete().eq('endpoint',sub.endpoint);await sub.unsubscribe()}track('push_off')}catch(e){log('push:off-error',e.message)}
@@ -2187,7 +2214,7 @@ function renderWeek(){
 }
 
 /* --- welcome --- */
-function renderWelcome(){renderCenterCard();syncCenterRecords();try{meAlertHome()}catch(e){}
+function renderWelcome(){renderCenterCard();syncCenterRecords();try{pushAsk()}catch(e){}try{meAlertHome()}catch(e){}
   $('wl-hi').textContent=T[lang].wl_hi(userLabel()||'');
   renderWeek();
   const br=lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='breathing'&&r.status==='completed').pop();
