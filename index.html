@@ -599,7 +599,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.19';
+const VERSION='0.9.20';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -2430,6 +2430,11 @@ const SHARE_VERSION='2026-11-v1';
 const ME={priv:{},docs:[],certs:[],shares:{},loaded:false};
 const DOC_KINDS={medico_generico:['Certificato medico generico','General medical certificate'],medico_non_agonistico:['Sportivo non agonistico','Non-competitive sports certificate'],medico_agonistico:['Sportivo agonistico','Competitive sports certificate'],assicurazione:['Assicurazione','Insurance'],federazione:['Federazione sportiva','Sports federation']};
 const SHARE_CATS=[['anagrafica','Dati personali e contatti','Personal details & contacts'],['brevetti','Brevetti','Certifications'],['medici','Certificati medici (dati sanitari)','Medical certificates (health data)'],['assicurazione','Assicurazione e federazioni','Insurance & federations']];
+const CARD_LBL={tess_centro:['Quota di iscrizione al centro','Center membership fee'],tess_fipsas:['Tesseramento FIPSAS','FIPSAS membership'],tess_csain:['Tesseramento CSAIN','CSAIN membership']};
+function meKindLbl(d){if(CARD_LBL[d.kind])return L2(CARD_LBL[d.kind][0],CARD_LBL[d.kind][1])+(d.center?' · '+d.center:'');return DOC_KINDS[d.kind]?DOC_KINDS[d.kind][lang==='en'?1:0]:d.kind}
+function meCardsSection(){const c=ME.cards||[];if(!c.length)return '';
+  return meSec(L2('Tesseramenti al centro','Center memberships'),L2('Li paghi al centro, che si occupa del tesseramento. Qui vedi le scadenze per ricordarti il rinnovo.','You pay the center, which handles the membership. Here you see expiry dates as a reminder.'),'',c.map(x=>{const st=meStatus(x.expires_on);
+    return `<div class="note meitem"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b>${esc(L2(CARD_LBL[x.kind][0],CARD_LBL[x.kind][1]))}</b><span class="mechip" style="color:${st.c};border-color:${st.c}">${esc(st.t)}</span></div>${x.center?`<div class="tiny">${esc(x.center)}</div>`:''}</div>`}).join(''))}
 function meFmt(iso){if(!iso)return '';const p=String(iso).slice(0,10).split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso}
 function meDays(iso){if(!iso)return null;const d=new Date(iso+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/86400000)}
 function meStatus(iso){const n=meDays(iso);
@@ -2446,7 +2451,8 @@ async function meLoad(){
     sb.from('athlete_shares').select('*').eq('user_id',uid)]);
   const er=r.find(x=>x.error);if(er)throw er.error;
   ME.priv=r[0].data||{};ME.docs=r[1].data||[];ME.certs=r[2].data||[];ME.shares={};(r[3].data||[]).forEach(s=>ME.shares[s.org_id]=s);ME.loaded=true;
-  lsSet('bc.medocs.v1',JSON.stringify(ME.docs.map(x=>({kind:x.kind,title:x.title,expires_on:x.expires_on}))));
+  ME.cards=[];try{const cr=await sb.from('memberships').select('org_id,center_until,fipsas_until,csain_until').eq('user_id',uid);const cl=lsJ('bc.centers.v1',[]);(cr.data||[]).forEach(m=>{const cn=(cl.find(c=>c.org_id===m.org_id)||{}).name||'';[['center_until','tess_centro'],['fipsas_until','tess_fipsas'],['csain_until','tess_csain']].forEach(([f,k])=>{if(m[f])ME.cards.push({kind:k,card:true,center:cn,title:cn,expires_on:m[f],org_id:m.org_id})})})}catch(e){}
+  lsSet('bc.medocs.v1',JSON.stringify(ME.docs.map(x=>({kind:x.kind,title:x.title,expires_on:x.expires_on})).concat(ME.cards.map(x=>({kind:x.kind,card:true,center:x.center,title:x.title,expires_on:x.expires_on})))));
   return true}
 /* avviso in home: documenti scaduti o in scadenza (30 giorni) */
 function meAlertItems(list){return (list||[]).map(d=>({d,s:meStatus(d.expires_on)})).filter(x=>x.s.lvl>0&&x.d.expires_on)}
@@ -2454,10 +2460,10 @@ function meAlertHome(){
   const box=$('wl-me');if(!box)return;
   const draw=list=>{const it=meAlertItems(list).sort((a,b)=>b.s.lvl-a.s.lvl);
     if(!it.length){box.innerHTML='';return}
-    const w=it[0];box.innerHTML=`<button class="mealert" style="border-color:${w.s.c}"><b style="color:${w.s.c}">⚠ ${esc(DOC_KINDS[w.d.kind]?DOC_KINDS[w.d.kind][lang==='en'?1:0]:w.d.kind)}</b><span>${esc(w.s.t)}${it.length>1?' · +'+(it.length-1):''}</span></button>`;
+    const w=it[0];box.innerHTML=`<button class="mealert" style="border-color:${w.s.c}"><b style="color:${w.s.c}">⚠ ${esc(meKindLbl(w.d))}</b><span>${esc(w.s.t)}${it.length>1?' · +'+(it.length-1):''}</span></button>`;
     box.querySelector('button').onclick=openMe};
   draw(lsJ('bc.medocs.v1',[]));
-  if(!isGuest()&&sb&&user)meLoad().then(()=>draw(ME.docs)).catch(()=>{})}
+  if(!isGuest()&&sb&&user)meLoad().then(()=>draw(ME.docs.concat(ME.cards||[]))).catch(()=>{})}
 function openMe(){if(isGuest()){openAccount(true);return}show('s-me');renderMe();meLoad().then(()=>habLoad().catch(()=>{})).then(renderMe).catch(e=>{$('me-body').innerHTML=`<p class="err">${esc(e.message||e)}</p>`})}
 function meSec(title,sub,btn,body){return `<h2>${title}</h2>${sub?`<p class="tiny" style="margin:-4px 0 8px">${sub}</p>`:''}${body}${btn||''}`}
 function meDocRow(d,table){const st=table==='docs'?meStatus(d.expires_on):null;
@@ -2473,12 +2479,13 @@ function renderMe(){
   $('me-h').textContent=L2('Profilo e documenti','Profile & documents');$('b-me-back').textContent=t('back');
   const pr=[[L2('Nome e cognome','Full name'),p.full_name],[L2('Data di nascita','Birth date'),meFmt(p.birth_date)],[L2('Luogo di nascita','Birth place'),p.birth_place],[L2('Codice fiscale','Tax code'),p.fiscal_code],[L2('Telefono','Phone'),p.phone],[L2('Email di contatto','Contact email'),p.contact_email],[L2('Indirizzo','Address'),p.address],[L2('Contatto di emergenza','Emergency contact'),[p.emergency_name,p.emergency_phone].filter(Boolean).join(' · ')]];
   const anyPr=pr.some(x=>x[1]);
-  const al=meAlertItems(ME.docs);
+  const al=meAlertItems(ME.docs.concat(ME.cards||[]));
   const medical=ME.docs.filter(d=>d.kind.startsWith('medico_')),ins=ME.docs.filter(d=>!d.kind.startsWith('medico_'));
   const cs=lsJ('bc.centers.v1',[]);
   B.innerHTML=`<p class="tiny">${L2('Questi dati sono privati. Il centro li vede solo se li condividi tu, categoria per categoria, e puoi revocare quando vuoi.','This data is private. A center only sees what you choose to share, category by category, and you can revoke at any time.')}</p>
-  ${al.length?`<div class="note" style="border:1px solid #E8B04A;margin-top:10px">⚠ ${al.map(x=>esc((DOC_KINDS[x.d.kind]?DOC_KINDS[x.d.kind][lang==='en'?1:0]:x.d.kind)+': '+x.s.t)).join('<br>')}</div>`:''}
+  ${al.length?`<div class="note" style="border:1px solid #E8B04A;margin-top:10px">⚠ ${al.map(x=>esc(meKindLbl(x.d)+': '+x.s.t)).join('<br>')}</div>`:''}
   ${habSection(cs)}
+  ${meCardsSection()}
   ${meSec(L2('Dati personali','Personal details'),'',`<button class="btn ghost" data-act="edit-priv">${anyPr?L2('Modifica dati','Edit details'):L2('Inserisci i tuoi dati','Add your details')}</button>`,anyPr?`<div class="note">${pr.filter(x=>x[1]).map(x=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span class="tiny">${esc(x[0])}</span><span style="text-align:right">${esc(x[1])}</span></div>`).join('')}</div>`:'')}
   ${meSec(L2('Brevetti','Certifications'),L2('Agenzia, livello, data e didattica usata.','Agency, level, date and teaching system.'),`<button class="btn ghost" data-act="add-certs">＋ ${L2('Aggiungi brevetto','Add certification')}</button>`,ME.certs.map(c=>meDocRow(c,'certs')).join(''))}
   ${meSec(L2('Certificati medici','Medical certificates'),L2('Generico, sportivo non agonistico o agonistico, con scadenza.','General, non-competitive or competitive, with expiry.'),`<button class="btn ghost" data-act="add-docs" data-grp="medico">＋ ${L2('Aggiungi certificato','Add certificate')}</button>`,medical.map(d=>meDocRow(d,'docs')).join(''))}
