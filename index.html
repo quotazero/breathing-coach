@@ -119,7 +119,7 @@ input[type=date].txt,input[type=time].txt{-webkit-appearance:none;appearance:non
 input[type=date].txt::-webkit-date-and-time-value,input[type=time].txt::-webkit-date-and-time-value{text-align:left;margin:0;min-width:0}
 .rqbox label{display:block;margin:12px 0 4px}.rqbox .txt{margin:0}.rqbox input.txt+input.txt{margin-top:10px}
 input.txt,select.txt{box-sizing:border-box;min-width:0;max-width:100%;width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);font-size:17px;color:var(--ink)}
-input.code{letter-spacing:8px;text-align:center;font-size:28px;font-weight:600}
+input.code{letter-spacing:4px;text-align:center;font-size:clamp(20px,6.4vw,28px);font-weight:600}
 .mealert{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;margin:8px 0 0;padding:9px 12px;border:1px solid;border-radius:12px;background:var(--bg2);font-size:13px;color:var(--ink)}
 .meitem{margin-top:10px}.merow{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap}
 .mechip{font-size:12px;border:1px solid;border-radius:20px;padding:2px 8px;white-space:nowrap}
@@ -530,7 +530,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
     </div>
     <div id="acc-step-code" style="display:none">
       <p id="acc-sent-to"></p>
-      <input class="txt code" id="acc-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="······">
+      <input class="txt code" id="acc-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="········">
       <button class="btn" id="b-verify" data-i18n="acc_verify"></button>
       <button class="link" id="b-code-back" data-i18n="acc_change_email" style="margin-top:10px"></button>
     </div>
@@ -599,7 +599,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.18';
+const VERSION='0.9.19';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1001,7 +1001,8 @@ async function sendCode(){
 let pendingType='email',guestPrev=null;
 async function verifyCode(){
   const token=$('acc-code').value.replace(/\D/g,'');
-  if(token.length!==6)return accErr('err_code');
+  if(token.length<6||token.length>10)return accErr('err_code');
+  if($('b-verify').disabled)return;
   accErr('');$('b-verify').disabled=true;
   try{
     let {data,error}=await sb.auth.verifyOtp({email:pendingEmail,token,type:pendingType});
@@ -1842,7 +1843,8 @@ $('b-acc-back').onclick=()=>{if(!profile||!profile.onboarding_done){renderOnb();
 $('b-have-account').onclick=haveAccount;$('b-have-account2').onclick=haveAccount;
 $('b-send-code').onclick=sendCode;
 $('b-verify').onclick=verifyCode;
-$('acc-code').addEventListener('input',e=>{if(e.target.value.replace(/\D/g,'').length===6)verifyCode()});
+let codeTmr=null;$('acc-code').addEventListener('input',e=>{clearTimeout(codeTmr);const n=e.target.value.replace(/\D/g,'').length;if(n<6)return;const it=e.inputType||'';
+  if(it==='insertFromPaste'||it==='insertReplacementText'||(e.data&&e.data.length>=6))verifyCode();else codeTmr=setTimeout(verifyCode,1500)});
 $('b-code-back').onclick=()=>{$('acc-step-email').style.display='block';$('acc-step-code').style.display='none';accErr('')};
 $('b-google').onclick=googleLogin;
 $('b-acc-mode').onclick=()=>{accMode=accMode==='new'?'existing':'new';renderAccMode()};
