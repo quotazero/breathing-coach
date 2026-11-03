@@ -120,6 +120,12 @@ input[type=date].txt::-webkit-date-and-time-value,input[type=time].txt::-webkit-
 .rqbox label{display:block;margin:12px 0 4px}.rqbox .txt{margin:0}.rqbox input.txt+input.txt{margin-top:10px}
 input.txt,select.txt{box-sizing:border-box;min-width:0;max-width:100%;width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg2);font-size:17px;color:var(--ink)}
 input.code{letter-spacing:8px;text-align:center;font-size:28px;font-weight:600}
+.mealert{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;margin:8px 0 0;padding:9px 12px;border:1px solid;border-radius:12px;background:var(--bg2);font-size:13px;color:var(--ink)}
+.meitem{margin-top:10px}.merow{display:flex;gap:16px;margin-top:8px;flex-wrap:wrap}
+.mechip{font-size:12px;border:1px solid;border-radius:20px;padding:2px 8px;white-space:nowrap}
+.mechk{display:flex;gap:10px;align-items:center;margin:8px 0;font-size:15px}.mechk input{width:22px;height:22px;accent-color:var(--accent);flex:none}
+.mesheet{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.mepanel{background:var(--bg);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px))}
 .err{color:var(--danger);font-size:14px;min-height:20px;margin:8px 0}
 .ok{color:var(--accent)}
 /* session */
@@ -252,6 +258,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
   </div>
   <div style="margin:10px 0 0"><button class="pill acc" id="b-account3" style="width:100%;text-align:left;display:none"></button></div>
   <button class="wk" id="wk"><div class="wkg" id="wk-grid"></div><div class="wkl" id="wk-line"></div></button>
+  <div id="wl-me"></div>
   <div id="wl-today"></div>
   <h2 data-i18n="wl_q"></h2>
   <button class="card" id="wl-breath" style="--c:var(--ph-hold_full)"><span class="ic" data-ic="lungs"></span><span><b data-i18n="wl_breath"></b><small id="wl-breath-sub"></small></span><span class="chev">›</span></button>
@@ -544,11 +551,18 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
         <button class="btn ghost" id="b-push-off"></button>
       </div>
     </div>
+    <button class="btn" id="b-me-open">Profilo e documenti</button>
     <button class="btn ghost" id="b-export" data-i18n="export"></button>
     <a class="btn ghost" id="b-admin" href="admin.html" style="display:none;text-align:center;text-decoration:none">Pannello admin</a>
     <button class="btn ghost" id="b-logout" data-i18n="acc_logout"></button>
     <p class="tiny" style="margin-top:16px" data-i18n="acc_delete_info"></p>
   </div>
+</section>
+
+<!-- ===== PROFILO E DOCUMENTI ===== -->
+<section class="screen" id="s-me">
+  <div class="top"><h1 id="me-h"></h1><button class="pill" id="b-me-back"></button></div>
+  <div id="me-body"></div>
 </section>
 
 <!-- ===== HISTORY ===== -->
@@ -585,7 +599,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.14';
+const VERSION='0.9.15';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -2171,7 +2185,7 @@ function renderWeek(){
 }
 
 /* --- welcome --- */
-function renderWelcome(){renderCenterCard();syncCenterRecords();
+function renderWelcome(){renderCenterCard();syncCenterRecords();try{meAlertHome()}catch(e){}
   $('wl-hi').textContent=T[lang].wl_hi(userLabel()||(profile&&profile.display_name)||'');
   renderWeek();
   const br=lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='breathing'&&r.status==='completed').pop();
@@ -2408,6 +2422,128 @@ applyLang();
   renderAccountPill();renderCenterCard();
   if(profile&&profile.onboarding_done)handlePendingJoin();
 })();
+
+/* ===== PROFILO E DOCUMENTI (0.9.15) ===== */
+const SHARE_VERSION='2026-11-v1';
+const ME={priv:{},docs:[],certs:[],shares:{},loaded:false};
+const DOC_KINDS={medico_generico:['Certificato medico generico','General medical certificate'],medico_non_agonistico:['Sportivo non agonistico','Non-competitive sports certificate'],medico_agonistico:['Sportivo agonistico','Competitive sports certificate'],assicurazione:['Assicurazione','Insurance'],federazione:['Federazione sportiva','Sports federation']};
+const SHARE_CATS=[['anagrafica','Dati personali e contatti','Personal details & contacts'],['brevetti','Brevetti','Certifications'],['medici','Certificati medici (dati sanitari)','Medical certificates (health data)'],['assicurazione','Assicurazione e federazioni','Insurance & federations']];
+function meFmt(iso){if(!iso)return '';const p=String(iso).slice(0,10).split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso}
+function meDays(iso){if(!iso)return null;const d=new Date(iso+'T00:00:00'),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/86400000)}
+function meStatus(iso){const n=meDays(iso);
+  if(n===null)return{c:'var(--ink2)',t:L2('Senza scadenza','No expiry'),lvl:0};
+  if(n<0)return{c:'var(--danger)',t:L2('Scaduto il ','Expired on ')+meFmt(iso),lvl:2};
+  if(n<=30)return{c:'#E8B04A',t:n===0?L2('Scade oggi','Expires today'):L2(`Scade tra ${n} giorni`,`Expires in ${n} days`),lvl:1};
+  return{c:'#6FD6A8',t:L2('Valido fino al ','Valid until ')+meFmt(iso),lvl:0}}
+async function meLoad(){
+  if(!sb||isGuest()||!user)return false;const uid=user.id;
+  const r=await Promise.all([
+    sb.from('athlete_private').select('*').eq('user_id',uid).maybeSingle(),
+    sb.from('athlete_docs').select('*').eq('user_id',uid).order('expires_on',{ascending:true,nullsFirst:false}),
+    sb.from('certifications').select('*').eq('user_id',uid).order('cert_date',{ascending:false,nullsFirst:false}),
+    sb.from('athlete_shares').select('*').eq('user_id',uid)]);
+  const er=r.find(x=>x.error);if(er)throw er.error;
+  ME.priv=r[0].data||{};ME.docs=r[1].data||[];ME.certs=r[2].data||[];ME.shares={};(r[3].data||[]).forEach(s=>ME.shares[s.org_id]=s);ME.loaded=true;
+  lsSet('bc.medocs.v1',JSON.stringify(ME.docs.map(x=>({kind:x.kind,title:x.title,expires_on:x.expires_on}))));
+  return true}
+/* avviso in home: documenti scaduti o in scadenza (30 giorni) */
+function meAlertItems(list){return (list||[]).map(d=>({d,s:meStatus(d.expires_on)})).filter(x=>x.s.lvl>0&&x.d.expires_on)}
+function meAlertHome(){
+  const box=$('wl-me');if(!box)return;
+  const draw=list=>{const it=meAlertItems(list).sort((a,b)=>b.s.lvl-a.s.lvl);
+    if(!it.length){box.innerHTML='';return}
+    const w=it[0];box.innerHTML=`<button class="mealert" style="border-color:${w.s.c}"><b style="color:${w.s.c}">⚠ ${esc(DOC_KINDS[w.d.kind]?DOC_KINDS[w.d.kind][lang==='en'?1:0]:w.d.kind)}</b><span>${esc(w.s.t)}${it.length>1?' · +'+(it.length-1):''}</span></button>`;
+    box.querySelector('button').onclick=openMe};
+  draw(lsJ('bc.medocs.v1',[]));
+  if(!isGuest()&&sb&&user)meLoad().then(()=>draw(ME.docs)).catch(()=>{})}
+function openMe(){if(isGuest()){openAccount(true);return}show('s-me');renderMe();meLoad().then(renderMe).catch(e=>{$('me-body').innerHTML=`<p class="err">${esc(e.message||e)}</p>`})}
+function meSec(title,sub,btn,body){return `<h2>${title}</h2>${sub?`<p class="tiny" style="margin:-4px 0 8px">${sub}</p>`:''}${body}${btn||''}`}
+function meDocRow(d,table){const st=table==='docs'?meStatus(d.expires_on):null;
+  const title=table==='docs'?(DOC_KINDS[d.kind]?DOC_KINDS[d.kind][lang==='en'?1:0]:d.kind):(`${d.agency||''} ${d.level_name||''}`.trim()||L2('Brevetto','Certification'));
+  const sub=table==='docs'?[d.title,d.number,d.issued_on?L2('rilasciato ','issued ')+meFmt(d.issued_on):''].filter(Boolean).join(' · '):[d.cert_date?meFmt(d.cert_date):'',d.didactic?L2('didattica ','teaching ')+d.didactic:'',d.instructor_name].filter(Boolean).join(' · ');
+  const f=table==='docs'?d.file_path:d.photo_path;
+  return `<div class="note meitem"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><b>${esc(title)}</b>${st?`<span class="mechip" style="color:${st.c};border-color:${st.c}">${esc(st.t)}</span>`:''}</div>
+    ${sub?`<div class="tiny">${esc(sub)}</div>`:''}${d.note?`<div class="tiny">${esc(d.note)}</div>`:''}
+    <div class="merow">${f?`<button class="link" data-act="file" data-path="${esc(f)}">${L2('Apri file','Open file')}</button>`:''}<button class="link" data-act="edit-${table}" data-id="${d.id}">${L2('Modifica','Edit')}</button><button class="link" data-act="del-${table}" data-id="${d.id}" style="color:var(--danger)">${L2('Elimina','Delete')}</button></div></div>`}
+function renderMe(){
+  const B=$('me-body');if(!B)return;const p=ME.priv||{};
+  const draft={};B.querySelectorAll('.meitem[data-org]').forEach(c=>{draft[c.dataset.org]=[...c.querySelectorAll('input[data-cat]:checked')].map(x=>x.dataset.cat)});
+  $('me-h').textContent=L2('Profilo e documenti','Profile & documents');$('b-me-back').textContent=t('back');
+  const pr=[[L2('Nome e cognome','Full name'),p.full_name],[L2('Data di nascita','Birth date'),meFmt(p.birth_date)],[L2('Luogo di nascita','Birth place'),p.birth_place],[L2('Codice fiscale','Tax code'),p.fiscal_code],[L2('Telefono','Phone'),p.phone],[L2('Email di contatto','Contact email'),p.contact_email],[L2('Indirizzo','Address'),p.address],[L2('Contatto di emergenza','Emergency contact'),[p.emergency_name,p.emergency_phone].filter(Boolean).join(' · ')]];
+  const anyPr=pr.some(x=>x[1]);
+  const al=meAlertItems(ME.docs);
+  const medical=ME.docs.filter(d=>d.kind.startsWith('medico_')),ins=ME.docs.filter(d=>!d.kind.startsWith('medico_'));
+  const cs=lsJ('bc.centers.v1',[]);
+  B.innerHTML=`<p class="tiny">${L2('Questi dati sono privati. Il centro li vede solo se li condividi tu, categoria per categoria, e puoi revocare quando vuoi.','This data is private. A center only sees what you choose to share, category by category, and you can revoke at any time.')}</p>
+  ${al.length?`<div class="note" style="border:1px solid #E8B04A;margin-top:10px">⚠ ${al.map(x=>esc((DOC_KINDS[x.d.kind]?DOC_KINDS[x.d.kind][lang==='en'?1:0]:x.d.kind)+': '+x.s.t)).join('<br>')}</div>`:''}
+  ${meSec(L2('Dati personali','Personal details'),'',`<button class="btn ghost" data-act="edit-priv">${anyPr?L2('Modifica dati','Edit details'):L2('Inserisci i tuoi dati','Add your details')}</button>`,anyPr?`<div class="note">${pr.filter(x=>x[1]).map(x=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span class="tiny">${esc(x[0])}</span><span style="text-align:right">${esc(x[1])}</span></div>`).join('')}</div>`:'')}
+  ${meSec(L2('Brevetti','Certifications'),L2('Agenzia, livello, data e didattica usata.','Agency, level, date and teaching system.'),`<button class="btn ghost" data-act="add-certs">＋ ${L2('Aggiungi brevetto','Add certification')}</button>`,ME.certs.map(c=>meDocRow(c,'certs')).join(''))}
+  ${meSec(L2('Certificati medici','Medical certificates'),L2('Generico, sportivo non agonistico o agonistico, con scadenza.','General, non-competitive or competitive, with expiry.'),`<button class="btn ghost" data-act="add-docs" data-grp="medico">＋ ${L2('Aggiungi certificato','Add certificate')}</button>`,medical.map(d=>meDocRow(d,'docs')).join(''))}
+  ${meSec(L2('Assicurazione e federazioni','Insurance & federations'),L2('Polizza, tessera federale e scadenze.','Policy, federation card and expiry dates.'),`<button class="btn ghost" data-act="add-docs" data-grp="ins">＋ ${L2('Aggiungi','Add')}</button>`,ins.map(d=>meDocRow(d,'docs')).join(''))}
+  ${meSec(L2('Condivisione con i centri','Sharing with centers'),L2('Scegli cosa può vedere ogni centro. Così non devi consegnare di nuovo i documenti.','Choose what each center can see, so you don’t have to hand in documents again.'),'',cs.length?cs.map(c=>{const s=ME.shares[c.org_id]||{},cats=s.categories||[];
+    return `<div class="note meitem" data-org="${c.org_id}"><b>${esc(c.name)}</b>
+      ${SHARE_CATS.map(k=>`<label class="mechk"><input type="checkbox" data-cat="${k[0]}" ${cats.includes(k[0])?'checked':''}><span>${esc(L2(k[1],k[2]))}</span></label>`).join('')}
+      <div class="tiny" style="margin-top:6px">${cats.length&&s.consented_at?L2('Condiviso dal ','Shared since ')+meFmt(s.consented_at):L2('Non condividi nulla','Nothing shared')}</div>
+      <button class="btn" data-act="share-save" data-org="${c.org_id}" data-name="${esc(c.name)}" style="margin-top:8px">${L2('Salva autorizzazione','Save authorization')}</button></div>`}).join(''):`<p class="tiny">${L2('Non sei ancora collegato a nessun centro.','You are not connected to any center yet.')}</p>`)}`;
+  Object.keys(draft).forEach(o=>{const c=B.querySelector('.meitem[data-org="'+o+'"]');if(c)c.querySelectorAll('input[data-cat]').forEach(x=>{x.checked=draft[o].includes(x.dataset.cat)})});
+}
+function meSheet(title,fields,vals,onSave){
+  const o=document.createElement('div');o.className='mesheet';
+  o.innerHTML=`<div class="mepanel rqbox"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${esc(title)}</h2><button class="pill" data-x>✕</button></div>
+  ${fields.map(f=>{const v=vals[f.k]??'';
+    if(f.type==='select')return `<label>${esc(f.label)}</label><select class="txt" id="mef-${f.k}">${f.opts.map(op=>`<option value="${op[0]}" ${v===op[0]?'selected':''}>${esc(op[1])}</option>`).join('')}</select>`;
+    if(f.type==='file')return `<label>${esc(f.label)}</label><input class="txt" id="mef-${f.k}" type="file" accept="image/*,application/pdf">${v?`<div class="tiny" style="margin-top:4px">${L2('File già caricato: se ne scegli un altro lo sostituisce.','File already uploaded: choosing another replaces it.')}</div>`:''}`;
+    return `<label>${esc(f.label)}</label><input class="txt" id="mef-${f.k}" type="${f.type||'text'}" value="${esc(v)}" ${f.ph?`placeholder="${esc(f.ph)}"`:''} ${f.upper?'autocapitalize="characters" style="text-transform:uppercase"':''} autocomplete="off">`}).join('')}
+  <div class="err" id="me-err"></div><button class="btn" data-ok>${L2('Salva','Save')}</button></div>`;
+  document.body.appendChild(o);
+  const close=()=>o.remove();o.querySelector('[data-x]').onclick=close;o.addEventListener('click',e=>{if(e.target===o)close()});
+  o.querySelector('[data-ok]').onclick=async()=>{const btn=o.querySelector('[data-ok]');btn.disabled=true;$('me-err').textContent='';
+    try{const out={};for(const f of fields){const el=$('mef-'+f.k);if(f.type==='file')out[f.k]=el.files&&el.files[0]||null;else out[f.k]=(el.value||'').trim()||null}
+      await onSave(out);close()}catch(e){$('me-err').textContent=e.message||String(e);btn.disabled=false}}}
+async function meShrink(file){return new Promise((res,rej)=>{const img=new Image(),u=URL.createObjectURL(file);
+  img.onload=()=>{const s=Math.min(1,1800/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*s);cv.height=Math.round(img.height*s);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);cv.toBlob(b=>{URL.revokeObjectURL(u);b?res(b):rej(new Error('img'))},'image/jpeg',.82)};
+  img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error(L2('Immagine non leggibile','Unreadable image')))};img.src=u})}
+async function meUpload(file){let blob=file,ext=((file.name||'').split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,5)||'bin';
+  if((file.type||'').startsWith('image/')){blob=await meShrink(file);ext='jpg'}else if(file.size>6*1024*1024)throw new Error(L2('File troppo grande (max 6 MB)','File too large (max 6 MB)'));
+  const path=`${user.id}/${(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2))}.${ext}`;
+  const {error}=await sb.storage.from('certs').upload(path,blob,{contentType:blob.type||file.type||'application/octet-stream',upsert:false});if(error)throw error;return path}
+async function meOpenFile(path){const w=window.open('','_blank');const {data,error}=await sb.storage.from('certs').createSignedUrl(path,120);
+  if(error||!data){if(w)w.close();toast(L2('File non disponibile','File not available'));return}if(w)w.location=data.signedUrl;else location.href=data.signedUrl}
+function meEditPriv(){const p=ME.priv||{};
+  meSheet(L2('Dati personali','Personal details'),[{k:'full_name',label:L2('Nome e cognome','Full name')},{k:'birth_date',label:L2('Data di nascita','Birth date'),type:'date'},{k:'birth_place',label:L2('Luogo di nascita','Birth place')},{k:'fiscal_code',label:L2('Codice fiscale','Tax code'),upper:true},{k:'phone',label:L2('Telefono','Phone'),type:'tel'},{k:'contact_email',label:L2('Email di contatto','Contact email'),type:'email'},{k:'address',label:L2('Indirizzo','Address')},{k:'emergency_name',label:L2('Contatto di emergenza (nome)','Emergency contact (name)')},{k:'emergency_phone',label:L2('Contatto di emergenza (telefono)','Emergency contact (phone)'),type:'tel'}],p,async o=>{
+    if(o.fiscal_code){o.fiscal_code=o.fiscal_code.toUpperCase().replace(/\s/g,'');if(!/^[A-Z0-9]{16}$/.test(o.fiscal_code))throw new Error(L2('Il codice fiscale deve avere 16 caratteri','The tax code must have 16 characters'))}
+    const row={user_id:user.id,...o,updated_at:new Date().toISOString()};const {error}=await sb.from('athlete_private').upsert(row,{onConflict:'user_id'});if(error)throw error;ME.priv=row;renderMe();toast(L2('Dati salvati','Details saved'))})}
+function meEditCert(id){const c=id?ME.certs.find(x=>x.id===id):{};
+  meSheet(id?L2('Modifica brevetto','Edit certification'):L2('Nuovo brevetto','New certification'),[{k:'agency',label:L2('Agenzia (es. AIDA, Molchanovs)','Agency (e.g. AIDA, Molchanovs)')},{k:'level_name',label:L2('Livello (es. Wave 3)','Level (e.g. Wave 3)')},{k:'cert_date',label:L2('Data di conseguimento','Date obtained'),type:'date'},{k:'didactic',label:L2('Didattica usata','Teaching system used')},{k:'instructor_name',label:L2('Istruttore','Instructor')},{k:'note',label:L2('Note','Notes')},{k:'file',label:L2('Foto o PDF del brevetto','Photo or PDF of the card'),type:'file'}],{...c,file:c.photo_path},async o=>{
+    if(!o.agency&&!o.level_name)throw new Error(L2('Indica almeno agenzia o livello','Enter at least agency or level'));
+    let path=c.photo_path||null;if(o.file){const np=await meUpload(o.file);if(path)sb.storage.from('certs').remove([path]).catch(()=>{});path=np}
+    const row={agency:o.agency,level_name:o.level_name,cert_date:o.cert_date,didactic:o.didactic,instructor_name:o.instructor_name,note:o.note,photo_path:path};
+    const q=id?sb.from('certifications').update(row).eq('id',id).eq('user_id',user.id):sb.from('certifications').insert({...row,user_id:user.id});
+    const {error}=await q;if(error)throw error;await meLoad();renderMe();toast(L2('Brevetto salvato','Certification saved'))})}
+function meEditDoc(id,grp){const d=id?ME.docs.find(x=>x.id===id):{};const isMed=id?d.kind.startsWith('medico_'):grp==='medico';
+  const kinds=(isMed?['medico_generico','medico_non_agonistico','medico_agonistico']:['assicurazione','federazione']).map(k=>[k,DOC_KINDS[k][lang==='en'?1:0]]);
+  meSheet(id?L2('Modifica','Edit'):(isMed?L2('Nuovo certificato medico','New medical certificate'):L2('Assicurazione o federazione','Insurance or federation')),[{k:'kind',label:L2('Tipo','Type'),type:'select',opts:kinds},{k:'title',label:isMed?L2('Medico o struttura','Doctor or clinic'):L2('Compagnia / federazione (es. FIPSAS, AIDA)','Company / federation (e.g. FIPSAS, AIDA)')},{k:'number',label:isMed?L2('Numero (facoltativo)','Number (optional)'):L2('Numero polizza o tessera','Policy or card number')},{k:'issued_on',label:L2('Data di rilascio','Issue date'),type:'date'},{k:'expires_on',label:L2('Data di scadenza','Expiry date'),type:'date'},{k:'note',label:L2('Note','Notes')},{k:'file',label:L2('Foto o PDF del documento','Photo or PDF of the document'),type:'file'}],{...d,file:d.file_path},async o=>{
+    if(!o.expires_on)throw new Error(L2('Indica la data di scadenza','Enter the expiry date'));
+    let path=d.file_path||null,fname=d.file_name||null;if(o.file){const np=await meUpload(o.file);if(path)sb.storage.from('certs').remove([path]).catch(()=>{});path=np;fname=o.file.name||null}
+    const row={kind:o.kind,title:o.title,number:o.number,issued_on:o.issued_on,expires_on:o.expires_on,note:o.note,file_path:path,file_name:fname,updated_at:new Date().toISOString()};
+    const q=id?sb.from('athlete_docs').update(row).eq('id',id).eq('user_id',user.id):sb.from('athlete_docs').insert({...row,user_id:user.id});
+    const {error}=await q;if(error)throw error;await meLoad();renderMe();toast(L2('Salvato','Saved'))})}
+async function meDelete(table,id){if(!confirm(L2('Eliminare definitivamente?','Delete permanently?')))return;
+  const arr=table==='docs'?ME.docs:ME.certs,it=arr.find(x=>x.id===id);if(!it)return;const f=table==='docs'?it.file_path:it.photo_path;
+  const {error}=await sb.from(table==='docs'?'athlete_docs':'certifications').delete().eq('id',id).eq('user_id',user.id);if(error){toast(error.message);return}
+  if(f)sb.storage.from('certs').remove([f]).catch(()=>{});await meLoad();renderMe()}
+async function meShareSave(org,name,card){
+  const cats=[...card.querySelectorAll('input[data-cat]:checked')].map(i=>i.dataset.cat),prev=(ME.shares[org]||{}).categories||[];
+  if(cats.includes('medici')&&!prev.includes('medici')&&!confirm(L2(`I certificati medici sono dati sulla salute. Autorizzi ${name} a vederli e conservarne copia per gestire la tua idoneità alle attività? Puoi revocare in ogni momento da qui.`,`Medical certificates are health data. Do you authorize ${name} to view them and keep a copy to manage your eligibility for activities? You can revoke at any time here.`)))return;
+  const row={user_id:user.id,org_id:org,categories:cats,consent_version:SHARE_VERSION,consented_at:cats.length?new Date().toISOString():null,updated_at:new Date().toISOString()};
+  const {error}=await sb.from('athlete_shares').upsert(row,{onConflict:'user_id,org_id'});
+  if(error){toast(error.message);return}ME.shares[org]=row;renderMe();toast(cats.length?L2('Autorizzazione salvata','Authorization saved'):L2('Condivisione revocata','Sharing revoked'))}
+document.addEventListener('click',e=>{const b=e.target.closest('#s-me [data-act]');if(!b)return;const a=b.dataset.act,id=b.dataset.id;
+  if(a==='edit-priv')meEditPriv();else if(a==='add-certs')meEditCert();else if(a==='edit-certs')meEditCert(id);else if(a==='del-certs')meDelete('certs',id);
+  else if(a==='add-docs')meEditDoc(null,b.dataset.grp);else if(a==='edit-docs')meEditDoc(id);else if(a==='del-docs')meDelete('docs',id);
+  else if(a==='file')meOpenFile(b.dataset.path);else if(a==='share-save')meShareSave(b.dataset.org,b.dataset.name,b.closest('.meitem'))});
+$('b-me-back').onclick=()=>goTab('s-welcome');
+$('b-me-open').onclick=openMe;
 </script>
 </body>
 </html>

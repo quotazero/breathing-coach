@@ -365,15 +365,34 @@ async function finishCourse(id){
   const {data,error}=await sb.rpc('complete_course',{p_act:id});
   closeModal();toast(error?'Errore: '+error.message:`Corso concluso: ${data} promossi`);await loadOrg();render();
 }
+/* ===== DATI CONDIVISI DALL'ATLETA (solo categorie autorizzate) ===== */
+const DOCK={medico_generico:'Certificato medico generico',medico_non_agonistico:'Sportivo non agonistico',medico_agonistico:'Sportivo agonistico',assicurazione:'Assicurazione',federazione:'Federazione sportiva'};
+function shFmt(i){if(!i)return '';const p=String(i).slice(0,10).split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:i}
+function shSt(iso){if(!iso)return['inherit','Senza scadenza'];const t=new Date();t.setHours(0,0,0,0);const n=Math.round((new Date(iso+'T00:00:00')-t)/864e5);
+  if(n<0)return['#d9534f','Scaduto il '+shFmt(iso)];if(n<=30)return['#d98c00',n===0?'Scade oggi':'Scade tra '+n+' giorni'];return['#2e9e6a','Valido fino al '+shFmt(iso)]}
+async function shOpen(path){const w=window.open('','_blank');const {data}=await sb.storage.from('certs').createSignedUrl(path,120);if(data&&w)w.location=data.signedUrl;else{if(w)w.close();toast('File non disponibile')}}
+async function sharedPanel(uid,box){
+  if(!box)return;const m=S.members.find(x=>x.user_id===uid),sh=(m&&m.shared)||[];
+  if(!sh.length){box.innerHTML='<div style="opacity:.7;font-size:13px">Questo atleta non ha condiviso dati personali o documenti con il centro.</div>';return}
+  try{const [pv,dc]=await Promise.all([sh.includes('anagrafica')?sb.from('athlete_private').select('*').eq('user_id',uid).maybeSingle():Promise.resolve({data:null}),(sh.includes('medici')||sh.includes('assicurazione'))?sb.from('athlete_docs').select('*').eq('user_id',uid).order('expires_on'):Promise.resolve({data:[]})]);
+    const p=pv.data,ds=dc.data||[];let h='';
+    if(p){const rows=[['Nome',p.full_name],['Nato il',shFmt(p.birth_date)],['Luogo di nascita',p.birth_place],['Codice fiscale',p.fiscal_code],['Telefono',p.phone],['Email',p.contact_email],['Indirizzo',p.address],['Emergenza',[p.emergency_name,p.emergency_phone].filter(Boolean).join(' · ')]].filter(r=>r[1]);
+      h+=rows.length?rows.map(r=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:14px"><span style="opacity:.65">${esc(r[0])}</span><span style="text-align:right">${esc(r[1])}</span></div>`).join(''):'<div style="opacity:.7;font-size:13px">Dati personali condivisi ma non ancora compilati.</div>'}
+    if(sh.includes('medici')||sh.includes('assicurazione')){
+      h+=ds.length?ds.map(d=>{const s=shSt(d.expires_on);return `<div style="padding:8px 0;border-top:1px solid rgba(128,128,128,.25)"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:14px">${esc(DOCK[d.kind]||d.kind)}</b><span style="font-size:12px;color:${s[0]};white-space:nowrap">${esc(s[1])}</span></div>${[d.title,d.number].filter(Boolean).length?`<div style="font-size:13px;opacity:.75">${esc([d.title,d.number].filter(Boolean).join(' · '))}</div>`:''}${d.file_path?`<button class="link" style="margin-top:4px;color:inherit;text-decoration:underline;font-size:13px" onclick="shOpen('${esc(d.file_path)}')">Apri documento</button>`:''}</div>`}).join(''):'<div style="opacity:.7;font-size:13px;padding-top:6px">Nessun certificato o documento inserito.</div>'}
+    box.innerHTML=h||'<div style="opacity:.7;font-size:13px">Il centro vede i brevetti condivisi (sopra).</div>'
+  }catch(e){box.innerHTML='<div style="color:#d9534f;font-size:13px">Non riesco a leggere i dati condivisi: '+esc(e.message||e)+'</div>'}}
 async function openMember(uid){
   const m=S.members.find(x=>x.user_id===uid);let certs=[];
   if(S.demo)certs=[{agency:'AIDA',level:'AIDA 2',issued_at:'2024-06-14',instructor:'T. Hassan'}];
   else{const r=await sb.rpc('member_certifications',{p_org:S.org.org_id,p_user:uid});certs=r.data||[]}
   modal(`<div class="top"><h3>${esc(m.name||'Atleta')}</h3><button class="rbtn" onclick="closeModal()">✕</button></div>
   <div style="font-size:14px;color:var(--ink2)">Livello centro: ${esc(m.level_name||'nessuno')}</div>${topCert(m)}
-  <h2 style="font-size:15px;margin:16px 0 0">Tutti i brevetti</h2>${certs.map(c=>`<div class="row"><div class="lbl">${esc(c.agency||'')} ${esc(c.level||c.level_name||'')}<small>${esc(c.issued_at||'')}${c.instructor?' · '+esc(c.instructor):''}</small></div></div>`).join('')||'<div class="empty">Nessun brevetto inserito</div>'}
+  <h2 style="font-size:15px;margin:16px 0 0">Tutti i brevetti</h2>${certs.map(c=>`<div class="row"><div class="lbl">${esc(c.agency||'')} ${esc(c.level||c.level_name||'')}<small>${esc(shFmt(c.cert_date)||c.issued_at||'')}${c.didactic?' · didattica '+esc(c.didactic):''}${(c.instructor_name||c.instructor)?' · '+esc(c.instructor_name||c.instructor):''}</small>${c.photo_path?`<button class="link" style="color:inherit;text-decoration:underline;font-size:13px" onclick="shOpen('${esc(c.photo_path)}')">Apri foto</button>`:''}</div></div>`).join('')||'<div class="empty">Nessun brevetto visibile (non inserito o non condiviso)</div>'}
+  <h2 style="font-size:15px;margin:16px 0 6px">Dati e documenti condivisi</h2><div id="shd"></div>
   ${m.role!=='athlete'?`<h2 style="font-size:15px;margin:16px 0 0">Prossime attività</h2>${S.acts.filter(a=>a.status==='scheduled'&&a.instructor_name===m.name&&new Date(a.ends_at)>=new Date()).map(a=>`<div class="row"><div class="lbl">${esc(a.title)}<small>${fmtD(a.starts_at)} · ${fmtT(a.starts_at)}</small></div></div>`).join('')||'<div class="empty">Nessuna attività in programma</div>'}`:''}
   <h2 style="font-size:15px;margin:16px 0 6px">Livello nel centro</h2><select id="lv" class="txt"><option value="">Senza livello</option>${S.levels.map(l=>`<option value="${l.id}" ${l.name===m.level_name?'selected':''}>${esc(l.name)}</option>`).join('')}</select><div class="err" id="lverr"></div><button class="btn" onclick="setLevel('${uid}')">Assegna livello</button>${S.org.role==='admin'&&m.user_id!==S.user?.id?`<h2 style="font-size:15px;margin:18px 0 6px">Ruolo</h2><select id="rl" class="txt"><option value="athlete" ${m.role==='athlete'?'selected':''}>Atleta</option><option value="instructor" ${m.role==='instructor'?'selected':''}>Istruttore</option><option value="admin" ${m.role==='admin'?'selected':''}>Amministratore</option></select><button class="btn ghost" onclick="setRole('${uid}')">Cambia ruolo</button>`:''}`);
+  if(!S.demo)sharedPanel(uid,$('#shd'));else{const b=$('#shd');if(b)b.innerHTML='<div style="opacity:.7;font-size:13px">Esempio: qui compaiono i dati condivisi dall\'atleta.</div>'}
 }
 async function setRole(uid){
   if(S.demo){closeModal();toast('Ruolo cambiato');return}
