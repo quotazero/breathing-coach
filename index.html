@@ -606,7 +606,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.23';
+const VERSION='0.9.24';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -2532,13 +2532,14 @@ function meSheet(title,fields,vals,onSave){
   o.innerHTML=`<div class="mepanel rqbox"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${esc(title)}</h2><button class="pill" data-x>✕</button></div>
   ${fields.map(f=>{const v=vals[f.k]??'';
     if(f.type==='select')return `<label>${esc(f.label)}</label><select class="txt" id="mef-${f.k}">${f.opts.map(op=>`<option value="${op[0]}" ${v===op[0]?'selected':''}>${esc(op[1])}</option>`).join('')}</select>`;
+    if(f.type==='phone')return `<label>${esc(f.label)}</label>${phoneField('mef-'+f.k,v)}`;
     if(f.type==='file')return `<label>${esc(f.label)}</label><input class="txt" id="mef-${f.k}" type="file" accept="image/*,application/pdf">${v?`<div class="tiny" style="margin-top:4px">${L2('File già caricato: se ne scegli un altro lo sostituisce.','File already uploaded: choosing another replaces it.')}</div>`:''}`;
     return `<label>${esc(f.label)}</label><input class="txt" id="mef-${f.k}" type="${f.type||'text'}" value="${esc(v)}" ${f.ph?`placeholder="${esc(f.ph)}"`:''} ${f.upper?'autocapitalize="characters" style="text-transform:uppercase"':''} autocomplete="off">`}).join('')}
   <div class="err" id="me-err"></div><button class="btn" data-ok>${L2('Salva','Save')}</button></div>`;
   document.body.appendChild(o);
   const close=()=>o.remove();o.querySelector('[data-x]').onclick=close;o.addEventListener('click',e=>{if(e.target===o)close()});
   o.querySelector('[data-ok]').onclick=async()=>{const btn=o.querySelector('[data-ok]');btn.disabled=true;$('me-err').textContent='';
-    try{const out={};for(const f of fields){const el=$('mef-'+f.k);if(f.type==='file')out[f.k]=el.files&&el.files[0]||null;else out[f.k]=(el.value||'').trim()||null}
+    try{const out={};for(const f of fields){if(f.type==='phone'){const r=phoneGet('mef-'+f.k);if(r.err)throw new Error(f.label+': '+r.err);out[f.k]=r.v;continue}const el=$('mef-'+f.k);if(f.type==='file')out[f.k]=el.files&&el.files[0]||null;else out[f.k]=(el.value||'').trim()||null}
       await onSave(out);close()}catch(e){$('me-err').textContent=e.message||String(e);btn.disabled=false}}}
 async function meShrink(file){return new Promise((res,rej)=>{const img=new Image(),u=URL.createObjectURL(file);
   img.onload=()=>{const s=Math.min(1,1800/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*s);cv.height=Math.round(img.height*s);cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);cv.toBlob(b=>{URL.revokeObjectURL(u);b?res(b):rej(new Error('img'))},'image/jpeg',.82)};
@@ -2550,7 +2551,7 @@ async function meUpload(file){let blob=file,ext=((file.name||'').split('.').pop(
 async function meOpenFile(path){const w=window.open('','_blank');const {data,error}=await sb.storage.from('certs').createSignedUrl(path,120);
   if(error||!data){if(w)w.close();toast(L2('File non disponibile','File not available'));return}if(w)w.location=data.signedUrl;else location.href=data.signedUrl}
 function meEditPriv(){const p=ME.priv||{};
-  meSheet(L2('Dati personali','Personal details'),[{k:'full_name',label:L2('Nome e cognome','Full name')},{k:'birth_date',label:L2('Data di nascita','Birth date'),type:'date'},{k:'birth_place',label:L2('Luogo di nascita','Birth place')},{k:'fiscal_code',label:L2('Codice fiscale','Tax code'),upper:true},{k:'phone',label:L2('Telefono','Phone'),type:'tel'},{k:'contact_email',label:L2('Email di contatto','Contact email'),type:'email'},{k:'address',label:L2('Indirizzo','Address')},{k:'emergency_name',label:L2('Contatto di emergenza (nome)','Emergency contact (name)')},{k:'emergency_phone',label:L2('Contatto di emergenza (telefono)','Emergency contact (phone)'),type:'tel'}],p,async o=>{
+  meSheet(L2('Dati personali','Personal details'),[{k:'full_name',label:L2('Nome e cognome','Full name')},{k:'birth_date',label:L2('Data di nascita','Birth date'),type:'date'},{k:'birth_place',label:L2('Luogo di nascita','Birth place')},{k:'fiscal_code',label:L2('Codice fiscale','Tax code'),upper:true},{k:'phone',label:L2('Telefono','Phone'),type:'phone'},{k:'contact_email',label:L2('Email di contatto','Contact email'),type:'email'},{k:'address',label:L2('Indirizzo','Address')},{k:'emergency_name',label:L2('Contatto di emergenza (nome)','Emergency contact (name)')},{k:'emergency_phone',label:L2('Contatto di emergenza (telefono)','Emergency contact (phone)'),type:'phone'}],p,async o=>{
     if(o.fiscal_code){o.fiscal_code=o.fiscal_code.toUpperCase().replace(/\s/g,'');if(!/^[A-Z0-9]{16}$/.test(o.fiscal_code))throw new Error(L2('Il codice fiscale deve avere 16 caratteri','The tax code must have 16 characters'))}
     const row={user_id:user.id,...o,updated_at:new Date().toISOString()};const {error}=await sb.from('athlete_private').upsert(row,{onConflict:'user_id'});if(error)throw error;ME.priv=row;renderMe();toast(L2('Dati salvati','Details saved'))})}
 function meEditCert(id){const c=id?ME.certs.find(x=>x.id===id):{};
@@ -2658,19 +2659,19 @@ async function ckOpen(why){
   ckSheet(`<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${L2('La tua scheda per il centro','Your sheet for the center')}</h2><button class="pill" data-x>✕</button></div>
   ${why?`<div class="note" style="border:1px solid var(--accent);margin:8px 0">${L2('Per prenotare devi prima completare i dati obbligatori (contrassegnati con *).','To book you must first complete the required details (marked *).')}</div>`:''}<p class="tiny" style="margin:6px 0 4px">${L2('Servono al centro per iscriverti alle uscite e per avvisarti nel modo giusto. Ci vuole un minuto.','The center needs this to sign you up for sessions and to notify you properly. It takes a minute.')}</p>
   <label>${L2('Nome e cognome','Full name')} *</label><input class="txt" id="ck-n" value="${esc(nm)}" autocomplete="name">
-  <label>${L2('Telefono','Phone')} *</label><input class="txt" id="ck-p" type="tel" value="${esc(p.phone||'')}" placeholder="+39…" autocomplete="tel">
+  <label>${L2('Telefono','Phone')} *</label>${phoneField('ck-p',p.phone)}
   <label>${L2('Data di nascita','Birth date')} *</label><input class="txt" id="ck-b" type="date" value="${esc(p.birth_date||'')}">
   <p class="tiny" style="margin:12px 0 4px">${L2('Facoltativo, puoi aggiungerlo dopo (serve prima delle uscite in acqua):','Optional, you can add it later (needed before water sessions):')}</p>
   <label>${L2('Contatto di emergenza: nome','Emergency contact: name')}</label><input class="txt" id="ck-en" value="${esc(p.emergency_name||'')}">
-  <label>${L2('Contatto di emergenza: telefono','Emergency contact: phone')}</label><input class="txt" id="ck-ep" type="tel" value="${esc(p.emergency_phone||'')}" placeholder="+39…">
+  <label>${L2('Contatto di emergenza: telefono','Emergency contact: phone')}</label>${phoneField('ck-ep',p.emergency_phone)}
   <label class="mechk" style="margin-top:12px"><input type="checkbox" id="ck-c" ${CK.consent?'checked':''}><span>${L2('Ho letto l’<a href="privacy.html" target="_blank">informativa privacy</a> e accetto che il centro veda questi dati.','I have read the <a href="privacy.html" target="_blank">privacy notice</a> and agree that the center can see this data.')} *</span></label>
   <div class="err" id="ck-err"></div><button class="btn" data-ok>${L2('Conferma','Confirm')}</button>`,(o,close)=>{
     o.querySelector('[data-ok]').onclick=async()=>{const btn=o.querySelector('[data-ok]'),er=o.querySelector('#ck-err');er.textContent='';
-      const n=o.querySelector('#ck-n').value.trim(),ph=ckPhone(o.querySelector('#ck-p').value),b=o.querySelector('#ck-b').value,en=o.querySelector('#ck-en').value.trim(),epRaw=o.querySelector('#ck-ep').value.trim(),ep=ckPhone(epRaw);
+      const n=o.querySelector('#ck-n').value.trim(),P=phoneGet('ck-p'),ph=P.v,b=o.querySelector('#ck-b').value,en=o.querySelector('#ck-en').value.trim(),EP=phoneGet('ck-ep'),ep=EP.v,epRaw=ep||'';
       if(n.split(/\s+/).filter(Boolean).length<2)return er.textContent=L2('Scrivi nome e cognome.','Enter first and last name.');
-      if(!ph)return er.textContent=L2('Telefono non valido: usa il prefisso (es. +39…).','Invalid phone: include the country code (e.g. +39…).');
+      if(P.err)return er.textContent=P.err;if(!ph)return er.textContent=L2('Inserisci il telefono.','Enter your phone number.');
       if(!b||b>new Date().toISOString().slice(0,10)||b<'1900-01-01')return er.textContent=L2('Controlla la data di nascita.','Check the birth date.');
-      if(epRaw&&!ep)return er.textContent=L2('Telefono di emergenza non valido.','Invalid emergency phone.');
+      if(EP.err)return er.textContent=L2('Emergenza: ','Emergency: ')+EP.err;
       if(!o.querySelector('#ck-c').checked)return er.textContent=L2('Serve il consenso privacy per continuare.','Privacy consent is required to continue.');
       btn.disabled=true;
       try{const {data,error}=await sb.rpc('checkin_save',{p_name:n,p_phone:ph,p_birth:b,p_consent:PRIVACY_VERSION,p_emg_name:en||null,p_emg_phone:(en&&ep)?ep:null});if(error)throw error;
@@ -2731,6 +2732,27 @@ function instAsk(box){
   $('b-inst-no').onclick=()=>{st.n++;st.t=Date.now();try{localStorage.setItem('bc.instask.v1',JSON.stringify(st))}catch(e){}box.innerHTML=''};
   if(BIP)$('b-inst-on').onclick=async()=>{try{BIP.prompt();const c=await BIP.userChoice;BIP=null;track('install_prompt',{o:c&&c.outcome});box.innerHTML=''}catch(e){box.innerHTML=''}};
   return true}
+/* ===== TELEFONO CON PREFISSO (0.9.24) ===== */
+const CC=[['Italia','Italy','39'],['Albania','Albania','355'],['Algeria','Algeria','213'],['Argentina','Argentina','54'],['Australia','Australia','61'],['Austria','Austria','43'],['Belgio','Belgium','32'],['Bielorussia','Belarus','375'],['Bosnia ed Erzegovina','Bosnia and Herzegovina','387'],['Brasile','Brazil','55'],['Bulgaria','Bulgaria','359'],['Canada','Canada','1'],['Cile','Chile','56'],['Cina','China','86'],['Cipro','Cyprus','357'],['Colombia','Colombia','57'],['Corea del Sud','South Korea','82'],['Costa Rica','Costa Rica','506'],['Croazia','Croatia','385'],['Cuba','Cuba','53'],['Danimarca','Denmark','45'],['Ecuador','Ecuador','593'],['Egitto','Egypt','20'],['Emirati Arabi Uniti','United Arab Emirates','971'],['Estonia','Estonia','372'],['Filippine','Philippines','63'],['Finlandia','Finland','358'],['Francia','France','33'],['Georgia','Georgia','995'],['Germania','Germany','49'],['Giappone','Japan','81'],['Giordania','Jordan','962'],['Grecia','Greece','30'],['India','India','91'],['Indonesia','Indonesia','62'],['Irlanda','Ireland','353'],['Islanda','Iceland','354'],['Israele','Israel','972'],['Kazakistan','Kazakhstan','7'],['Kenya','Kenya','254'],['Lettonia','Latvia','371'],['Libano','Lebanon','961'],['Lituania','Lithuania','370'],['Lussemburgo','Luxembourg','352'],['Macedonia del Nord','North Macedonia','389'],['Malaysia','Malaysia','60'],['Malta','Malta','356'],['Marocco','Morocco','212'],['Messico','Mexico','52'],['Moldavia','Moldova','373'],['Monaco','Monaco','377'],['Montenegro','Montenegro','382'],['Norvegia','Norway','47'],['Nuova Zelanda','New Zealand','64'],['Paesi Bassi','Netherlands','31'],['Panama','Panama','507'],['Perù','Peru','51'],['Polonia','Poland','48'],['Portogallo','Portugal','351'],['Regno Unito','United Kingdom','44'],['Repubblica Ceca','Czech Republic','420'],['Romania','Romania','40'],['Russia','Russia','7'],['San Marino','San Marino','378'],['Serbia','Serbia','381'],['Singapore','Singapore','65'],['Slovacchia','Slovakia','421'],['Slovenia','Slovenia','386'],['Spagna','Spain','34'],['Stati Uniti','United States','1'],['Sudafrica','South Africa','27'],['Svezia','Sweden','46'],['Svizzera','Switzerland','41'],['Thailandia','Thailand','66'],['Tunisia','Tunisia','216'],['Turchia','Turkey','90'],['Ucraina','Ukraine','380'],['Ungheria','Hungary','36'],['Uruguay','Uruguay','598'],['Venezuela','Venezuela','58'],['Vietnam','Vietnam','84']];
+const ccLabel=c=>(lang==='en'?c[1]:c[0])+' (+'+c[2]+')';
+const ccNorm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
+function phoneSplit(v){const raw=String(v||'').replace(/[^0-9+]/g,'');
+  if(!raw.startsWith('+'))return {c:null,n:raw.replace(/\D/g,'')};
+  const d=raw.slice(1),best=CC.filter(c=>d.startsWith(c[2])).sort((a,b)=>b[2].length-a[2].length)[0];
+  return best?{c:best,n:d.slice(best[2].length)}:{c:null,n:d}}
+function phoneField(id,val){
+  if(!document.getElementById('cc-list')){const dl=document.createElement('datalist');dl.id='cc-list';dl.innerHTML=CC.map(c=>`<option value="${esc(ccLabel(c))}">`).join('');document.body.appendChild(dl)}
+  const s=phoneSplit(val),c=s.c||(val?null:CC[0]);
+  return `<div style="display:flex;gap:8px"><input class="txt" id="${id}-c" list="cc-list" value="${esc(c?ccLabel(c):'')}" placeholder="${L2('Paese o prefisso','Country or code')}" autocomplete="off" style="flex:0 0 48%;min-width:0" onfocus="this.select()"><input class="txt" id="${id}-n" type="tel" inputmode="tel" value="${esc(s.n||'')}" placeholder="${L2('Numero','Number')}" autocomplete="tel-national" style="flex:1;min-width:0"></div>`}
+/* restituisce {v:'+39…'|null, err:''}: il prefisso e' obbligatorio se c'e' un numero */
+function phoneGet(id){const ct=($(id+'-c').value||'').trim(),n=($(id+'-n').value||'').replace(/\D/g,'').replace(/^0+(?=\d{6,})/,m=>/^\+?39/.test(ct)||ccNorm(ct).startsWith('ital')?m:'');
+  if(!n&&!$(id+'-n').value.trim())return {v:null,err:''};
+  let c=CC.find(x=>ccNorm(ccLabel(x))===ccNorm(ct)||ccNorm(x[0])===ccNorm(ct)||ccNorm(x[1])===ccNorm(ct));
+  if(!c){const m=ct.match(/^\+?(\d{1,4})$/);if(m){const l=CC.filter(x=>x[2]===m[1]);if(l.length)c=l[0]}}
+  if(!c){const l=CC.filter(x=>ccNorm(x[0]).startsWith(ccNorm(ct))||ccNorm(x[1]).startsWith(ccNorm(ct)));if(ct&&l.length===1)c=l[0]}
+  if(!c)return {v:null,err:L2('Scegli il paese dall’elenco: il prefisso è obbligatorio.','Pick the country from the list: the country code is required.')};
+  if(n.length<6||n.length>12)return {v:null,err:L2('Numero di telefono non valido.','Invalid phone number.')};
+  return {v:'+'+c[2]+n,err:''}}
 </script>
 </body>
 </html>
