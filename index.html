@@ -599,7 +599,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.17';
+const VERSION='0.9.18';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -1679,7 +1679,7 @@ function streakDays(){
   while(days.has(dayKey(d))){n++;d.setDate(d.getDate()-1)}return n;
 }
 function renderWelcome(){
-  $('wl-hi').textContent=T[lang].wl_hi(userLabel()||(profile&&profile.display_name)||'');
+  $('wl-hi').textContent=T[lang].wl_hi(userLabel()||'');
   $('wl-streak').textContent=T[lang].wl_streak(streakDays());
   const br=lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='breathing'&&r.status==='completed').pop();
   $('wl-breath-sub').textContent=T[lang].wl_breath_sub(br?`${relDay(br.startedAt)} · ${t2(br.elapsedSec)}`:'');
@@ -2186,7 +2186,7 @@ function renderWeek(){
 
 /* --- welcome --- */
 function renderWelcome(){renderCenterCard();syncCenterRecords();try{meAlertHome()}catch(e){}
-  $('wl-hi').textContent=T[lang].wl_hi(userLabel()||(profile&&profile.display_name)||'');
+  $('wl-hi').textContent=T[lang].wl_hi(userLabel()||'');
   renderWeek();
   const br=lsJ(KEY.sess,[]).filter(r=>r.exerciseId==='breathing'&&r.status==='completed').pop();
   $('wl-breath-sub').textContent=T[lang].wl_breath_sub(br?`${relDay(br.startedAt)} · ${t2(br.elapsedSec)}`:'');
