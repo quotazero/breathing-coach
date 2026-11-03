@@ -599,7 +599,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.15';
+const VERSION='0.9.16';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -2456,7 +2456,7 @@ function meAlertHome(){
     box.querySelector('button').onclick=openMe};
   draw(lsJ('bc.medocs.v1',[]));
   if(!isGuest()&&sb&&user)meLoad().then(()=>draw(ME.docs)).catch(()=>{})}
-function openMe(){if(isGuest()){openAccount(true);return}show('s-me');renderMe();meLoad().then(renderMe).catch(e=>{$('me-body').innerHTML=`<p class="err">${esc(e.message||e)}</p>`})}
+function openMe(){if(isGuest()){openAccount(true);return}show('s-me');renderMe();meLoad().then(()=>habLoad().catch(()=>{})).then(renderMe).catch(e=>{$('me-body').innerHTML=`<p class="err">${esc(e.message||e)}</p>`})}
 function meSec(title,sub,btn,body){return `<h2>${title}</h2>${sub?`<p class="tiny" style="margin:-4px 0 8px">${sub}</p>`:''}${body}${btn||''}`}
 function meDocRow(d,table){const st=table==='docs'?meStatus(d.expires_on):null;
   const title=table==='docs'?(DOC_KINDS[d.kind]?DOC_KINDS[d.kind][lang==='en'?1:0]:d.kind):(`${d.agency||''} ${d.level_name||''}`.trim()||L2('Brevetto','Certification'));
@@ -2476,6 +2476,7 @@ function renderMe(){
   const cs=lsJ('bc.centers.v1',[]);
   B.innerHTML=`<p class="tiny">${L2('Questi dati sono privati. Il centro li vede solo se li condividi tu, categoria per categoria, e puoi revocare quando vuoi.','This data is private. A center only sees what you choose to share, category by category, and you can revoke at any time.')}</p>
   ${al.length?`<div class="note" style="border:1px solid #E8B04A;margin-top:10px">⚠ ${al.map(x=>esc((DOC_KINDS[x.d.kind]?DOC_KINDS[x.d.kind][lang==='en'?1:0]:x.d.kind)+': '+x.s.t)).join('<br>')}</div>`:''}
+  ${habSection(cs)}
   ${meSec(L2('Dati personali','Personal details'),'',`<button class="btn ghost" data-act="edit-priv">${anyPr?L2('Modifica dati','Edit details'):L2('Inserisci i tuoi dati','Add your details')}</button>`,anyPr?`<div class="note">${pr.filter(x=>x[1]).map(x=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0"><span class="tiny">${esc(x[0])}</span><span style="text-align:right">${esc(x[1])}</span></div>`).join('')}</div>`:'')}
   ${meSec(L2('Brevetti','Certifications'),L2('Agenzia, livello, data e didattica usata.','Agency, level, date and teaching system.'),`<button class="btn ghost" data-act="add-certs">＋ ${L2('Aggiungi brevetto','Add certification')}</button>`,ME.certs.map(c=>meDocRow(c,'certs')).join(''))}
   ${meSec(L2('Certificati medici','Medical certificates'),L2('Generico, sportivo non agonistico o agonistico, con scadenza.','General, non-competitive or competitive, with expiry.'),`<button class="btn ghost" data-act="add-docs" data-grp="medico">＋ ${L2('Aggiungi certificato','Add certificate')}</button>`,medical.map(d=>meDocRow(d,'docs')).join(''))}
@@ -2538,6 +2539,53 @@ async function meShareSave(org,name,card){
   const row={user_id:user.id,org_id:org,categories:cats,consent_version:SHARE_VERSION,consented_at:cats.length?new Date().toISOString():null,updated_at:new Date().toISOString()};
   const {error}=await sb.from('athlete_shares').upsert(row,{onConflict:'user_id,org_id'});
   if(error){toast(error.message);return}ME.shares[org]=row;renderMe();toast(cats.length?L2('Autorizzazione salvata','Authorization saved'):L2('Condivisione revocata','Sharing revoked'))}
+/* ---- Cosa faccio e dove + promemoria di prenotazione ---- */
+const HAB={},HAB_DIS='bc.habdis.v1';
+async function habLoad(){
+  if(!sb||isGuest()||!user)return;const cs=lsJ('bc.centers.v1',[]);
+  await Promise.all(cs.map(async c=>{const o=c.org_id,H=HAB[o]=HAB[o]||{habits:[],notify:null,choices:{types:[],places:[]},sugg:[],defH:6};
+    const safe=p=>Promise.resolve(p).catch(()=>({data:null}));
+    const r=await Promise.all([
+      safe(sb.from('athlete_habits').select('id,type_id,place').eq('user_id',user.id).eq('org_id',o)),
+      safe(sb.from('athlete_notify').select('remind_on,hours').eq('user_id',user.id).eq('org_id',o).maybeSingle()),
+      safe(sb.rpc('habit_choices',{p_org:o})),safe(sb.rpc('habit_suggestions',{p_org:o})),
+      safe(sb.from('organizations').select('settings').eq('id',o).maybeSingle())]);
+    H.habits=r[0].data||[];H.notify=r[1].data||null;H.choices=(r[2].data&&r[2].data.types)?r[2].data:{types:[],places:[]};H.sugg=Array.isArray(r[3].data)?r[3].data:[];
+    const sv=r[4].data&&r[4].data.settings&&r[4].data.settings.book_reminder_hours;H.defH=sv==null?6:+sv}))}
+function habSection(cs){if(!cs.length)return '';
+  const dis=lsJ(HAB_DIS,[]);
+  const body=cs.map(c=>{const H=HAB[c.org_id];if(!H)return '';
+    const tn=id=>{const t=(H.choices.types||[]).find(x=>x.id===id);return t?t.name:'—'};
+    const sg=(H.sugg||[]).filter(x=>!dis.includes(c.org_id+'|'+x.type_id+'|'+x.place));
+    const n=H.notify||{},on=n.remind_on!==false,off=H.defH===0;
+    const opts=[['',L2('Come stabilito dal centro','As set by the center')+(off?'':` (${H.defH} ${L2('ore','h')})`)],...[2,3,4,6,8,12,24].map(h=>[String(h),h+' '+L2('ore prima','h before')])];
+    return `<div class="note hab" data-horg="${c.org_id}" style="margin-top:8px">${cs.length>1?`<b>${esc(c.name)}</b>`:''}
+      ${H.habits.length?H.habits.map(h=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0"><span>${esc(tn(h.type_id))} <span class="tiny">· ${esc(h.place||L2('tutte le sedi','all locations'))}</span></span><button class="link" data-act="hab-del" data-id="${h.id}" style="color:var(--danger)">${L2('Togli','Remove')}</button></div>`).join(''):`<p class="tiny" style="margin:4px 0 8px">${L2('Nessuna ancora: aggiungi ciò che fai di solito e dove.','None yet: add what you usually do and where.')}</p>`}
+      ${sg.map(x=>`<div class="note" style="border:1px solid var(--accent);margin:8px 0"><b>${L2('Vuoi un promemoria?','Want a reminder?')}</b><div class="tiny">${L2('Ti sei prenotato spesso a','You often book')} ${esc(x.name)} · ${esc(x.place)} (${x.n}×)</div><div class="merow"><button class="link" data-act="hab-sg-add" data-org="${c.org_id}" data-type="${x.type_id}" data-place="${esc(x.place)}">${L2('Sì, aggiungi','Yes, add')}</button><button class="link" data-act="hab-sg-no" data-org="${c.org_id}" data-type="${x.type_id}" data-place="${esc(x.place)}">${L2('No, grazie','No thanks')}</button></div></div>`).join('')}
+      <button class="btn ghost" data-act="hab-add" data-org="${c.org_id}" style="margin-top:6px">＋ ${L2('Aggiungi attività e sede','Add activity and location')}</button>
+      ${off?`<p class="tiny" style="margin-top:8px">${L2('Questo centro non invia promemoria di prenotazione.','This center does not send booking reminders.')}</p>`:`
+      <label class="mechk" style="margin-top:12px"><input type="checkbox" data-hab-on ${on?'checked':''}><span>${L2('Avvisami prima delle sessioni a cui non sono prenotato','Notify me before sessions I haven’t booked')}</span></label>
+      <select class="txt" data-hab-h>${opts.map(o=>`<option value="${o[0]}" ${String(n.hours??'')===o[0]?'selected':''}>${esc(o[1])}</option>`).join('')}</select>
+      <p class="tiny" style="margin-top:6px">${L2('Per ricevere la notifica sul telefono attiva «Attiva i promemoria» nelle impostazioni dell’account. Il messaggio compare comunque nell’app.','To get the notification on your phone turn on “Turn on reminders” in your account settings. The message also shows in the app.')}</p>`}
+    </div>`}).join('');
+  return meSec(L2('Cosa faccio e dove','What I do and where'),L2('Ti avvisiamo per prenotare solo le sessioni che ti riguardano: per esempio la piscina di Acireale, non quella di Catania.','We only remind you about sessions that matter to you: e.g. the Acireale pool, not Catania.'),'',body)}
+async function habInsert(o,type_id,place){const {error}=await sb.from('athlete_habits').insert({org_id:o,type_id,place:place||null});
+  if(error&&error.code!=='23505')throw error;await habLoad();renderMe();toast(error?L2('Già presente','Already added'):L2('Aggiunto','Added'))}
+function habAdd(o){const H=HAB[o];if(!H||!(H.choices.types||[]).length){toast(L2('Nessuna attività disponibile in questo centro','No activities available in this center'));return}
+  meSheet(L2('Cosa faccio e dove','What I do and where'),[
+    {k:'type_id',label:L2('Attività','Activity'),type:'select',opts:H.choices.types.map(t=>[t.id,t.name])},
+    {k:'place',label:L2('Sede','Location'),type:'select',opts:[['',L2('Tutte le sedi','All locations')],...(H.choices.places||[]).map(x=>[x,x])]}],{},
+    async v=>{await habInsert(o,v.type_id,v.place)})}
+document.addEventListener('click',async e=>{const b=e.target.closest('#s-me [data-act^="hab-"]');if(!b)return;const a=b.dataset.act;
+  try{if(a==='hab-add')habAdd(b.dataset.org);
+    else if(a==='hab-del'){const {error}=await sb.from('athlete_habits').delete().eq('id',b.dataset.id);if(error)throw error;await habLoad();renderMe()}
+    else if(a==='hab-sg-add')await habInsert(b.dataset.org,b.dataset.type,b.dataset.place);
+    else if(a==='hab-sg-no'){const d=lsJ(HAB_DIS,[]);d.push(b.dataset.org+'|'+b.dataset.type+'|'+b.dataset.place);lsSet(HAB_DIS,JSON.stringify(d));renderMe()}}
+  catch(err){toast(L2('Non riuscito. Riprova.','Failed. Try again.'))}});
+document.addEventListener('change',async e=>{const el=e.target.closest('#s-me .hab [data-hab-on],#s-me .hab [data-hab-h]');if(!el)return;const box=el.closest('.hab'),o=box.dataset.horg;
+  const row={user_id:user.id,org_id:o,remind_on:box.querySelector('[data-hab-on]').checked,hours:box.querySelector('[data-hab-h]').value?+box.querySelector('[data-hab-h]').value:null,updated_at:new Date().toISOString()};
+  const {error}=await sb.from('athlete_notify').upsert(row,{onConflict:'user_id,org_id'});
+  if(error){toast(L2('Non salvato. Riprova.','Not saved. Try again.'));return}HAB[o].notify=row;toast(L2('Salvato','Saved'))});
 document.addEventListener('click',e=>{const b=e.target.closest('#s-me [data-act]');if(!b)return;const a=b.dataset.act,id=b.dataset.id;
   if(a==='edit-priv')meEditPriv();else if(a==='add-certs')meEditCert();else if(a==='edit-certs')meEditCert(id);else if(a==='del-certs')meDelete('certs',id);
   else if(a==='add-docs')meEditDoc(null,b.dataset.grp);else if(a==='edit-docs')meEditDoc(id);else if(a==='del-docs')meDelete('docs',id);
