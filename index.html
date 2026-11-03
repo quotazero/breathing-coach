@@ -606,9 +606,9 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.24';
+const VERSION='0.9.25';
 const SCHEMA=1;
-const PRIVACY_VERSION='2026-10-v1';
+const PRIVACY_VERSION='2026-11-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
 const SUPA_KEY='sb_publishable_9YiJUA45r62HfT5KTidEdw_N0QICtoC';
 const KEY={cfg:'bc.params.v1',sess:'bc.sessions.v1',acc:'bc.disclaimer.v1',lang:'bc.lang',athlete:'bc.athlete',onb:'bc.onboarding.v1',events:'bc.events.v1',nudge:'bc.nudge',warm:'bc.warm.v1'};
@@ -2655,7 +2655,7 @@ function ckSheet(html,onReady){const o=document.createElement('div');o.className
 async function ckOpen(why){
   if(isGuest()||!user){openAccount&&openAccount(true);return}
   try{await ckLoad(true)}catch(e){}
-  const p=CK.priv||{},nm=p.full_name||'';
+  const p=CK.priv||{},nm=p.full_name||'',pv='privacy.html?o='+((CK.centers[0]&&CK.centers[0].org_id)||'');
   ckSheet(`<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${L2('La tua scheda per il centro','Your sheet for the center')}</h2><button class="pill" data-x>✕</button></div>
   ${why?`<div class="note" style="border:1px solid var(--accent);margin:8px 0">${L2('Per prenotare devi prima completare i dati obbligatori (contrassegnati con *).','To book you must first complete the required details (marked *).')}</div>`:''}<p class="tiny" style="margin:6px 0 4px">${L2('Servono al centro per iscriverti alle uscite e per avvisarti nel modo giusto. Ci vuole un minuto.','The center needs this to sign you up for sessions and to notify you properly. It takes a minute.')}</p>
   <label>${L2('Nome e cognome','Full name')} *</label><input class="txt" id="ck-n" value="${esc(nm)}" autocomplete="name">
@@ -2664,7 +2664,7 @@ async function ckOpen(why){
   <p class="tiny" style="margin:12px 0 4px">${L2('Facoltativo, puoi aggiungerlo dopo (serve prima delle uscite in acqua):','Optional, you can add it later (needed before water sessions):')}</p>
   <label>${L2('Contatto di emergenza: nome','Emergency contact: name')}</label><input class="txt" id="ck-en" value="${esc(p.emergency_name||'')}">
   <label>${L2('Contatto di emergenza: telefono','Emergency contact: phone')}</label>${phoneField('ck-ep',p.emergency_phone)}
-  <label class="mechk" style="margin-top:12px"><input type="checkbox" id="ck-c" ${CK.consent?'checked':''}><span>${L2('Ho letto l’<a href="privacy.html" target="_blank">informativa privacy</a> e accetto che il centro veda questi dati.','I have read the <a href="privacy.html" target="_blank">privacy notice</a> and agree that the center can see this data.')} *</span></label>
+  <label class="mechk" style="margin-top:12px"><input type="checkbox" id="ck-c" ${CK.consent?'checked':''}><span>${L2('Ho letto l’<a href="'+pv+'" target="_blank">informativa privacy del centro</a> e accetto che il centro tratti questi dati.','I have read the center’s <a href="'+pv+'" target="_blank">privacy notice</a> and agree that the center processes this data.')} *</span></label>
   <div class="err" id="ck-err"></div><button class="btn" data-ok>${L2('Conferma','Confirm')}</button>`,(o,close)=>{
     o.querySelector('[data-ok]').onclick=async()=>{const btn=o.querySelector('[data-ok]'),er=o.querySelector('#ck-err');er.textContent='';
       const n=o.querySelector('#ck-n').value.trim(),P=phoneGet('ck-p'),ph=P.v,b=o.querySelector('#ck-b').value,en=o.querySelector('#ck-en').value.trim(),EP=phoneGet('ck-ep'),ep=EP.v,epRaw=ep||'';
