@@ -606,7 +606,7 @@ pre{background:#031019;color:#BFD6E0;font-size:11.5px;line-height:1.45;padding:1
    v0.3: accesso diretto 'ho già un account', modulo Apnea statica (riscaldamento
          vocalizzato, tap contrazioni, doppio tap stop, grafici).
    ============================================================ */
-const VERSION='0.9.22';
+const VERSION='0.9.23';
 const SCHEMA=1;
 const PRIVACY_VERSION='2026-10-v1';
 const SUPA_URL='https://kiqumfsqcaukxazobszm.supabase.co';
@@ -2651,12 +2651,12 @@ function ckPhone(v){let d=String(v||'').trim().replace(/[^0-9+]/g,'');if(d.start
   return /^\+[0-9]{8,15}$/.test(d)?d:null}
 function ckSheet(html,onReady){const o=document.createElement('div');o.className='mesheet';o.innerHTML=`<div class="mepanel rqbox">${html}</div>`;document.body.appendChild(o);
   const close=()=>o.remove();o.addEventListener('click',e=>{if(e.target===o)close()});o.querySelectorAll('[data-x]').forEach(b=>b.onclick=close);onReady(o,close);return o}
-async function ckOpen(){
+async function ckOpen(why){
   if(isGuest()||!user){openAccount&&openAccount(true);return}
   try{await ckLoad(true)}catch(e){}
   const p=CK.priv||{},nm=p.full_name||'';
   ckSheet(`<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">${L2('La tua scheda per il centro','Your sheet for the center')}</h2><button class="pill" data-x>✕</button></div>
-  <p class="tiny" style="margin:6px 0 4px">${L2('Servono al centro per iscriverti alle uscite e per avvisarti nel modo giusto. Ci vuole un minuto.','The center needs this to sign you up for sessions and to notify you properly. It takes a minute.')}</p>
+  ${why?`<div class="note" style="border:1px solid var(--accent);margin:8px 0">${L2('Per prenotare devi prima completare i dati obbligatori (contrassegnati con *).','To book you must first complete the required details (marked *).')}</div>`:''}<p class="tiny" style="margin:6px 0 4px">${L2('Servono al centro per iscriverti alle uscite e per avvisarti nel modo giusto. Ci vuole un minuto.','The center needs this to sign you up for sessions and to notify you properly. It takes a minute.')}</p>
   <label>${L2('Nome e cognome','Full name')} *</label><input class="txt" id="ck-n" value="${esc(nm)}" autocomplete="name">
   <label>${L2('Telefono','Phone')} *</label><input class="txt" id="ck-p" type="tel" value="${esc(p.phone||'')}" placeholder="+39…" autocomplete="tel">
   <label>${L2('Data di nascita','Birth date')} *</label><input class="txt" id="ck-b" type="date" value="${esc(p.birth_date||'')}">
@@ -2688,7 +2688,7 @@ async function ckHome(){const box=$('wl-ck');if(!box)return;box.innerHTML='';
 const CK_L2_HARD=false;
 async function ckGate(a){
   try{if(!(await ckLoad()))return true}catch(e){return true}
-  if(ckMiss1().length){toast(L2('Prima completa la tua scheda','Complete your sheet first'));ckOpen();return false}
+  if(ckMiss1().length){ckOpen(true);return false}
   const wet=a&&(a.location_type==='sea'||a.location_type==='pool')&&a.kind!=='dry',m2=ckMiss2();
   if(wet&&m2.length){
     if(CK_L2_HARD){toast(L2('Per le uscite in acqua mancano: ','For water sessions you need: ')+m2.join(', '));openMe();return false}
